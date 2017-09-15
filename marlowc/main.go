@@ -108,12 +108,20 @@ func main() {
 			exit(fmt.Sprintf("unable to compile file %s", fullName), e)
 		}
 
+		if e := reader.Close(); e != nil {
+			panic(e)
+			exit(fmt.Sprintf("unable to compile file %s", fullName), e)
+		}
+
+		if e := output.Close(); e != nil {
+			panic(e)
+			exit(fmt.Sprintf("unable to compile file %s", fullName), e)
+		}
+
+		buffer.Close()
+
 		time.Sleep(time.Second / 4)
 		bar.Incr(1)
-
-		reader.Close()
-		output.Close()
-		buffer.Close()
 		wg.Done()
 	}
 
