@@ -1,6 +1,8 @@
-hash: 5f8b0ec1bca7e5d04df12aec1e98d0f2320ba2e407cc164c168a1b7b9049626b
-updated: 2017-09-14T21:39:10.739546056-04:00
+hash: 2c6ad7734d5f437fb24cd9f57ed467361d09379b817cbf3336b029872ab3a7e6
+updated: 2017-09-15T15:42:03.906225765-04:00
 imports:
+- name: github.com/gedex/inflector
+  version: 046f2c31204676e3623730ee70fd0964e05822e7
 - name: github.com/mattn/go-isatty
   version: 56b76bdf51f7708750eac80fa38b952bb9f32639
 - name: github.com/vbauerster/mpb

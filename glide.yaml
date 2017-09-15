@@ -5,3 +5,4 @@ import:
   subpackages:
   - decor
   - cwriter
+- package: github.com/gedex/inflector

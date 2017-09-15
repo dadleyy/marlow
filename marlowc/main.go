@@ -8,12 +8,26 @@ import "time"
 import "path"
 import "sync"
 import "bytes"
-import "strings"
 import "go/build"
 import "github.com/vbauerster/mpb"
 import "github.com/vbauerster/mpb/cwriter"
 import "github.com/vbauerster/mpb/decor"
 import "github.com/dadleyy/marlow/marlow"
+
+type closableBuffer struct {
+	*bytes.Buffer
+}
+
+func (b *closableBuffer) Close() error {
+	fmt.Fprintf(os.Stdout, "contents:\n----\n%s----\n\n", b.String())
+	return nil
+}
+
+func buildOuput(filename string) (io.WriteCloser, error) {
+	return &closableBuffer{
+		Buffer: new(bytes.Buffer),
+	}, nil
+}
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
@@ -31,8 +45,6 @@ func exit(msg string, e error) {
 
 	os.Exit(2)
 }
-
-type marlowSourceFile string
 
 func main() {
 	cwd, err := os.Getwd()
@@ -74,37 +86,38 @@ func main() {
 	wg := sync.WaitGroup{}
 
 	for _, name := range pkg.GoFiles {
+		wg.Add(1)
 		fullName := path.Join(options.directory, name)
-		output, e := buildOuput(fullName)
+
+		buffer, e := buildOuput(fullName)
 
 		if e != nil {
-			exit("unable to establish absolute path to directory", e)
+			exit("unable to open target file", e)
 		}
 
-		w := marlow.NewWriter(output)
+		output := marlow.NewWriter(buffer)
+
 		reader, e := os.Open(fullName)
 
 		if e != nil {
 			exit("unable to open output for file", e)
 		}
 
-		if _, e := io.Copy(w, reader); e != nil {
+		if _, e := io.Copy(output, reader); e != nil {
+			panic(e)
 			exit(fmt.Sprintf("unable to compile file %s", fullName), e)
 		}
 
 		time.Sleep(time.Second / 4)
 		bar.Incr(1)
-		w.Close()
+
 		reader.Close()
+		output.Close()
+		buffer.Close()
+		wg.Done()
 	}
 
+	wg.Wait()
+
 	p.Stop()
-}
-
-func buildOuput(filename string) (io.WriteCloser, error) {
-	destDir := path.Dir(filename)
-	cleanName := strings.TrimSuffix(path.Base(filename), path.Ext(filename))
-	marlowName := path.Join(destDir, fmt.Sprintf("%s.marlow%s", cleanName, path.Ext(filename)))
-
-	return bytes.NewBuffer([]byte{marlowName}), nil
 }
