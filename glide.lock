@@ -1,0 +1,15 @@
+hash: 5f8b0ec1bca7e5d04df12aec1e98d0f2320ba2e407cc164c168a1b7b9049626b
+updated: 2017-09-14T21:39:10.739546056-04:00
+imports:
+- name: github.com/mattn/go-isatty
+  version: 56b76bdf51f7708750eac80fa38b952bb9f32639
+- name: github.com/vbauerster/mpb
+  version: d99a1af798365748126d750fb9e4b0cbd933a634
+  subpackages:
+  - cwriter
+  - decor
+- name: golang.org/x/sys
+  version: 62bee037599929a6e9146f29d10dd5208c43507d
+  subpackages:
+  - unix
+testImports: []

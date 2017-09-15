@@ -14,6 +14,7 @@ node_modules
 vendor/*/
 dump.rdb
 coverage.txt
+mc
 
 # Folders
 _obj

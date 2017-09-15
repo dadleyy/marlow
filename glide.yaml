@@ -1,0 +1,7 @@
+package: github.com/dadleyy/marlow
+import:
+- package: github.com/vbauerster/mpb
+  version: ^3.0.2
+  subpackages:
+  - decor
+  - cwriter
