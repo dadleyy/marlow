@@ -95,25 +95,13 @@ func main() {
 			exit("unable to open target file", e)
 		}
 
-		output := marlow.NewWriter(buffer)
-
-		reader, e := os.Open(fullName)
+		reader, e := marlow.NewReaderFromFile(fullName)
 
 		if e != nil {
 			exit("unable to open output for file", e)
 		}
 
-		if _, e := io.Copy(output, reader); e != nil {
-			panic(e)
-			exit(fmt.Sprintf("unable to compile file %s", fullName), e)
-		}
-
-		if e := reader.Close(); e != nil {
-			panic(e)
-			exit(fmt.Sprintf("unable to compile file %s", fullName), e)
-		}
-
-		if e := output.Close(); e != nil {
+		if _, e := io.Copy(buffer, reader); e != nil {
 			panic(e)
 			exit(fmt.Sprintf("unable to compile file %s", fullName), e)
 		}

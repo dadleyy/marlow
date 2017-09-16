@@ -1,74 +1,51 @@
 package marlow
 
-import "io"
-
+import "log"
 import "fmt"
+import "strings"
 
-// import "go/ast"
-// import "net/url"
-// import "strings"
-// import "reflect"
-import "go/token"
-import "go/parser"
+type b func(*Writer) error
 
-const (
-	compilationHeader = "// Do not edit! Compiled with github.com/dadleyy/marlow"
-)
+type Writer struct {
+	*log.Logger
+}
 
-func Copy(destination io.Writer, input io.Reader) error {
-	pr, pw := io.Pipe()
+func (w *Writer) withFunc(name string, args map[string]string, returns []string, block b) error {
+	argList := make([]string, 0, len(args))
+	var returnList string
 
-	go func() {
-		fs := token.NewFileSet()
-		_, e := parser.ParseFile(fs, "", input, parser.AllErrors)
-
-		if e != nil {
-			pw.CloseWithError(fmt.Errorf("fucker"))
-			return
-		}
-
-		pw.Close()
-	}()
-
-	_, e := io.Copy(destination, pr)
-
-	if e != nil {
-		panic(e)
+	switch {
+	case len(returns) == 1:
+		returnList = returns[0]
+	case len(returns) > 1:
+		returnList = fmt.Sprintf("(%s)", strings.Join(returns, ","))
+	default:
+		returnList = ""
 	}
 
-	return e
-}
-
-func NewWriter(destination io.Writer) io.WriteCloser {
-	pr, pw := io.Pipe()
-	done := make(chan struct{})
-
-	// Writes into the returned writer will be sent into the reader, which will then subsequently send the data to
-	// the destination writer that was provided, completing the compilation step.
-	go func() {
-		defer close(done)
-		e := Copy(destination, pr)
-		pr.CloseWithError(e)
-	}()
-
-	w := &writer{
-		PipeWriter: pw,
-		done:       done,
+	for name, typeDef := range args {
+		argList = append(argList, fmt.Sprintf("%s %s", name, typeDef))
 	}
 
-	return w
-}
+	w.Printf("func %s(%s) %s {", name, strings.Join(argList, ","), returnList)
 
-type writer struct {
-	*io.PipeWriter
-	done chan struct{}
-}
-
-func (w *writer) Close() error {
-	if e := w.PipeWriter.Close(); e != nil {
+	if e := block(w); e != nil {
 		return e
 	}
 
-	<-w.done
+	w.Printf("}")
+
+	return nil
+}
+
+func (w *Writer) withStruct(name string, block b) error {
+	w.Printf("type %s struct {", name)
+
+	if e := block(w); e != nil {
+		return e
+	}
+
+	w.Printf("}")
+
 	return nil
 }
