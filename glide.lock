@@ -1,0 +1,19 @@
+hash: 661ac93184f42db03d4a428524b5fb7cdf256d0a14083f8c952f4016f3f96769
+updated: 2017-09-16T20:17:07.511026485-04:00
+imports:
+- name: github.com/franela/goblin
+  version: 74c9fe110d4bfd04c222a089a309e0a97e258534
+- name: github.com/gedex/inflector
+  version: 046f2c31204676e3623730ee70fd0964e05822e7
+- name: github.com/mattn/go-isatty
+  version: 56b76bdf51f7708750eac80fa38b952bb9f32639
+- name: github.com/vbauerster/mpb
+  version: d99a1af798365748126d750fb9e4b0cbd933a634
+  subpackages:
+  - cwriter
+  - decor
+- name: golang.org/x/sys
+  version: 62bee037599929a6e9146f29d10dd5208c43507d
+  subpackages:
+  - unix
+testImports: []

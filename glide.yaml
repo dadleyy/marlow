@@ -1,0 +1,10 @@
+package: github.com/dadleyy/marlow
+import:
+- package: github.com/vbauerster/mpb
+  version: ^3.0.2
+  subpackages:
+  - decor
+  - cwriter
+- package: github.com/gedex/inflector
+- package: github.com/franela/goblin
+  version: ^0.0.1
