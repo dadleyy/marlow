@@ -32,7 +32,9 @@ func copyRecordFinder(destination io.Writer, source *tableSource) error {
 		return nil
 	})
 
-	lookupParams := map[string]string{"q": fmt.Sprintf("*%s", queryStructName)}
+	lookupParams := []funcParam{
+		funcParam{paramName: "q", typeName: fmt.Sprintf("*%s", queryStructName)},
+	}
 	lookupReturns := []string{fmt.Sprintf("[]*%s", source.recordName), "error"}
 	fieldList := make([]string, 0, len(source.fields))
 

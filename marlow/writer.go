@@ -7,6 +7,11 @@ import "net/url"
 
 type b func(url.Values) error
 
+type funcParam struct {
+	typeName  string
+	paramName string
+}
+
 // goWriter wraps the log.Logger interface with several handy functions for writing go code.
 type goWriter struct {
 	*log.Logger
@@ -30,11 +35,11 @@ func (w *goWriter) formatReturns(returns []string) (returnList string) {
 	return
 }
 
-func (w *goWriter) formatArgList(args map[string]string) string {
+func (w *goWriter) formatArgList(args []funcParam) string {
 	list := make([]string, 0, len(args))
 
-	for name, typeDef := range args {
-		list = append(list, fmt.Sprintf("%s %s", name, typeDef))
+	for _, def := range args {
+		list = append(list, fmt.Sprintf("%s %s", def.paramName, def.typeName))
 	}
 
 	return strings.Join(list, ",")
@@ -52,7 +57,7 @@ func (w *goWriter) withBlock(start string, block b, v url.Values) error {
 	return nil
 }
 
-func (w *goWriter) withFunc(name string, args map[string]string, returns []string, block b) error {
+func (w *goWriter) withFunc(name string, args []funcParam, returns []string, block b) error {
 	returnList := w.formatReturns(returns)
 	argList := w.formatArgList(args)
 	funcDef := fmt.Sprintf("func %s(%s) %s", name, argList, returnList)
@@ -63,7 +68,7 @@ func (w *goWriter) withIter(condition string, block b) error {
 	return w.withBlock(fmt.Sprintf("for %s", condition), block, make(url.Values))
 }
 
-func (w *goWriter) withMetod(name string, typeName string, args map[string]string, returns []string, block b) error {
+func (w *goWriter) withMetod(name string, typeName string, args []funcParam, returns []string, block b) error {
 	returnList := w.formatReturns(returns)
 	argList := w.formatArgList(args)
 	receiver := strings.ToLower(typeName)[0:1]
