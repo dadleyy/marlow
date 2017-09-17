@@ -1,5 +1,7 @@
 package models
 
+//go:generate marlowc -stdout=true
+
 // Example file for testing.
 
 // Author represents an author of a book.

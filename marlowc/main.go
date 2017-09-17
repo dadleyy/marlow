@@ -40,6 +40,33 @@ func exit(msg string, e error) {
 	os.Exit(2)
 }
 
+func loadFileNames(input string) ([]string, error) {
+	stat, e := os.Stat(input)
+
+	if e != nil {
+		return nil, e
+	}
+
+	if !stat.IsDir() {
+		return []string{input}, nil
+	}
+
+	pkg, e := build.Default.ImportDir(input, build.IgnoreVendor)
+
+	if e != nil {
+		return nil, e
+	}
+
+	output := make([]string, 0, len(pkg.GoFiles))
+
+	for _, name := range pkg.GoFiles {
+		full := path.Join(input, name)
+		output = append(output, full)
+	}
+
+	return output, nil
+}
+
 func main() {
 	cwd, err := os.Getwd()
 
@@ -47,24 +74,24 @@ func main() {
 	}
 
 	options := struct {
-		directory string
-		stdout    bool
+		input  string
+		stdout bool
 	}{}
 
-	flag.StringVar(&options.directory, "directory", cwd, "the directory to compile")
+	flag.StringVar(&options.input, "input", cwd, "the input to compile")
 	flag.BoolVar(&options.stdout, "stdout", false, "print generated code to stdout")
 
 	flag.Usage = usage
 	flag.Parse()
 
-	if s, e := os.Stat(options.directory); e != nil || s.IsDir() == false {
-		exit("must provide a valid directory for compilation", nil)
+	if _, e := os.Stat(options.input); e != nil {
+		exit("must provide a valid input for compilation", nil)
 	}
 
-	pkg, err := build.Default.ImportDir(options.directory, 0)
+	sourceFiles, err := loadFileNames(options.input)
 
 	if err != nil {
-		exit("unable to load package from directory", err)
+		exit("unable to load package from input", err)
 	}
 
 	var progressOut io.Writer = new(bytes.Buffer)
@@ -73,7 +100,7 @@ func main() {
 		progressOut = os.Stdout
 	}
 
-	total, name, done := len(pkg.GoFiles), fmt.Sprintf("compiling: %s", pkg.Name), make(chan struct{})
+	total, name, done := len(sourceFiles), fmt.Sprintf("compiling files"), make(chan struct{})
 
 	progress := mpb.New(
 		mpb.Output(progressOut),
@@ -92,10 +119,10 @@ func main() {
 
 	wg := sync.WaitGroup{}
 
-	for _, name := range pkg.GoFiles {
-		fullName := path.Join(options.directory, name)
+	for _, name := range sourceFiles {
+		sourceDir := path.Dir(name)
 
-		if strings.HasSuffix(path.Base(fullName), ".marlow.go") {
+		if strings.HasSuffix(path.Base(name), ".marlow.go") {
 			continue
 		}
 
@@ -107,8 +134,8 @@ func main() {
 			var e error
 
 			destName := path.Join(
-				options.directory,
-				fmt.Sprintf("%s.marlow.go", strings.TrimSuffix(path.Base(fullName), path.Ext(fullName))),
+				sourceDir,
+				fmt.Sprintf("%s.marlow.go", strings.TrimSuffix(path.Base(name), path.Ext(name))),
 			)
 
 			if e := os.Remove(destName); e != nil && os.IsNotExist(e) == false {
@@ -122,14 +149,14 @@ func main() {
 			}
 		}
 
-		reader, e := marlow.NewReaderFromFile(fullName)
+		reader, e := marlow.NewReaderFromFile(name)
 
 		if e != nil {
 			exit("unable to open output for file", e)
 		}
 
 		if _, e := io.Copy(buffer, reader); e != nil {
-			exit(fmt.Sprintf("unable to compile file %s", fullName), e)
+			exit(fmt.Sprintf("unable to compile file %s", name), e)
 		}
 
 		buffer.Close()
