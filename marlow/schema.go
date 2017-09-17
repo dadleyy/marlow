@@ -38,8 +38,8 @@ func (t *tableSource) WriteTo(destination io.Writer) (int64, error) {
 	})
 
 	qParams := []funcParam{
-		funcParam{paramName: "sqlQuery", typeName: "string"},
-		funcParam{paramName: "args", typeName: "...interface{}"},
+		{paramName: "sqlQuery", typeName: "string"},
+		{paramName: "args", typeName: "...interface{}"},
 	}
 
 	qReturns := []string{"*sql.Rows", "error"}
