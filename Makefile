@@ -8,7 +8,6 @@ VENDOR_DIR=vendor
 
 LINT=golint
 LINT_FLAGS=-set_exit_status
-LINT_RESULT=.lint-results
 
 EXE=mc
 MAIN=$(wildcard ./marlowc/main.go)
@@ -33,7 +32,7 @@ TEST_LIST_FMT='{{if len .TestGoFiles}}"go test {{.Name}} $(TEST_FLAGS)"{{end}}'
 
 all: $(EXE)
 
-$(EXE): $(VENDOR_DIR) $(GO_SRC) $(LIB_SRC) $(LINT_RESULT)
+$(EXE): $(VENDOR_DIR) $(GO_SRC) $(LIB_SRC)
 	$(COMPILE) $(BUILD_FLAGS) -o $(EXE) $(MAIN)
 
 lint: $(GO_SRC)
