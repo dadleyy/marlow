@@ -22,7 +22,7 @@ func Test_Reader(t *testing.T) {
 			g.Assert(e == nil).Equal(false)
 		})
 
-		g.It("succeeds if the provded input is valid golang source", func() {
+		g.It("succeeds if the provided input is valid golang source", func() {
 			source := strings.NewReader(`
 			package marlowt
 
