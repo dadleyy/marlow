@@ -3,6 +3,12 @@ language: go
 go:
   - 1.8
   - 1.9
+install:
+  - go get github.com/mattn/go-sqlite3
+  - go install github.com/mattn/go-sqlite3
 script: 
   - make
   - make test
+  - go run marlowc/main.go -input examples/library/models -stdout=true
+  - go run marlowc/main.go -input examples/library/models
+  - go run examples/library/main.go
