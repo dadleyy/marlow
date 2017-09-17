@@ -1,5 +1,7 @@
 package models
 
+//go:generate marlowc -input book.go
+
 // Example file for testing.
 
 // Book represents a book in the example application

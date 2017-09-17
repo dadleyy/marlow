@@ -1,6 +1,6 @@
 package models
 
-//go:generate marlowc -stdout=true
+//go:generate marlowc -input author.go
 
 // Example file for testing.
 
