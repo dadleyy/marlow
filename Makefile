@@ -27,8 +27,7 @@ VET=$(GO) vet
 VET_FLAGS=
 
 MAX_TEST_CONCURRENCY=10
-TEST_FLAGS=
-TEST_LIST_FMT='{{if len .TestGoFiles}}"go test {{.Name}} $(TEST_FLAGS)"{{end}}'
+TEST_FLAGS=-covermode=atomic -coverprofile=.coverprofile 
 
 all: $(EXE)
 
@@ -43,7 +42,7 @@ test: $(GO_SRC) $(VENDOR_DIR) $(INTERCHANGE_OBJ) lint
 	$(VET) $(VET_FLAGS) $(SRC_DIR)
 	$(VET) $(VET_FLAGS) $(LIB_DIR)
 	$(VET) $(VET_FLAGS) $(MAIN)
-	$(GO) test -covermode=atomic -coverprofile=.coverprofile -p=$(MAX_TEST_CONCURRENCY) $(LIB_DIR)
+	$(GO) test $(TEST_FLAGS) -p=$(MAX_TEST_CONCURRENCY) $(LIB_DIR)
 
 $(VENDOR_DIR):
 	go get -u github.com/Masterminds/glide
