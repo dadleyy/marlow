@@ -105,7 +105,7 @@ func main() {
 	progress := mpb.New(
 		mpb.Output(progressOut),
 		mpb.WithWidth(100),
-		mpb.WithRefreshRate(10*time.Millisecond),
+		mpb.WithRefreshRate(time.Millisecond),
 		mpb.WithShutdownNotifier(done),
 	)
 
@@ -118,6 +118,12 @@ func main() {
 	)
 
 	wg := sync.WaitGroup{}
+
+	if len(sourceFiles) == 0 {
+		exit("no source files found", nil)
+	}
+
+	writtenFiles := make([]string, 0, len(sourceFiles))
 
 	for _, name := range sourceFiles {
 		sourceDir := path.Dir(name)
@@ -147,6 +153,8 @@ func main() {
 			if e != nil {
 				exit("unable to write file", e)
 			}
+
+			writtenFiles = append(writtenFiles, destName)
 		}
 
 		reader, e := marlow.NewReaderFromFile(name)
@@ -168,4 +176,8 @@ func main() {
 	bar.Complete()
 	progress.Stop()
 	<-done
+
+	if len(writtenFiles) >= 1 {
+		fmt.Fprintf(os.Stdout, "compiled sources, files generated: %s\n", strings.Join(writtenFiles, ", "))
+	}
 }
