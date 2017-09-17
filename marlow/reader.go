@@ -92,7 +92,7 @@ func Compile(writer io.Writer, reader io.Reader) error {
 
 	}
 
-	out := Writer{
+	out := goWriter{
 		Logger: log.New(buffered, "", 0),
 	}
 
