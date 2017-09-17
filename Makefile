@@ -21,7 +21,7 @@ EXAMPLE_DIR=./examples
 
 LIB_SRC=$(wildcard $(LIB_DIR)/**/*.go $(LIB_DIR)/*.go)
 GO_SRC=$(wildcard $(MAIN) $(SRC_DIR)/**/*.go $(SRC_DIR)/*.go)
-EXAMPLE_OBJS=$(wildcard $(EXAMPLE_DIR)/**/*.marlow.go)
+EXAMPLE_OBJS=$(wildcard $(EXAMPLE_DIR)/library/**/*.marlow.go)
 
 VET=$(GO) vet
 VET_FLAGS=

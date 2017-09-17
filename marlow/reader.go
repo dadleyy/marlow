@@ -73,11 +73,17 @@ func Compile(writer io.Writer, reader io.Reader) error {
 
 			if !ok {
 				t = &tableSource{
+					config:     make(url.Values),
 					recordName: typeName,
 					fields:     make(map[string]url.Values),
 				}
 
 				s[typeName] = t
+			}
+
+			if fieldName == "_" {
+				t.config = config
+				continue
 			}
 
 			config.Set("type", fmt.Sprintf("%v", f.Type))
