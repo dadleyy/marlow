@@ -4,8 +4,8 @@ go:
   - 1.8
   - 1.9
 install:
-  - go get github.com/mattn/go-sqlite3
-  - go install github.com/mattn/go-sqlite3
+  - go get -v github.com/mattn/go-sqlite3
+  - go install -v -x github.com/mattn/go-sqlite3
 script: 
   - make
   - make test

@@ -48,7 +48,7 @@ func main() {
 
 	defer stmt.Close()
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10; i++ {
 		_, err = stmt.Exec(i, fmt.Sprintf("author-%03d", i))
 
 		if err != nil {
