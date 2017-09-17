@@ -12,3 +12,6 @@ script:
   - go run marlowc/main.go -input examples/library/models -stdout=true
   - go run marlowc/main.go -input examples/library/models
   - go run examples/library/main.go
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

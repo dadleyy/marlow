@@ -43,7 +43,7 @@ func copyRecordFinder(destination io.Writer, source *tableSource) error {
 		colName := c.Get("column")
 
 		if colName == "" {
-			n = strings.ToLower(n)
+			colName = strings.ToLower(n)
 		}
 
 		fieldList = append(fieldList, colName)
