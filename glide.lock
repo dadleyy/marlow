@@ -1,6 +1,8 @@
-hash: 2c6ad7734d5f437fb24cd9f57ed467361d09379b817cbf3336b029872ab3a7e6
-updated: 2017-09-15T15:42:03.906225765-04:00
+hash: 661ac93184f42db03d4a428524b5fb7cdf256d0a14083f8c952f4016f3f96769
+updated: 2017-09-16T20:17:07.511026485-04:00
 imports:
+- name: github.com/franela/goblin
+  version: 74c9fe110d4bfd04c222a089a309e0a97e258534
 - name: github.com/gedex/inflector
   version: 046f2c31204676e3623730ee70fd0964e05822e7
 - name: github.com/mattn/go-isatty

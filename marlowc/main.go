@@ -102,7 +102,6 @@ func main() {
 		}
 
 		if _, e := io.Copy(buffer, reader); e != nil {
-			panic(e)
 			exit(fmt.Sprintf("unable to compile file %s", fullName), e)
 		}
 

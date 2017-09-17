@@ -6,3 +6,5 @@ import:
   - decor
   - cwriter
 - package: github.com/gedex/inflector
+- package: github.com/franela/goblin
+  version: ^0.0.1

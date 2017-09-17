@@ -6,6 +6,7 @@ import "strings"
 
 type b func(*Writer) error
 
+// Writer wraps the log.Logger interface with several handy functions for writing go code.
 type Writer struct {
 	*log.Logger
 }

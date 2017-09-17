@@ -24,25 +24,31 @@ LIB_SRC=$(wildcard $(LIB_DIR)/**/*.go $(LIB_DIR)/*.go)
 GO_SRC=$(wildcard $(MAIN) $(SRC_DIR)/**/*.go $(SRC_DIR)/*.go)
 EXAMPLE_OBJS=$(wildcard $(EXAMPLE_DIR)/**/*.marlow.go)
 
+VET=$(GO) vet
+VET_FLAGS=
+
+MAX_TEST_CONCURRENCY=10
+TEST_FLAGS=
+TEST_LIST_FMT='{{if len .TestGoFiles}}"go test {{.Name}} $(TEST_FLAGS)"{{end}}'
+
 all: $(EXE)
 
 $(EXE): $(VENDOR_DIR) $(GO_SRC) $(LIB_SRC) $(LINT_RESULT)
 	$(COMPILE) $(BUILD_FLAGS) -o $(EXE) $(MAIN)
 
-$(LINT_RESULT): $(GO_SRC)
-	$(LINT) $(LINT_FLAGS) $(shell go list $(SRC_DIR)/... | grep -v 'interchange')
-	touch $(LINT_RESULT)
+lint: $(GO_SRC)
+	$(LINT) $(LINT_FLAGS) $(LIB_DIR)
+	$(LINT) $(LINT_FLAGS) $(MAIN)
 
-test: $(GO_SRC) $(LINT_RESULT) $(COVERAGE_REPORT)
-	$(GO) vet $(shell go list ./... | grep -vi 'vendor\|testing')
-
-$(COVERAGE_REPORT):
-	$(COVERAGE) -v -parallel=1 -covermode=atomic -coverprofile=$(COVERAGE_REPORT) $(SRC_DIR)/...
+test: $(GO_SRC) $(VENDOR_DIR) $(INTERCHANGE_OBJ) lint
+	$(VET) $(VET_FLAGS) $(SRC_DIR)
+	$(VET) $(VET_FLAGS) $(LIB_DIR)
+	$(VET) $(VET_FLAGS) $(MAIN)
+	$(GO) test -covermode=atomic -coverprofile=.coverprofile -p=$(MAX_TEST_CONCURRENCY) $(LIB_DIR)
 
 $(VENDOR_DIR):
 	go get -u github.com/Masterminds/glide
 	go get -u github.com/golang/lint/golint
-	go get -u github.com/haya14busa/goverage
 	$(GLIDE) install
 
 clean:

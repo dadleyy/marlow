@@ -15,6 +15,7 @@ vendor/*/
 dump.rdb
 coverage.txt
 mc
+.coverprofile
 
 # Folders
 _obj
