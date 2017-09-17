@@ -16,4 +16,4 @@ set of structs.
 [travis.img]: https://img.shields.io/travis/dadleyy/marlow.svg?style=flat-square
 [travis.url]: https://travis-ci.org/dadleyy/marlow
 [godoc.img]: http://img.shields.io/badge/godoc-reference-5272B4.svg?style=flat-square
-[godoc.url]: https://godoc.org/github.com/dadleyy/marlow
+[godoc.url]: https://godoc.org/github.com/dadleyy/marlow/marlow
