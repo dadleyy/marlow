@@ -12,7 +12,9 @@ func copyRecordFinder(destination io.Writer, source *tableSource) error {
 	singular := inflector.Singularize(source.recordName)
 	plural := inflector.Pluralize(source.recordName)
 	queryStructName := fmt.Sprintf("%sQuery", singular)
-	tableName := source.config.Get("tableName")
+
+	tableName := source.tableName()
+
 	w := goWriter{Logger: log.New(destination, "", 0)}
 
 	w.Println("// [marlow feature]: record finder")

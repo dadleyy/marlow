@@ -68,6 +68,16 @@ func (t *tableSource) WriteTo(destination io.Writer) (int64, error) {
 	return io.Copy(destination, buffered)
 }
 
+func (t *tableSource) tableName() string {
+	name := t.config.Get("tableName")
+
+	if name != "" {
+		return name
+	}
+
+	return strings.ToLower(inflector.Pluralize(t.recordName))
+}
+
 func (t *tableSource) storeName() string {
 	singular := inflector.Singularize(t.recordName)
 	return fmt.Sprintf("%sStore", singular)
