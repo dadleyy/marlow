@@ -1,4 +1,4 @@
-package library
+package models
 
 // Example file for testing.
 
