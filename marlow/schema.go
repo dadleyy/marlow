@@ -18,11 +18,12 @@ type tableSource struct {
 func (t *tableSource) WriteTo(destination io.Writer) (int64, error) {
 	buffered := new(bytes.Buffer)
 
-	writer := Writer{
+	writer := goWriter{
 		Logger: log.New(buffered, "", 0),
 	}
 
 	tableName := t.config.Get("tableName")
+	storeName := t.storeName()
 
 	if tableName == "" {
 		tableName = strings.ToLower(inflector.Pluralize(t.recordName))
@@ -31,94 +32,55 @@ func (t *tableSource) WriteTo(destination io.Writer) (int64, error) {
 	writer.Printf("// record: %s\n// table: %s", t.recordName, tableName)
 	writer.Println()
 
-	singularName := inflector.Singularize(t.recordName)
-	storeName := fmt.Sprintf("%sStore", singularName)
-
 	writer.withStruct(storeName, func(url.Values) error {
 		writer.Printf("*sql.DB")
 		return nil
 	})
 
-	if qf := t.queryableFields(); len(qf) >= 1 {
-		queryStruct := fmt.Sprintf("%sQuery", singularName)
+	qParams := []funcParam{
+		funcParam{paramName: "sqlQuery", typeName: "string"},
+		funcParam{paramName: "args", typeName: "...interface{}"},
+	}
 
-		writer.withStruct(queryStruct, func(url.Values) error {
-			for name, config := range t.queryableFields() {
-				writer.Printf("%s []%s", name, config.Get("type"))
-			}
+	qReturns := []string{"*sql.Rows", "error"}
 
-			writer.Printf("Limit uint")
-			writer.Printf("Offset uint")
+	writer.withMetod("q", t.storeName(), qParams, qReturns, func(scope url.Values) error {
+		receiver := scope.Get("receiver")
+		condition := fmt.Sprintf("%s.DB == nil || %s.Ping() != nil", receiver, receiver)
 
+		writer.withIf(condition, func(url.Values) error {
+			writer.Println("return nil, fmt.Errorf(\"\")")
 			return nil
 		})
 
-		findName := fmt.Sprintf("Find%s", inflector.Pluralize(t.recordName))
+		writer.Printf("return %s.Query(sqlQuery, args...)", receiver)
+		return nil
+	})
 
-		findParams := make(map[string]string)
+	if qf := t.queryableFields(); len(qf) == 0 {
+		return io.Copy(destination, buffered)
+	}
 
-		findParams["q"] = queryStruct
-
-		findReturns := []string{
-			fmt.Sprintf("[]*%s", singularName),
-			"error",
-		}
-
-		qParams := map[string]string{
-			"sqlQuery": "string",
-			"args":     "...interface{}",
-		}
-
-		writer.withMetod("q", storeName, qParams, []string{"*sql.Rows", "error"}, func(scope url.Values) error {
-			receiver := scope.Get("receiver")
-			condition := fmt.Sprintf("%s.DB == nil || %s.Ping() != nil", receiver, receiver)
-
-			writer.withIf(condition, func(url.Values) error {
-				writer.Println("return nil, fmt.Errorf(\"\")")
-				return nil
-			})
-
-			writer.Printf("return %s.Query(sqlQuery, args...)", receiver)
-			return nil
-		})
-
-		writer.withMetod(findName, storeName, findParams, findReturns, func(scope url.Values) error {
-			writer.Printf("query := fmt.Sprintf(\"SELECT * FROM %s;\")", tableName)
-			writer.Printf("results, e := %s.q(query)", scope.Get("receiver"))
-			writer.Printf("out := make([]*%s, 0)", t.recordName)
-			writer.Println()
-
-			writer.withIf("e != nil", func(url.Values) error {
-				writer.Printf("return nil, e")
-				return nil
-			})
-
-			writer.Println("defer results.Close()")
-			writer.Println("")
-
-			writer.withIf("e := results.Err(); e != nil", func(url.Values) error {
-				writer.Printf("return nil, e")
-				return nil
-			})
-
-			writer.withIter("results.Next()", func(url.Values) error {
-				writer.Printf("var b %s", t.recordName)
-
-				writer.withIf("e := results.Scan(&b); e != nil", func(url.Values) error {
-					writer.Printf("return nil, e")
-					return nil
-				})
-
-				writer.Println("out = append(out, &b)")
-				return nil
-			})
-
-			writer.Println("return out, nil")
-			return nil
-		})
+	if _, e := io.Copy(&writer, recordFinderGenerator(t)); e != nil {
+		return 0, e
 	}
 
 	return io.Copy(destination, buffered)
+}
+
+func (t *tableSource) tableName() string {
+	name := t.config.Get("tableName")
+
+	if name != "" {
+		return name
+	}
+
+	return strings.ToLower(inflector.Pluralize(t.recordName))
+}
+
+func (t *tableSource) storeName() string {
+	singular := inflector.Singularize(t.recordName)
+	return fmt.Sprintf("%sStore", singular)
 }
 
 func (t *tableSource) queryableFields() map[string]url.Values {

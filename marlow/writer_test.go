@@ -5,16 +5,16 @@ import "bytes"
 import "testing"
 import "github.com/franela/goblin"
 
-func Test_Writer(t *testing.T) {
+func Test_goWriter(t *testing.T) {
 	g := goblin.Goblin(t)
 
-	g.Describe("Writer", func() {
+	g.Describe("goWriter", func() {
 		var b *bytes.Buffer
-		var w *Writer
+		var w *goWriter
 
 		g.BeforeEach(func() {
 			b = new(bytes.Buffer)
-			w = &Writer{log.New(b, "", 0)}
+			w = &goWriter{log.New(b, "", 0)}
 		})
 
 		g.It("correctly formats an empty return value", func() {
