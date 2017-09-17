@@ -1,14 +1,16 @@
 # marlow
 
-| | | |
-| ---- | ---- | ---- |
-| [![travis.img]][travis.url] | [![godoc.img]][godoc.url] | [![report.img]][report.url] |
+| | | | |
+| ---- | ---- | ---- | ---- |
+| [![travis.img]][travis.url] | [![godoc.img]][godoc.url] | [![report.img]][report.url] | [![tag.img]][tag.url] |
 
 Marlow is a [golang] code generation tool that reads a project's [struct field tags] and generates useful golang
 constructs that provide an intuitive API for interacting with a database who's schema is represented in the original
 set of structs.
 
 
+[tag.img]: https://img.shields.io/github/tag/dadleyy/marlow.svg?style=flat-square
+[tag.url]: https://github.com/dadleyy/marlow/releases
 [struct field tags]: https://golang.org/ref/spec#Tag
 [golang]: https://golang.org
 [report.img]: https://goreportcard.com/badge/github.com/dadleyy/marlow?style=flat-square
