@@ -50,9 +50,11 @@ $(VENDOR_DIR):
 	go get -u github.com/golang/lint/golint
 	$(GLIDE) install
 
-clean:
+clean-example:
+	rm -rf $(EXAMPLE_OBJS)
+
+clean: clean-example
 	rm -rf $(COVERAGE_REPORT)
 	rm -rf $(LINT_RESULT)
 	rm -rf $(VENDOR_DIR)
 	rm -rf $(EXE)
-	rm -rf $(EXAMPLE_OBJS)
