@@ -28,7 +28,7 @@ VET=$(GO) vet
 VET_FLAGS=
 
 MAX_TEST_CONCURRENCY=10
-TEST_FLAGS=-covermode=atomic -coverprofile=.coverprofile 
+TEST_FLAGS=-covermode=atomic -coverprofile=coverage.txt
 
 all: $(EXE)
 
