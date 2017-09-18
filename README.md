@@ -16,26 +16,27 @@ API for interacting with a project's data persistence layer while maintaining st
 ### Objective &amp; Inspiration
 
 Marlow was created to improve developer velocity on projects written in [golang] that interact with a data persistence
-layer, like [mysql] or [postgres]. In other programming languages, these interactions are usually provided by the 
-project's [ORM], such as the [ActiveRecord] library used by [Rails].
+layer, like [mysql] or [postgres]. In other web application backend environments, these interfaces are usually
+provided by an application framework's [ORM], like the [ActiveRecord] library used by [Rails].
 
-For web applications leveraging the benefits of using [golang], it can be difficult to equivalent abstraction of their
-database that provides [crud] operations - especially one that is type-safe and [dry]. This challenge has been 
-approached by several popular libraries - [`gorm`], [`beego`], and [`gorp`] to name a [few][awesome-go]. 
-
+For web applications leveraging the benefits of using [golang], it can be difficult to construct the equivalent
+abstraction of their database that provides [crud] operations - especially one that is type-safe and [dry]. There are
+several open source projects in the golang ecosystem who's goal is exactly that; [`gorm`], [`beego`], and  [`gorp`] to
+name a [few][awesome-go]. Marlow differs from these other projects in its philosophy; rather than attempt to provide an
+eloquent orm for your project at runtime, it generates a tailored solution at compile time.
 
 ### Useage
 
-At its core, marlow simply reads a package's [field tags] and generates valid [golang] code. The marlow compiler can
-be installed & used directly via:
+At its core, marlow simply reads a package's [field tags] and generates valid [golang] code. The `marlowc` executable 
+can be installed & used directly via:
 
 ```
 go get -u github.com/dadleyy/marlow/marlowc
 marlowc -input=./examples/library/models -stdout=true
 ```
 
-For a full list of options supported by the compiler refer to `marlowc -help`. The compiler can also be used to compile
-using the golang [`go generate`] command using the generator tool's comment syntax:
+For a full list of options supported by the compiler refer to `marlowc -help`. The command line tool can also be used
+as the executable target for golang's [`go generate`] command using `//go:generate` comment syntax:
 
 ```go
 package models
@@ -136,3 +137,4 @@ overrides for default marlow assumptions about the table.
 [travis.url]: https://travis-ci.org/dadleyy/marlow
 [godoc.img]: http://img.shields.io/badge/godoc-reference-5272B4.svg?style=flat-square
 [godoc.url]: https://godoc.org/github.com/dadleyy/marlow/marlow
+[field tags]: https://golang.org/pkg/reflect/#StructTag
