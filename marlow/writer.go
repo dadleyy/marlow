@@ -47,13 +47,17 @@ func (w *goWriter) formatArgList(args []funcParam) string {
 
 func (w *goWriter) withBlock(start string, block b, v url.Values) error {
 	w.Printf("%s {", start)
+	defer w.Printf("}")
+	defer w.Println()
+
+	if block == nil {
+		return nil
+	}
 
 	if e := block(v); e != nil {
 		return e
 	}
 
-	w.Printf("}")
-	w.Println()
 	return nil
 }
 

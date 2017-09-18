@@ -36,5 +36,22 @@ func Test_Reader(t *testing.T) {
 			_, e = parser.ParseFile(ts, "", output, parser.AllErrors)
 			g.Assert(e).Equal(nil)
 		})
+
+		g.It("succeeds if the provided input is valid golang source w/ marlow structs", func() {
+			source := strings.NewReader(`
+			package marlowt
+
+			type Construct struct {
+				table string ` + "`marlow:\"name=constructs_table\"`" + `
+				Name string ` + "`marlow:\"column=name\"`" + `
+			}
+			`)
+			e := Compile(output, source)
+			g.Assert(e).Equal(nil)
+			ts := token.NewFileSet()
+			_, e = parser.ParseFile(ts, "", output, parser.AllErrors)
+			g.Assert(e).Equal(nil)
+		})
+
 	})
 }
