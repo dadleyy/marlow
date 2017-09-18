@@ -75,8 +75,8 @@ In this example, marlow would create golang code that would look (not exactly) l
 ```go
 func (s *UserStore) FindUsers(query *UserQuery) ([]*User, error) {
   out := make([]*User, 0)
+  // ...
   _rows, e := s.DB.Query(_generatedSQL) // e.g "SELECT id, name FROM users ..."
-
   // ... 
 
   for _rows.Next() {
