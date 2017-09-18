@@ -81,7 +81,7 @@ func Compile(writer io.Writer, reader io.Reader) error {
 				s[typeName] = t
 			}
 
-			if fieldName == "_" {
+			if fieldName == "_" || fieldName == "table" {
 				t.config = config
 				continue
 			}
