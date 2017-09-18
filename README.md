@@ -1,7 +1,7 @@
 # Marlow
 
-Marlow is a code generation tool written in [golang] designed to generate useful constructs that provide an ergonomic
-API for interacting with a project's data persistence layer while maintaining strong compile time type safety assurance.
+Marlow is a code generation tool written in [golang] designed to create useful constructs that provide an ergonomic API
+for interacting with a project's data persistence layer while maintaining strong compile time type safety assurance.
 
 ---- 
 
