@@ -1,4 +1,8 @@
-# Marlow
+<div style="text-align: center">
+  <img src="https://s3.amazonaws.com/marlow-go/media/logo-text.svg" width="65%" align="center"/>
+</div>
+
+---
 
 Marlow is a code generation tool written in [golang] designed to create useful constructs that provide an ergonomic API
 for interacting with a project's data persistence layer while maintaining strong compile time type safety assurance.
@@ -111,6 +115,12 @@ overrides for default marlow assumptions about the table.
 | `column` | This is the column that any raw sql generated will target when scanning/selecting/querying this field. |
 | `primary` | Lets marlow know that this is the primary key of the table. |
 
+----
+
+![logo][logo.img]
+
+----
+
 [`ParseQuery`]: https://golang.org/pkg/net/url/#ParseQuery
 [`make`]: https://www.gnu.org/software/make/
 [`go generate`]: https://blog.golang.org/generate
@@ -138,3 +148,4 @@ overrides for default marlow assumptions about the table.
 [godoc.img]: http://img.shields.io/badge/godoc-reference-5272B4.svg?style=flat-square
 [godoc.url]: https://godoc.org/github.com/dadleyy/marlow/marlow
 [field tags]: https://golang.org/pkg/reflect/#StructTag
+[logo.img]: https://s3.amazonaws.com/marlow-go/media/logo-text.svg
