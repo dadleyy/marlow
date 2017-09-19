@@ -54,11 +54,7 @@ func (w *goWriter) withBlock(start string, block b, v url.Values) error {
 		return nil
 	}
 
-	if e := block(v); e != nil {
-		return e
-	}
-
-	return nil
+	return block(v)
 }
 
 func (w *goWriter) withFunc(name string, args []funcParam, returns []string, block b) error {
