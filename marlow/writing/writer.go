@@ -1,0 +1,120 @@
+package writing
+
+import "io"
+import "log"
+import "fmt"
+import "strings"
+import "net/url"
+
+// NewGoWriter returns an instance of the GoWriter interface which is useful for writing golang code.
+func NewGoWriter(destination io.Writer) GoWriter {
+	return &goWriter{
+		Logger: log.New(destination, "", 0),
+	}
+}
+
+type goWriter struct {
+	*log.Logger
+}
+
+func (w *goWriter) Println(msg string, extras ...interface{}) {
+	formatted := fmt.Sprintf(msg, extras...)
+	w.Logger.Printf("%s\n", formatted)
+}
+
+func (w *goWriter) Comment(msg string, keys ...interface{}) {
+	comment := fmt.Sprintf(msg, keys...)
+	w.Println(fmt.Sprintf("// %s", comment))
+}
+
+func (w *goWriter) WritePackage(packageName string) {
+	w.Printf("package %s\n", packageName)
+}
+
+func (w *goWriter) WriteImport(importName string) {
+	w.Printf("import \"%s\"\n", importName)
+}
+
+func (w *goWriter) WithFunc(name string, args []FuncParam, returns []string, block Block) error {
+	returnList := w.formatReturns(returns)
+	argList := w.formatArgList(args)
+	funcDef := fmt.Sprintf("func %s(%s) %s", name, argList, returnList)
+	return w.withBlock(funcDef, block, make(url.Values))
+}
+
+func (w *goWriter) WithIter(condition string, block Block, symbols ...interface{}) error {
+	if len(condition) == 0 {
+		return fmt.Errorf("invalid-condition")
+	}
+
+	formattedCondition := fmt.Sprintf(condition, symbols...)
+
+	return w.withBlock(fmt.Sprintf("for %s", formattedCondition), block, make(url.Values))
+}
+
+func (w *goWriter) WithMethod(name string, typeName string, args []FuncParam, returns []string, block Block) error {
+	returnList := w.formatReturns(returns)
+	argList := w.formatArgList(args)
+
+	if len(typeName) >= 1 != true {
+		return fmt.Errorf("invalid-receiver")
+	}
+
+	receiver := strings.ToLower(typeName)[0:1]
+	funcDef := fmt.Sprintf("func (%s *%s) %s(%s) %s", receiver, typeName, name, argList, returnList)
+	c := make(url.Values)
+	c.Set("receiver", receiver)
+	return w.withBlock(funcDef, block, c)
+}
+
+func (w *goWriter) WithIf(condition string, block Block, symbols ...interface{}) error {
+	if len(condition) == 0 {
+		return fmt.Errorf("invalid-condition")
+	}
+
+	formattedCondition := fmt.Sprintf(condition, symbols...)
+
+	return w.withBlock(fmt.Sprintf("if %s", formattedCondition), block, make(url.Values))
+}
+
+func (w *goWriter) WithStruct(name string, block Block) error {
+	if len(name) == 0 {
+		return fmt.Errorf("invalid-name")
+	}
+
+	return w.withBlock(fmt.Sprintf("type %s struct", name), block, make(url.Values))
+}
+
+func (w *goWriter) formatReturns(returns []string) (returnList string) {
+	switch {
+	case len(returns) == 1:
+		returnList = returns[0]
+	case len(returns) > 1:
+		returnList = fmt.Sprintf("(%s)", strings.Join(returns, ","))
+	default:
+		returnList = ""
+	}
+
+	return
+}
+
+func (w *goWriter) formatArgList(args []FuncParam) string {
+	list := make([]string, 0, len(args))
+
+	for _, def := range args {
+		list = append(list, fmt.Sprintf("%s %s", def.Symbol, def.Type))
+	}
+
+	return strings.Join(list, ",")
+}
+
+func (w *goWriter) withBlock(start string, block Block, v url.Values) error {
+	w.Printf("\n%s {", start)
+	defer w.Logger.Printf("}\n\n")
+
+	if block == nil {
+		return nil
+	}
+
+	return block(v)
+}

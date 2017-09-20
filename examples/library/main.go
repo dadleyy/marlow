@@ -35,7 +35,7 @@ func addBooks(tx *sql.Tx) error {
 
 	defer stmt.Close()
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 50; i++ {
 		_, e = stmt.Exec(i, fmt.Sprintf("book-%03d", i), i, i)
 
 		if e != nil {
@@ -55,7 +55,7 @@ func addAuthors(tx *sql.Tx) error {
 
 	defer stmt.Close()
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 50; i++ {
 		_, e = stmt.Exec(i, fmt.Sprintf("author-%03d", i))
 
 		if e != nil {
@@ -107,7 +107,7 @@ func main() {
 
 	authorStore := models.AuthorStore{DB: db}
 
-	a, e := authorStore.FindAuthors(&models.AuthorQuery{})
+	a, e := authorStore.FindAuthors(&models.AuthorBlueprint{})
 
 	if e != nil {
 		log.Fatalf("error file finding authors: %s", e.Error())
@@ -118,7 +118,7 @@ func main() {
 	}
 
 	bookStore := models.BookStore{DB: db}
-	b, e := bookStore.FindBooks(&models.BookQuery{})
+	b, e := bookStore.FindBooks(&models.BookBlueprint{})
 
 	if e != nil {
 		log.Fatalf("error file finding authors: %s", e.Error())
@@ -127,4 +127,6 @@ func main() {
 	for _, book := range b {
 		log.Printf("found book: %s", book.Title)
 	}
+
+	log.Println("done")
 }

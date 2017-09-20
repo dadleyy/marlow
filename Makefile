@@ -21,6 +21,9 @@ SRC_DIR=./marlowc
 EXAMPLE_DIR=./examples
 EXAMPLE_MODEL_DIR=$(EXAMPLE_DIR)/library/models
 
+CYCLO=gocyclo
+CYCLO_FLAGS=-over 15
+
 LIB_SRC=$(wildcard $(LIB_DIR)/**/*.go $(LIB_DIR)/*.go)
 GO_SRC=$(wildcard $(MAIN) $(SRC_DIR)/**/*.go $(SRC_DIR)/*.go)
 
@@ -32,7 +35,10 @@ VET=$(GO) vet
 VET_FLAGS=
 
 MAX_TEST_CONCURRENCY=10
-TEST_FLAGS=-covermode=atomic -coverprofile=coverage.txt
+
+TEST_FLAGS=-covermode=atomic -coverprofile={{.Dir}}/.coverprofile
+TEST_LIST_FMT='{{if len .TestGoFiles}}"go test {{.ImportPath}} $(TEST_FLAGS)"{{end}}'
+
 EXAMPLE_TEST_FLAGS=-covermode=atomic
 
 all: $(EXE)
@@ -41,20 +47,22 @@ $(EXE): $(VENDOR_DIR) $(GO_SRC) $(LIB_SRC)
 	$(COMPILE) $(BUILD_FLAGS) -o $(EXE) $(MAIN)
 
 lint: $(GO_SRC)
-	$(LINT) $(LINT_FLAGS) $(LIB_DIR)
+	$(LINT) $(LINT_FLAGS) $(LIB_DIR)/...
 	$(LINT) $(LINT_FLAGS) $(MAIN)
 
 test: $(GO_SRC) $(VENDOR_DIR) $(INTERCHANGE_OBJ) lint
 	$(VET) $(VET_FLAGS) $(SRC_DIR)
 	$(VET) $(VET_FLAGS) $(LIB_DIR)
 	$(VET) $(VET_FLAGS) $(MAIN)
-	$(GO) test $(TEST_FLAGS) -p=$(MAX_TEST_CONCURRENCY) $(LIB_DIR)
+	$(CYCLO) $(CYCLO_FLAGS) $(LIB_SRC)
+	$(GO) list -f $(TEST_LIST_FMT) $(LIB_DIR)/... | xargs -L 1 sh -c
 
 test-example: $(EXAMPLE_SRC)
 	$(GO) run $(MAIN) -input=$(EXAMPLE_MODEL_DIR)
 	$(GO) test $(EXAMPLE_TEST_FLAGS) -p=$(MAX_TEST_CONCURRENCY) $(EXAMPLE_MODEL_DIR)
 
 $(VENDOR_DIR):
+	go get -u github.com/fzipp/gocyclo
 	go get -u github.com/Masterminds/glide
 	go get -u github.com/golang/lint/golint
 	$(GLIDE) install

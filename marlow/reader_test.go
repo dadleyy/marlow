@@ -5,10 +5,25 @@ import "strings"
 import "testing"
 import "go/token"
 import "go/parser"
+import "io/ioutil"
 import "github.com/franela/goblin"
 
 func Test_Reader(t *testing.T) {
 	g := goblin.Goblin(t)
+
+	g.Describe("NewReaderFromFile", func() {
+		g.It("returns an error if unable to open the provided file name", func() {
+			_, e := NewReaderFromFile("not-exists")
+			g.Assert(e == nil).Equal(false)
+		})
+
+		g.It("opens the file and compiles it if it exists", func() {
+			f, e := ioutil.TempFile("", "marlow-reader-test")
+			g.Assert(e).Equal(nil)
+			_, openErr := NewReaderFromFile(f.Name())
+			g.Assert(openErr).Equal(nil)
+		})
+	})
 
 	g.Describe("Compile", func() {
 		var output *bytes.Buffer
