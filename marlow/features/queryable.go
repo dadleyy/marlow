@@ -169,6 +169,7 @@ func writeQueryableLookup(o io.Writer, record url.Values, fields map[string]url.
 	return nil
 }
 
+// NewQueryableGenerator is responsible for returning a reader that will generate lookup functions for a given record.
 func NewQueryableGenerator(record url.Values, fields map[string]url.Values, imports importsChannel) io.Reader {
 	pr, pw := io.Pipe()
 

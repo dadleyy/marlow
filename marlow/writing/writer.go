@@ -6,6 +6,7 @@ import "fmt"
 import "strings"
 import "net/url"
 
+// NewGoWriter returns an instance of the GoWriter interface which is useful for writing golang code.
 func NewGoWriter(destination io.Writer) GoWriter {
 	return &goWriter{
 		Logger: log.New(destination, "", 0),

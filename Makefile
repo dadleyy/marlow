@@ -47,7 +47,7 @@ $(EXE): $(VENDOR_DIR) $(GO_SRC) $(LIB_SRC)
 	$(COMPILE) $(BUILD_FLAGS) -o $(EXE) $(MAIN)
 
 lint: $(GO_SRC)
-	$(LINT) $(LINT_FLAGS) $(LIB_DIR)
+	$(LINT) $(LINT_FLAGS) $(LIB_DIR)/...
 	$(LINT) $(LINT_FLAGS) $(MAIN)
 
 test: $(GO_SRC) $(VENDOR_DIR) $(INTERCHANGE_OBJ) lint

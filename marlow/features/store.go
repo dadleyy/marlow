@@ -50,6 +50,7 @@ func writeStore(destination io.Writer, record url.Values, imports chan<- string)
 	return nil
 }
 
+// NewStoreGenerator returns a reader that will generate the centralized record store for a given record.
 func NewStoreGenerator(record url.Values, imports chan<- string) io.Reader {
 	pr, pw := io.Pipe()
 

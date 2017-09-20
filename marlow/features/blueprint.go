@@ -50,6 +50,7 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 	})
 }
 
+// NewBlueprintGenerator returns a reader that will generate the basic query struct type used for record lookups.
 func NewBlueprintGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
 	pr, pw := io.Pipe()
 
