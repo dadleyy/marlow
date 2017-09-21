@@ -29,6 +29,7 @@ MISSPELL=misspell
 LIB_SRC=$(wildcard $(LIB_DIR)/**/*.go $(LIB_DIR)/*.go)
 GO_SRC=$(wildcard $(MAIN) $(SRC_DIR)/**/*.go $(SRC_DIR)/*.go)
 
+EXAMPLE_EXE=$(EXAMPLE_DIR)/lib
 EXAMPLE_MAIN=$(wildcard $(EXAMPLE_DIR)/library/main.go)
 EXAMPLE_SRC=$(wildcard $(EXAMPLE_DIR)/library/**/*.go)
 EXAMPLE_OBJS=$(patsubst %.go,%.marlow.go,$(EXAMPLE_SRC))
@@ -73,10 +74,11 @@ $(VENDOR_DIR):
 
 example: $(EXAMPLE_SRC) $(EXAMPLE_MAIN)
 	$(GO) run $(MAIN) -input=$(EXAMPLE_MODEL_DIR)
-	$(GO) run $(EXAMPLE_MAIN)
+	$(COMPILE) $(BUILD_FLAGS) -o $(EXAMPLE_EXE) $(EXAMPLE_MAIN)
 
 clean-example:
 	rm -rf $(EXAMPLE_OBJS)
+	rm -rf $(EXAMPLE_EXE)
 
 clean: clean-example
 	rm -rf $(COVERAGE_REPORT)

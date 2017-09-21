@@ -29,15 +29,15 @@ func writeQueryableLookup(o io.Writer, record url.Values, fields map[string]url.
 	}
 
 	symbols := map[string]string{
-		"blueprint":    "_query",
-		"RESULTS":      "_results",
-		"FULL_QUERY":   "_fullQuery",
-		"ROW_RESULTS":  "_rowResults",
-		"ROW_ITEM":     "_rowItem",
-		"LIMIT":        "_limit",
-		"OFFSET":       "_offset",
-		"RECORD_SLICE": fmt.Sprintf("[]*%s", recordName),
-		"FUNC_NAME":    fmt.Sprintf("Find%s", inflector.Pluralize(recordName)),
+		"blueprint":         "_query",
+		"RESULTS":           "_results",
+		"FULL_QUERY_BUFFER": "_fullQuery",
+		"ROW_RESULTS":       "_rowResults",
+		"ROW_ITEM":          "_rowItem",
+		"LIMIT":             "_limit",
+		"OFFSET":            "_offset",
+		"RECORD_SLICE":      fmt.Sprintf("[]*%s", recordName),
+		"FUNC_NAME":         fmt.Sprintf("Find%s", inflector.Pluralize(recordName)),
 	}
 
 	params := []writing.FuncParam{
@@ -76,15 +76,21 @@ func writeQueryableLookup(o io.Writer, record url.Values, fields map[string]url.
 		// Prepare the sql statement that will be sent to the DB.
 		out.Println(
 			"%s := bytes.NewBufferString(fmt.Sprintf(\"SELECT %s FROM %s\"))",
-			symbols["FULL_QUERY"],
+			symbols["FULL_QUERY_BUFFER"],
 			strings.Join(fieldList, ","),
 			table,
 		)
 
+		// Write our where clauses
+		e := out.WithIf("%s != nil", func(url.Values) error {
+			out.Println("fmt.Fprintf(%s, \" %%s\", %s)", symbols["FULL_QUERY_BUFFER"], symbols["blueprint"])
+			return nil
+		}, symbols["blueprint"])
+
 		// Write the limit determining code.
 		limitCondition := fmt.Sprintf("%s != nil && %s.Limit >= 1", symbols["blueprint"], symbols["blueprint"])
 		out.Println("%s := %s", symbols["LIMIT"], defaultLimit)
-		e := out.WithIf(limitCondition, func(url.Values) error {
+		e = out.WithIf(limitCondition, func(url.Values) error {
 			out.Println("%s = %s.Limit", symbols["LIMIT"], symbols["blueprint"])
 			return nil
 		})
@@ -109,13 +115,13 @@ func writeQueryableLookup(o io.Writer, record url.Values, fields map[string]url.
 		// Write out the limit & offset query write.
 		out.Println(
 			"fmt.Fprintf(%s, \" LIMIT %%d OFFSET %%d\", %s, %s)",
-			symbols["FULL_QUERY"],
+			symbols["FULL_QUERY_BUFFER"],
 			symbols["LIMIT"],
 			symbols["OFFSET"],
 		)
 
 		// Write the query execution statement.
-		out.Println("%s, e := %s.q(%s.String())", symbols["ROW_RESULTS"], scope.Get("receiver"), symbols["FULL_QUERY"])
+		out.Println("%s, e := %s.q(%s.String())", symbols["ROW_RESULTS"], scope.Get("receiver"), symbols["FULL_QUERY_BUFFER"])
 
 		// Query has been executed, write out error handler
 		e = out.WithIf("e != nil", func(url.Values) error {

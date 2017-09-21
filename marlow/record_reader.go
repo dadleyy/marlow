@@ -11,26 +11,35 @@ import "strings"
 import "github.com/gedex/inflector"
 import "github.com/dadleyy/marlow/marlow/features"
 
-func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
-	decl, ok := root.(*ast.GenDecl)
+func parseStruct(d ast.Decl) (*ast.StructType, string, bool) {
+	decl, ok := d.(*ast.GenDecl)
 
 	if !ok {
-		return nil, false
+		return nil, "", false
 	}
 
 	typeDecl, ok := decl.Specs[0].(*ast.TypeSpec)
 
 	if !ok {
-		return nil, false
+		return nil, "", false
 	}
 
 	structType, ok := typeDecl.Type.(*ast.StructType)
 
 	if !ok {
-		return nil, false
+		return nil, "", false
 	}
 
 	typeName := typeDecl.Name.String()
+	return structType, typeName, true
+}
+
+func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
+	structType, typeName, ok := parseStruct(root)
+
+	if !ok {
+		return nil, false
+	}
 
 	recordConfig, recordFields := make(url.Values), make(map[string]url.Values)
 
@@ -51,6 +60,10 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 		if name == "table" || name == "_" {
 			recordConfig = fieldConfig
 			continue
+		}
+
+		if fieldConfig.Get("column") == "" {
+			fieldConfig.Set("column", strings.ToLower(name))
 		}
 
 		fieldConfig.Set("type", fmt.Sprintf("%v", f.Type))

@@ -44,10 +44,65 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 
 	imports <- "strings"
 
-	return out.WithMethod("String", bp.Name(), nil, []string{"string"}, func(url.Values) error {
-		out.Println("return strings.ToLower(\"\")")
+	symbols := map[string]string{
+		"CLAUSE_ARRAY": "_clauseArray",
+	}
+
+	return out.WithMethod("String", bp.Name(), nil, []string{"string"}, func(scope url.Values) error {
+		out.Println("%s := make([]string, 0)", symbols["CLAUSE_ARRAY"])
+
+		if e := writeBlueprintFieldConditionals(out, bp, scope.Get("receiver"), symbols["CLAUSE_ARRAY"]); e != nil {
+			return e
+		}
+
+		out.WithIf("len(%s) == 0", func(url.Values) error {
+			out.Println("return \"\"")
+			return nil
+		}, symbols["CLAUSE_ARRAY"])
+
+		out.Println("return strings.Join(%s, \" AND \")", symbols["CLAUSE_ARRAY"])
 		return nil
 	})
+}
+
+func writeBlueprintFieldConditionals(w writing.GoWriter, p blueprint, receiver string, list string) error {
+	symbols := map[string]string{
+		"VALUE_ARRAY": "_values",
+		"VALUE_ITEM":  "_v",
+	}
+
+	for name, config := range p.fields {
+		colName, tableName := config.Get("column"), p.record.Get("tableName")
+		fieldReference := fmt.Sprintf("%s.%s", receiver, name)
+
+		w.WithIf("len(%s) >= 1", func(url.Values) error {
+			w.Println("%s := make([]string, 0, len(%s))", symbols["VALUE_ARRAY"], fieldReference)
+
+			w.WithIter("_, %s := range %s", func(url.Values) error {
+				w.Println(
+					"%s = append(%s, fmt.Sprintf(\"'%%v'\", %s))",
+					symbols["VALUE_ARRAY"],
+					symbols["VALUE_ARRAY"],
+					symbols["VALUE_ITEM"],
+				)
+
+				return nil
+			}, symbols["VALUE_ITEM"], fieldReference)
+
+			w.Println(
+				"%s = append(%s, fmt.Sprintf(\"WHERE %s.%s IN (%%s)\", strings.Join(%s, \",\")))",
+				list,
+				list,
+				tableName,
+				colName,
+				symbols["VALUE_ARRAY"],
+			)
+
+			return nil
+		}, fieldReference)
+	}
+
+	return nil
 }
 
 // NewBlueprintGenerator returns a reader that will generate the basic query struct type used for record lookups.
