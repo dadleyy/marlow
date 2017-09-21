@@ -68,10 +68,10 @@ and value are separated by an equal sign (`=`). For example, a user record may l
 package Model
 
 type User struct {
-  table string `marlow:"name=users&timestamps=[created_at, deleted_at]"`
-  ID    uint   `marlow:"column=id&primary=true"`
+  table string `marlow:"tableName=users"`
+  ID    uint   `marlow:"column=id"`
   Name  string `marlow:"column=name"`
-  Email string `marlow:"column=name&unique=true"`
+  Email string `marlow:"column=name"`
 }
 ```
 
@@ -105,15 +105,15 @@ overrides for default marlow assumptions about the table.
 
 | Option | Description |
 | :--- | :--- |
-| `name` | The name of the table (marlow will assume a lowercased &amp; pluralized version of the struct name). |
-| `timestamps` | Array indicating presence of `created_at`, `updated_at`, and `destroyed_at` columns. |
+| `tableName` | The name of the table (marlow will assume a lowercased &amp; pluralized version of the struct name). |
+| `defaultLimit` | When using the queryable feature, this will be the default maximum number of records to load. |
+| `storeName` | The name of the store type that will be generated, defaults to `%sStore`, where `%s` is the name of the struct. |
 
 **All other fields**
 
 | Option | Description |
 | :--- | :--- |
 | `column` | This is the column that any raw sql generated will target when scanning/selecting/querying this field. |
-| `primary` | Lets marlow know that this is the primary key of the table. |
 
 ----
 
