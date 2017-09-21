@@ -89,7 +89,7 @@ func Test_QueryableGenerator(t *testing.T) {
 			})
 
 			g.It("returns an error if the record does not have a table or recordName but a valid table", func() {
-				scaffold.record.Set("table", "books")
+				scaffold.record.Set("tableName", "books")
 				_, e := io.Copy(scaffold.output, scaffold.g())
 				g.Assert(e == nil).Equal(false)
 			})
@@ -97,7 +97,7 @@ func Test_QueryableGenerator(t *testing.T) {
 			g.It("acts as a no-op for valid records with zero fields", func() {
 				scaffold.record.Set("storeName", "BookStore")
 				scaffold.record.Set("recordName", "Book")
-				scaffold.record.Set("table", "books")
+				scaffold.record.Set("tableName", "books")
 				_, e := io.Copy(scaffold.output, scaffold.g())
 				g.Assert(e).Equal(nil)
 				g.Assert(scaffold.output.Len()).Equal(0)
@@ -113,7 +113,7 @@ func Test_QueryableGenerator(t *testing.T) {
 			g.BeforeEach(func() {
 				scaffold.record.Set("storeName", "BookStore")
 				scaffold.record.Set("recordName", "Book")
-				scaffold.record.Set("table", "books")
+				scaffold.record.Set("tableName", "books")
 				scaffold.fields["Title"] = url.Values{
 					"type":   []string{"string"},
 					"column": []string{"title"},

@@ -1,6 +1,7 @@
 package marlow
 
 import "io"
+import "bytes"
 import "go/ast"
 import "go/token"
 import "go/parser"
@@ -11,6 +12,7 @@ import "github.com/franela/goblin"
 type recordReaderTestScaffold struct {
 	source  io.Reader
 	imports chan string
+	output  *bytes.Buffer
 }
 
 func (s *recordReaderTestScaffold) root() ast.Decl {
@@ -37,6 +39,7 @@ func Test_RecordReader(t *testing.T) {
 		g.BeforeEach(func() {
 			scaffold = &recordReaderTestScaffold{
 				imports: make(chan string),
+				output:  new(bytes.Buffer),
 			}
 		})
 
@@ -61,6 +64,21 @@ func Test_RecordReader(t *testing.T) {
 			`)
 			_, ok := newRecordReader(scaffold.root(), scaffold.imports)
 			g.Assert(ok).Equal(true)
+		})
+
+		g.It("returns a reader that will error during copy if the record has an invalid tableName", func() {
+			scaffold.source = strings.NewReader(`
+			package marlowt
+
+			type Book struct {
+				table string ` + "`marlow:\"tableName=@@#\"`" + `
+				Title string ` + "`marlow:\"column=title\"`" + `
+			}
+			`)
+			r, ok := newRecordReader(scaffold.root(), scaffold.imports)
+			g.Assert(ok).Equal(true)
+			_, e := io.Copy(scaffold.output, r)
+			g.Assert(e.Error()).Equal("invalid-table")
 		})
 
 	})

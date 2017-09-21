@@ -4,6 +4,7 @@ import "io"
 import "fmt"
 import "bytes"
 import "go/ast"
+import "regexp"
 import "reflect"
 import "net/url"
 import "strings"
@@ -56,15 +57,17 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 		recordFields[name] = fieldConfig
 	}
 
+	pr, pw := io.Pipe()
+
 	// Typically the generate will want to generate the API based on the name of the type, but allow override.
 	if recordConfig.Get("recordName") == "" {
 		recordConfig.Set("recordName", typeName)
 	}
 
-	if recordConfig.Get("table") == "" {
+	if recordConfig.Get("tableName") == "" {
 		name := recordConfig.Get("recordName")
 		tableName := strings.ToLower(inflector.Pluralize(name))
-		recordConfig.Set("table", tableName)
+		recordConfig.Set("tableName", tableName)
 	}
 
 	if recordConfig.Get("defaultLimit") == "" {
@@ -77,7 +80,10 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 		recordConfig.Set("storeName", storeName)
 	}
 
-	pr, pw := io.Pipe()
+	if v := regexp.MustCompile("^[A-z_]+$"); v.MatchString(recordConfig.Get("tableName")) != true {
+		pw.CloseWithError(fmt.Errorf("invalid-table"))
+		return pr, true
+	}
 
 	go func() {
 		e := readRecord(pw, recordConfig, recordFields, imports)

@@ -11,7 +11,7 @@ import "github.com/dadleyy/marlow/marlow/writing"
 type importsChannel chan<- string
 
 func writeQueryableLookup(o io.Writer, record url.Values, fields map[string]url.Values, imports importsChannel) error {
-	table, recordName, store := record.Get("table"), record.Get("recordName"), record.Get("storeName")
+	table, recordName, store := record.Get("tableName"), record.Get("recordName"), record.Get("storeName")
 
 	if table == "" || recordName == "" || store == "" {
 		return fmt.Errorf("invalid-record")

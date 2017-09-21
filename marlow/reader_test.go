@@ -44,6 +44,10 @@ func Test_Reader(t *testing.T) {
 			type Construct struct {
 				Name string
 			}
+
+			func (c *Construct) String() string {
+				return "hello world"
+			}
 			`)
 			e := Compile(output, source)
 			g.Assert(e).Equal(nil)
@@ -58,6 +62,22 @@ func Test_Reader(t *testing.T) {
 
 			type Construct struct {
 				table string ` + "`marlow:\"name=constructs_table\"`" + `
+				Name string ` + "`marlow:\"column=name\"`" + `
+			}
+			`)
+			e := Compile(output, source)
+			g.Assert(e).Equal(nil)
+			ts := token.NewFileSet()
+			_, e = parser.ParseFile(ts, "", output, parser.AllErrors)
+			g.Assert(e).Equal(nil)
+		})
+
+		g.It("returns an error if a field is mis-configured", func() {
+			source := strings.NewReader(`
+			package marlowt
+
+			type Construct struct {
+				table string ` + "`marlow:\"tableName=&*@#@\"`" + `
 				Name string ` + "`marlow:\"column=name\"`" + `
 			}
 			`)
