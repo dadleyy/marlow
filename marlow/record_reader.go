@@ -4,32 +4,42 @@ import "io"
 import "fmt"
 import "bytes"
 import "go/ast"
+import "regexp"
 import "reflect"
 import "net/url"
 import "strings"
 import "github.com/gedex/inflector"
 import "github.com/dadleyy/marlow/marlow/features"
 
-func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
-	decl, ok := root.(*ast.GenDecl)
+func parseStruct(d ast.Decl) (*ast.StructType, string, bool) {
+	decl, ok := d.(*ast.GenDecl)
 
 	if !ok {
-		return nil, false
+		return nil, "", false
 	}
 
 	typeDecl, ok := decl.Specs[0].(*ast.TypeSpec)
 
 	if !ok {
-		return nil, false
+		return nil, "", false
 	}
 
 	structType, ok := typeDecl.Type.(*ast.StructType)
 
 	if !ok {
-		return nil, false
+		return nil, "", false
 	}
 
 	typeName := typeDecl.Name.String()
+	return structType, typeName, true
+}
+
+func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
+	structType, typeName, ok := parseStruct(root)
+
+	if !ok {
+		return nil, false
+	}
 
 	recordConfig, recordFields := make(url.Values), make(map[string]url.Values)
 
@@ -52,19 +62,25 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 			continue
 		}
 
+		if fieldConfig.Get("column") == "" {
+			fieldConfig.Set("column", strings.ToLower(name))
+		}
+
 		fieldConfig.Set("type", fmt.Sprintf("%v", f.Type))
 		recordFields[name] = fieldConfig
 	}
+
+	pr, pw := io.Pipe()
 
 	// Typically the generate will want to generate the API based on the name of the type, but allow override.
 	if recordConfig.Get("recordName") == "" {
 		recordConfig.Set("recordName", typeName)
 	}
 
-	if recordConfig.Get("table") == "" {
+	if recordConfig.Get("tableName") == "" {
 		name := recordConfig.Get("recordName")
 		tableName := strings.ToLower(inflector.Pluralize(name))
-		recordConfig.Set("table", tableName)
+		recordConfig.Set("tableName", tableName)
 	}
 
 	if recordConfig.Get("defaultLimit") == "" {
@@ -77,7 +93,10 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 		recordConfig.Set("storeName", storeName)
 	}
 
-	pr, pw := io.Pipe()
+	if v := regexp.MustCompile("^[A-z_]+$"); v.MatchString(recordConfig.Get("tableName")) != true {
+		pw.CloseWithError(fmt.Errorf("invalid-table"))
+		return pr, true
+	}
 
 	go func() {
 		e := readRecord(pw, recordConfig, recordFields, imports)

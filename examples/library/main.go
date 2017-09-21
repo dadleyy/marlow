@@ -105,9 +105,17 @@ func main() {
 		log.Fatalf("unable to add books: %s", e.Error())
 	}
 
+	log.Printf("author query w/o values: %v", &models.AuthorBlueprint{})
+
+	log.Printf("author query w values: %v", &models.AuthorBlueprint{
+		ID: []int{123, 456},
+	})
+
 	authorStore := models.AuthorStore{DB: db}
 
-	a, e := authorStore.FindAuthors(&models.AuthorBlueprint{})
+	a, e := authorStore.FindAuthors(&models.AuthorBlueprint{
+		ID: []int{1, 2, 3},
+	})
 
 	if e != nil {
 		log.Fatalf("error file finding authors: %s", e.Error())
@@ -118,7 +126,9 @@ func main() {
 	}
 
 	bookStore := models.BookStore{DB: db}
-	b, e := bookStore.FindBooks(&models.BookBlueprint{})
+	b, e := bookStore.FindBooks(&models.BookBlueprint{
+		ID: []int{1, 2},
+	})
 
 	if e != nil {
 		log.Fatalf("error file finding authors: %s", e.Error())

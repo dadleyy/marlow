@@ -12,7 +12,7 @@ import "go/parser"
 import "github.com/franela/goblin"
 
 type storeTestScaffold struct {
-	ouput    *bytes.Buffer
+	output   *bytes.Buffer
 	imports  chan string
 	record   url.Values
 	received map[string]bool
@@ -25,7 +25,7 @@ func (s *storeTestScaffold) g() io.Reader {
 }
 
 func (s *storeTestScaffold) parsed() (*ast.File, error) {
-	return parser.ParseFile(token.NewFileSet(), "", s.ouput, parser.AllErrors)
+	return parser.ParseFile(token.NewFileSet(), "", s.output, parser.AllErrors)
 }
 
 func (s *storeTestScaffold) close() {
@@ -43,7 +43,7 @@ func Test_StoreGenerator(t *testing.T) {
 
 		g.BeforeEach(func() {
 			scaffold = &storeTestScaffold{
-				ouput:    new(bytes.Buffer),
+				output:   new(bytes.Buffer),
 				imports:  make(chan string),
 				record:   make(url.Values),
 				received: make(map[string]bool),
@@ -68,12 +68,12 @@ func Test_StoreGenerator(t *testing.T) {
 		})
 
 		g.It("returns an error if the store name is not valid", func() {
-			_, e := io.Copy(scaffold.ouput, scaffold.g())
+			_, e := io.Copy(scaffold.output, scaffold.g())
 			g.Assert(e == nil).Equal(false)
 		})
 
 		g.It("does not inject any imports if name is invalid", func() {
-			io.Copy(scaffold.ouput, scaffold.g())
+			io.Copy(scaffold.output, scaffold.g())
 			scaffold.close()
 			g.Assert(len(scaffold.received)).Equal(0)
 		})
@@ -82,18 +82,18 @@ func Test_StoreGenerator(t *testing.T) {
 
 			g.BeforeEach(func() {
 				scaffold.record.Set("storeName", "BookStore")
-				fmt.Fprintln(scaffold.ouput, "package marlowt")
+				fmt.Fprintln(scaffold.output, "package marlowt")
 			})
 
 			g.It("injects fmt and sql packages into import stream", func() {
-				io.Copy(scaffold.ouput, scaffold.g())
+				io.Copy(scaffold.output, scaffold.g())
 				scaffold.close()
 				g.Assert(scaffold.received["fmt"]).Equal(true)
 				g.Assert(scaffold.received["database/sql"]).Equal(true)
 			})
 
 			g.It("writes valid golang code if store name is present", func() {
-				io.Copy(scaffold.ouput, scaffold.g())
+				io.Copy(scaffold.output, scaffold.g())
 				_, e := scaffold.parsed()
 				g.Assert(e).Equal(nil)
 			})

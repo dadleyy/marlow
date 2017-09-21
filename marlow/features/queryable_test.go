@@ -12,7 +12,7 @@ import "go/parser"
 import "github.com/franela/goblin"
 
 type queryableTestScaffold struct {
-	ouput    *bytes.Buffer
+	output   *bytes.Buffer
 	imports  chan string
 	record   url.Values
 	fields   map[string]url.Values
@@ -26,7 +26,7 @@ func (s *queryableTestScaffold) g() io.Reader {
 }
 
 func (s *queryableTestScaffold) parsed() (*ast.File, error) {
-	return parser.ParseFile(token.NewFileSet(), "", s.ouput, parser.AllErrors)
+	return parser.ParseFile(token.NewFileSet(), "", s.output, parser.AllErrors)
 }
 
 func Test_QueryableGenerator(t *testing.T) {
@@ -38,7 +38,7 @@ func Test_QueryableGenerator(t *testing.T) {
 
 		g.BeforeEach(func() {
 			scaffold = &queryableTestScaffold{
-				ouput:    new(bytes.Buffer),
+				output:   new(bytes.Buffer),
 				imports:  make(chan string),
 				record:   make(url.Values),
 				fields:   make(map[string]url.Values),
@@ -72,35 +72,35 @@ func Test_QueryableGenerator(t *testing.T) {
 			})
 
 			g.It("returns an error if the record does not have a table, recordName or storeName", func() {
-				_, e := io.Copy(scaffold.ouput, scaffold.g())
+				_, e := io.Copy(scaffold.output, scaffold.g())
 				g.Assert(e == nil).Equal(false)
 			})
 
 			g.It("returns an error if the record does not have a table or storeName but a valid recordName", func() {
 				scaffold.record.Set("recordName", "Book")
-				_, e := io.Copy(scaffold.ouput, scaffold.g())
+				_, e := io.Copy(scaffold.output, scaffold.g())
 				g.Assert(e == nil).Equal(false)
 			})
 
 			g.It("returns an error if the record does not have a table or recordName but a valid storeName", func() {
 				scaffold.record.Set("storeName", "BookStore")
-				_, e := io.Copy(scaffold.ouput, scaffold.g())
+				_, e := io.Copy(scaffold.output, scaffold.g())
 				g.Assert(e == nil).Equal(false)
 			})
 
 			g.It("returns an error if the record does not have a table or recordName but a valid table", func() {
-				scaffold.record.Set("table", "books")
-				_, e := io.Copy(scaffold.ouput, scaffold.g())
+				scaffold.record.Set("tableName", "books")
+				_, e := io.Copy(scaffold.output, scaffold.g())
 				g.Assert(e == nil).Equal(false)
 			})
 
 			g.It("acts as a no-op for valid records with zero fields", func() {
 				scaffold.record.Set("storeName", "BookStore")
 				scaffold.record.Set("recordName", "Book")
-				scaffold.record.Set("table", "books")
-				_, e := io.Copy(scaffold.ouput, scaffold.g())
+				scaffold.record.Set("tableName", "books")
+				_, e := io.Copy(scaffold.output, scaffold.g())
 				g.Assert(e).Equal(nil)
-				g.Assert(scaffold.ouput.Len()).Equal(0)
+				g.Assert(scaffold.output.Len()).Equal(0)
 				scaffold.closed = true
 				close(scaffold.imports)
 				scaffold.wg.Wait()
@@ -113,7 +113,7 @@ func Test_QueryableGenerator(t *testing.T) {
 			g.BeforeEach(func() {
 				scaffold.record.Set("storeName", "BookStore")
 				scaffold.record.Set("recordName", "Book")
-				scaffold.record.Set("table", "books")
+				scaffold.record.Set("tableName", "books")
 				scaffold.fields["Title"] = url.Values{
 					"type":   []string{"string"},
 					"column": []string{"title"},
@@ -121,16 +121,16 @@ func Test_QueryableGenerator(t *testing.T) {
 			})
 
 			g.It("produces valid golang code", func() {
-				fmt.Fprintln(scaffold.ouput, "package marlowt")
-				io.Copy(scaffold.ouput, scaffold.g())
+				fmt.Fprintln(scaffold.output, "package marlowt")
+				io.Copy(scaffold.output, scaffold.g())
 				tree, e := scaffold.parsed()
 				g.Assert(e).Equal(nil)
 				g.Assert(tree == nil).Equal(false)
 			})
 
 			g.It("injected the fmt, bytes and strings packages to the import channel", func() {
-				fmt.Fprintln(scaffold.ouput, "package marlowt")
-				io.Copy(scaffold.ouput, scaffold.g())
+				fmt.Fprintln(scaffold.output, "package marlowt")
+				io.Copy(scaffold.output, scaffold.g())
 				scaffold.closed = true
 				close(scaffold.imports)
 				scaffold.wg.Wait()
