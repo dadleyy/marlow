@@ -27,6 +27,10 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 				return fmt.Errorf("bad field type for field name: %s", name)
 			}
 
+			if fieldType == "int" {
+				out.Println("%sRange []int", name)
+			}
+
 			out.Println("%s []%s", name, fieldType)
 		}
 
@@ -60,7 +64,7 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 			return nil
 		}, symbols["CLAUSE_ARRAY"])
 
-		out.Println("return strings.Join(%s, \" AND \")", symbols["CLAUSE_ARRAY"])
+		out.Println("return \"WHERE \" + strings.Join(%s, \" AND \")", symbols["CLAUSE_ARRAY"])
 		return nil
 	})
 }
@@ -71,8 +75,10 @@ func writeBlueprintFieldConditionals(w writing.GoWriter, p blueprint, receiver s
 		"VALUE_ITEM":  "_v",
 	}
 
+	tableName := p.record.Get("tableName")
+
 	for name, config := range p.fields {
-		colName, tableName := config.Get("column"), p.record.Get("tableName")
+		colName, fieldType := config.Get("column"), config.Get("type")
 		fieldReference := fmt.Sprintf("%s.%s", receiver, name)
 
 		w.WithIf("len(%s) >= 1", func(url.Values) error {
@@ -90,7 +96,7 @@ func writeBlueprintFieldConditionals(w writing.GoWriter, p blueprint, receiver s
 			}, symbols["VALUE_ITEM"], fieldReference)
 
 			w.Println(
-				"%s = append(%s, fmt.Sprintf(\"WHERE %s.%s IN (%%s)\", strings.Join(%s, \",\")))",
+				"%s = append(%s, fmt.Sprintf(\"%s.%s IN (%%s)\", strings.Join(%s, \",\")))",
 				list,
 				list,
 				tableName,
@@ -100,6 +106,32 @@ func writeBlueprintFieldConditionals(w writing.GoWriter, p blueprint, receiver s
 
 			return nil
 		}, fieldReference)
+
+		if fieldType != "int" {
+			continue
+		}
+
+		rangeArray := fmt.Sprintf("%s.%sRange", receiver, name)
+
+		w.WithIf("len(%s) == 2", func(url.Values) error {
+			w.Println(
+				"%s = append(%s, fmt.Sprintf(\"%s.%s > %%d\", %s[0]))",
+				list,
+				list,
+				tableName,
+				colName,
+				rangeArray,
+			)
+			w.Println(
+				"%s = append(%s, fmt.Sprintf(\"%s.%s < %%d\", %s[1]))",
+				list,
+				list,
+				tableName,
+				colName,
+				rangeArray,
+			)
+			return nil
+		}, rangeArray)
 	}
 
 	return nil
