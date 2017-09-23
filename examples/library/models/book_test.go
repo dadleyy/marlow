@@ -16,7 +16,6 @@ func Test_Book(t *testing.T) {
 
 	g := goblin.Goblin(t)
 
-	os.Remove(dbFile)
 	defer os.Remove(dbFile)
 
 	g.Describe("Book model & generated store", func() {
@@ -45,10 +44,38 @@ func Test_Book(t *testing.T) {
 		g.AfterEach(func() {
 			e := db.Close()
 			g.Assert(e).Equal(nil)
+			os.Remove(dbFile)
+		})
+
+		g.It("allows the consumer to search for books w/o a blueprint", func() {
+			_, e := bookStore.FindBooks(nil)
+			g.Assert(e).Equal(nil)
+		})
+
+		g.It("allows the consumer to search for books w/ a blueprint & multiple fields", func() {
+			q := &BookBlueprint{
+				IDRange: []int{0, 100},
+			}
+
+			r, dbErr := db.Exec(`
+			insert into books (id,page_count,author_id,title) values(1,50,1,'hello world');
+			`)
+
+			g.Assert(dbErr).Equal(nil)
+
+			count, _ := r.RowsAffected()
+			g.Assert(count).Equal(1)
+
+			books, e := bookStore.FindBooks(q)
+
+			g.Assert(e).Equal(nil)
+			g.Assert(len(books)).Equal(1)
 		})
 
 		g.It("allows the consumer to search for books", func() {
-			_, e := bookStore.FindBooks(nil)
+			_, e := bookStore.FindBooks(&BookBlueprint{
+				IDRange: []int{4, 5},
+			})
 			g.Assert(e).Equal(nil)
 		})
 

@@ -138,5 +138,23 @@ func main() {
 		log.Printf("found book: %s", book.Title)
 	}
 
+	q := &models.BookBlueprint{
+		IDRange: []int{1, 20},
+	}
+
+	b, e = bookStore.FindBooks(q)
+
+	if e != nil {
+		log.Fatalf("error file finding authors: %s", e.Error())
+	}
+
+	if len(b) == 0 {
+		log.Printf("found no books w/ query: %s", q)
+	}
+
+	for _, book := range b {
+		log.Printf("found book: %s", book.Title)
+	}
+
 	log.Println("done")
 }
