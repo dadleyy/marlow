@@ -82,10 +82,7 @@ func Test_Reader(t *testing.T) {
 			}
 			`)
 			e := Compile(output, source)
-			g.Assert(e).Equal(nil)
-			ts := token.NewFileSet()
-			_, e = parser.ParseFile(ts, "", output, parser.AllErrors)
-			g.Assert(e).Equal(nil)
+			g.Assert(e.Error()).Equal("invalid-table")
 		})
 
 	})
