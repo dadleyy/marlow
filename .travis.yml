@@ -12,5 +12,6 @@ script:
   - make test-example
   - go run marlowc/main.go -input examples/library/models -stdout=true
   - make example
+  - ./examples/lib
 after_success:
   - bash <(curl -s https://codecov.io/bash) -f ./coverage.txt
