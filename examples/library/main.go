@@ -107,8 +107,12 @@ func main() {
 
 	log.Printf("author query w/o values: %v", &models.AuthorBlueprint{})
 
-	log.Printf("author query w values: %v", &models.AuthorBlueprint{
+	log.Printf("author query w ID exact matches: %v", &models.AuthorBlueprint{
 		ID: []int{123, 456},
+	})
+
+	log.Printf("author query w NameLike: %v", &models.AuthorBlueprint{
+		NameLike: []string{"danny"},
 	})
 
 	authorStore := models.AuthorStore{DB: db}

@@ -16,6 +16,19 @@ const (
 	DefaultBlueprintLimit = 100
 )
 
+func newRecordConfig(typeName string) url.Values {
+	config := make(url.Values)
+	config.Set("recordName", typeName)
+	tableName := strings.ToLower(inflector.Pluralize(typeName))
+	config.Set("tableName", tableName)
+	config.Set("defaultLimit", fmt.Sprintf("%d", DefaultBlueprintLimit))
+	storeName := fmt.Sprintf("%sStore", typeName)
+	config.Set("storeName", storeName)
+	config.Set("blueprintRangeFieldSuffix", "Range")
+	config.Set("blueprintLikeFieldSuffix", "Like")
+	return config
+}
+
 func parseStruct(d ast.Decl) (*ast.StructType, string, bool) {
 	decl, ok := d.(*ast.GenDecl)
 
@@ -46,7 +59,7 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 		return nil, false
 	}
 
-	recordConfig, recordFields := make(url.Values), make(map[string]url.Values)
+	recordConfig, recordFields := newRecordConfig(typeName), make(map[string]url.Values)
 
 	for _, f := range structType.Fields.List {
 		if f.Tag == nil {
@@ -63,7 +76,11 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 		name := f.Names[0].String()
 
 		if name == "table" || name == "_" {
-			recordConfig = fieldConfig
+			for k := range fieldConfig {
+				v := fieldConfig.Get(k)
+				recordConfig.Set(k, v)
+			}
+
 			continue
 		}
 
@@ -76,27 +93,6 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 	}
 
 	pr, pw := io.Pipe()
-
-	// Typically the generate will want to generate the API based on the name of the type, but allow override.
-	if recordConfig.Get("recordName") == "" {
-		recordConfig.Set("recordName", typeName)
-	}
-
-	if recordConfig.Get("tableName") == "" {
-		name := recordConfig.Get("recordName")
-		tableName := strings.ToLower(inflector.Pluralize(name))
-		recordConfig.Set("tableName", tableName)
-	}
-
-	if recordConfig.Get("defaultLimit") == "" {
-		recordConfig.Set("defaultLimit", fmt.Sprintf("%d", DefaultBlueprintLimit))
-	}
-
-	if recordConfig.Get("storeName") == "" {
-		name := recordConfig.Get("recordName")
-		storeName := fmt.Sprintf("%sStore", name)
-		recordConfig.Set("storeName", storeName)
-	}
 
 	if v := regexp.MustCompile("^[A-z_]+$"); v.MatchString(recordConfig.Get("tableName")) != true {
 		pw.CloseWithError(fmt.Errorf("invalid-table"))

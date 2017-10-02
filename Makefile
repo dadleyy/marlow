@@ -66,6 +66,7 @@ test: $(GO_SRC) $(VENDOR_DIR) $(INTERCHANGE_OBJ) lint
 test-example: $(EXAMPLE_SRC)
 	$(GO) run $(MAIN) -input=$(EXAMPLE_MODEL_DIR)
 	$(GO) test $(EXAMPLE_TEST_FLAGS) -p=$(MAX_TEST_CONCURRENCY) $(EXAMPLE_MODEL_DIR)
+	$(VET) $(VET_FLAGS) $(EXAMPLE_MODEL_DIR)
 
 $(VENDOR_DIR):
 	$(GO) get -v -u github.com/modocache/gover

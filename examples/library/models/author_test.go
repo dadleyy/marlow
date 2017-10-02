@@ -39,6 +39,32 @@ func Test_Author(t *testing.T) {
 	var db *sql.DB
 	var store *AuthorStore
 
+	g.Describe("AuthorBlueprint test suite", func() {
+
+		g.It("supports range on ID column querying", func() {
+			r := fmt.Sprintf("%s", &AuthorBlueprint{
+				IDRange: []int{1, 2},
+			})
+
+			g.Assert(r).Equal("WHERE authors.id > 1 AND authors.id < 2")
+		})
+
+		g.It("supports 'IN' on ID column querying", func() {
+			r := fmt.Sprintf("%s", &AuthorBlueprint{ID: []int{1, 2, 3}})
+			g.Assert(r).Equal("WHERE authors.id IN ('1','2','3')")
+		})
+
+		g.It("supports a combination of range and 'IN' on ID column querying", func() {
+			r := fmt.Sprintf("%s", &AuthorBlueprint{
+				ID:      []int{1, 2, 3},
+				IDRange: []int{1, 4},
+			})
+
+			g.Assert(r).Equal("WHERE authors.id IN ('1','2','3') AND authors.id > 1 AND authors.id < 4")
+		})
+
+	})
+
 	g.Describe("Author model & generated store test suite", func() {
 
 		g.Before(func() {
@@ -92,6 +118,15 @@ func Test_Author(t *testing.T) {
 			})
 			g.Assert(e).Equal(nil)
 			g.Assert(len(authors)).Equal(2)
+		})
+
+		g.It("allows the consumer to search by 'NameLike'", func() {
+			authors, e := store.FindAuthors(&AuthorBlueprint{
+				NameLike: []string{"%-100%"},
+			})
+			t.Logf("%s", &AuthorBlueprint{NameLike: []string{"%-100%"}})
+			g.Assert(e).Equal(nil)
+			g.Assert(len(authors)).Equal(1)
 		})
 
 		g.It("allows the consumer to search for authors by explicit ID", func() {
