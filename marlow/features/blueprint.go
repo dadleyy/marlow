@@ -58,7 +58,7 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 		"CLAUSE_ITEM":  "_clauseItem",
 	}
 
-	clauseMethods := make([]string, 0)
+	var clauseMethods []string
 
 	for name, config := range bp.fields {
 		methods, e := writeFieldClauseMethods(out, bp, name, config)
