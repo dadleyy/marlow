@@ -6,7 +6,7 @@ package models
 
 // Book represents a book in the example application
 type Book struct {
-	table     string `marlow:"defaultLimit=100"`
+	table     string `marlow:"defaultLimit=10"`
 	ID        int    `marlow:"column=id"`
 	Title     string `marlow:"column=title"`
 	AuthorID  int    `marlow:"column=author_id&references=Author"`

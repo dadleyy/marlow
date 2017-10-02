@@ -6,7 +6,7 @@ package models
 
 // Author represents an author of a book.
 type Author struct {
-	_    bool   `marlow:"tableName=authors"`
-	ID   int    `marlow:"column=id"`
-	Name string `marlow:"column=name"`
+	table bool   `marlow:"tableName=authors"`
+	ID    int    `marlow:"column=id"`
+	Name  string `marlow:"column=name"`
 }

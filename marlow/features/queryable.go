@@ -59,11 +59,10 @@ func writeQueryableLookup(o io.Writer, record url.Values, fields map[string]url.
 		fieldList = append(fieldList, expanded)
 	}
 
-	// TODO - should this be here?
 	defaultLimit := record.Get("defaultLimit")
 
 	if defaultLimit == "" {
-		defaultLimit = fmt.Sprintf("%d", 100)
+		return fmt.Errorf("invalid defaultLimit for record %s", recordName)
 	}
 
 	sort.Strings(fieldList)

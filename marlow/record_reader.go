@@ -11,6 +11,11 @@ import "strings"
 import "github.com/gedex/inflector"
 import "github.com/dadleyy/marlow/marlow/features"
 
+const (
+	// DefaultBlueprintLimit is the default limit that will be used in blueprints unless one is configured on the record.
+	DefaultBlueprintLimit = 100
+)
+
 func parseStruct(d ast.Decl) (*ast.StructType, string, bool) {
 	decl, ok := d.(*ast.GenDecl)
 
@@ -84,7 +89,7 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 	}
 
 	if recordConfig.Get("defaultLimit") == "" {
-		recordConfig.Set("defaultLimit", "10")
+		recordConfig.Set("defaultLimit", fmt.Sprintf("%d", DefaultBlueprintLimit))
 	}
 
 	if recordConfig.Get("storeName") == "" {

@@ -13,8 +13,8 @@ LINT_FLAGS=-set_exit_status
 EXE=mc
 MAIN=$(wildcard ./marlowc/main.go)
 
-COVERAGE=goverage
-COVERAGE_REPORT=coverage.out
+GOVER=gover
+GOVER_REPORT=coverage.txt
 
 LIB_DIR=./marlow
 SRC_DIR=./marlowc
@@ -42,7 +42,8 @@ MAX_TEST_CONCURRENCY=10
 TEST_FLAGS=-covermode=atomic -coverprofile={{.Dir}}/.coverprofile
 TEST_LIST_FMT='{{if len .TestGoFiles}}"go test {{.ImportPath}} $(TEST_FLAGS)"{{end}}'
 
-EXAMPLE_TEST_FLAGS=-covermode=atomic
+EXAMPLE_COVER_REPORT=./examples/coverage.txt
+EXAMPLE_TEST_FLAGS=-covermode=atomic -coverprofile=$(EXAMPLE_COVER_REPORT)
 
 all: $(EXE)
 
@@ -60,20 +61,24 @@ test: $(GO_SRC) $(VENDOR_DIR) $(INTERCHANGE_OBJ) lint
 	$(CYCLO) $(CYCLO_FLAGS) $(LIB_SRC)
 	$(MISSPELL) -error $(LIB_SRC) $(MAIN)
 	$(GO) list -f $(TEST_LIST_FMT) $(LIB_DIR)/... | xargs -L 1 sh -c
+	$(GOVER) $(LIB_DIR) $(GOVER_REPORT)
 
 test-example: $(EXAMPLE_SRC)
 	$(GO) run $(MAIN) -input=$(EXAMPLE_MODEL_DIR)
 	$(GO) test $(EXAMPLE_TEST_FLAGS) -p=$(MAX_TEST_CONCURRENCY) $(EXAMPLE_MODEL_DIR)
 
 $(VENDOR_DIR):
-	go get -u github.com/client9/misspell/cmd/misspell
-	go get -u github.com/fzipp/gocyclo
-	go get -u github.com/Masterminds/glide
-	go get -u github.com/golang/lint/golint
+	$(GO) get -v -u github.com/modocache/gover
+	$(GO) get -v -u github.com/client9/misspell/cmd/misspell
+	$(GO) get -v -u github.com/fzipp/gocyclo
+	$(GO) get -v -u github.com/Masterminds/glide
+	$(GO) get -v -u github.com/golang/lint/golint
 	$(GLIDE) install
 
 example: $(EXAMPLE_SRC) $(EXAMPLE_MAIN)
 	$(GO) run $(MAIN) -input=$(EXAMPLE_MODEL_DIR)
+	$(GO) get -v github.com/mattn/go-sqlite3
+	$(GO) install -v -x github.com/mattn/go-sqlite3
 	$(COMPILE) $(BUILD_FLAGS) -o $(EXAMPLE_EXE) $(EXAMPLE_MAIN)
 
 clean-example:
