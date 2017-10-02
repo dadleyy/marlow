@@ -6,11 +6,9 @@ go:
 install:
   - go get -v github.com/mattn/go-sqlite3
   - go install -v -x github.com/mattn/go-sqlite3
-  - go get -v github.com/modocache/gover
 script: 
   - make
   - make test
-  - gover ./marlow ./coverage.txt
   - make test-example
   - go run marlowc/main.go -input examples/library/models -stdout=true
   - make example

@@ -177,7 +177,13 @@ func main() {
 	progress.Stop()
 	<-done
 
-	if len(writtenFiles) >= 1 {
-		fmt.Fprintf(os.Stdout, "compiled sources, files generated: %s\n", strings.Join(writtenFiles, ", "))
+	if (len(writtenFiles) >= 1) != true {
+		return
+	}
+
+	fmt.Fprintln(os.Stdout, "success! files generated:")
+
+	for _, fn := range writtenFiles {
+		fmt.Fprintf(os.Stdout, " - %s\n", fn)
 	}
 }

@@ -111,6 +111,7 @@ func Test_QueryableGenerator(t *testing.T) {
 		g.Describe("with a valid record configuration and some fields", func() {
 
 			g.BeforeEach(func() {
+				scaffold.record.Set("defaultLimit", "20")
 				scaffold.record.Set("storeName", "BookStore")
 				scaffold.record.Set("recordName", "Book")
 				scaffold.record.Set("tableName", "books")
