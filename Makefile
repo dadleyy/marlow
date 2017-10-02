@@ -68,15 +68,17 @@ test-example: $(EXAMPLE_SRC)
 	$(GO) test $(EXAMPLE_TEST_FLAGS) -p=$(MAX_TEST_CONCURRENCY) $(EXAMPLE_MODEL_DIR)
 
 $(VENDOR_DIR):
-	go get -v -u github.com/modocache/gover
-	go get -v -u github.com/client9/misspell/cmd/misspell
-	go get -v -u github.com/fzipp/gocyclo
-	go get -v -u github.com/Masterminds/glide
-	go get -v -u github.com/golang/lint/golint
+	$(GO) get -v -u github.com/modocache/gover
+	$(GO) get -v -u github.com/client9/misspell/cmd/misspell
+	$(GO) get -v -u github.com/fzipp/gocyclo
+	$(GO) get -v -u github.com/Masterminds/glide
+	$(GO) get -v -u github.com/golang/lint/golint
 	$(GLIDE) install
 
 example: $(EXAMPLE_SRC) $(EXAMPLE_MAIN)
 	$(GO) run $(MAIN) -input=$(EXAMPLE_MODEL_DIR)
+	$(GO) get -v github.com/mattn/go-sqlite3
+	$(GO) install -v -x github.com/mattn/go-sqlite3
 	$(COMPILE) $(BUILD_FLAGS) -o $(EXAMPLE_EXE) $(EXAMPLE_MAIN)
 
 clean-example:
