@@ -74,7 +74,7 @@ func writeQueryableLookup(o io.Writer, record url.Values, fields map[string]url.
 
 		// Prepare the sql statement that will be sent to the DB.
 		out.Println(
-			"%s := bytes.NewBufferString(fmt.Sprintf(\"SELECT %s FROM %s\"))",
+			"%s := bytes.NewBufferString(\"SELECT %s FROM %s\")",
 			symbols["FULL_QUERY_BUFFER"],
 			strings.Join(fieldList, ","),
 			table,
