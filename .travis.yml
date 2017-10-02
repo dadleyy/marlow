@@ -14,4 +14,3 @@ script:
   - make example
 after_success:
   - bash <(curl -s https://codecov.io/bash) -f ./coverage.txt
-  - bash <(curl -s https://codecov.io/bash) -f ./examples/coverage.txt -R ./examples
