@@ -5,6 +5,7 @@ import "fmt"
 import "net/url"
 import "github.com/gedex/inflector"
 import "github.com/dadleyy/marlow/marlow/writing"
+import "github.com/dadleyy/marlow/marlow/constants"
 
 type blueprint struct {
 	record url.Values
@@ -12,7 +13,7 @@ type blueprint struct {
 }
 
 func (p blueprint) Name() string {
-	singular := inflector.Singularize(p.record.Get("recordName"))
+	singular := inflector.Singularize(p.record.Get(constants.RecordNameConfigOption))
 	return fmt.Sprintf("%sBlueprint", singular)
 }
 
@@ -28,11 +29,11 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 			}
 
 			if fieldType == "int" {
-				out.Println("%s%s []int", name, bp.record.Get("blueprintRangeFieldSuffix"))
+				out.Println("%s%s []int", name, bp.record.Get(constants.BlueprintRangeFieldSuffixConfigOption))
 			}
 
 			if fieldType == "string" {
-				out.Println("%s%s []string", name, bp.record.Get("blueprintLikeFieldSuffix"))
+				out.Println("%s%s []string", name, bp.record.Get(constants.BlueprintLikeFieldSuffixConfigOption))
 			}
 
 			out.Println("%s []%s", name, fieldType)
@@ -97,7 +98,7 @@ func writeFieldClauseMethods(writer writing.GoWriter, p blueprint, name string, 
 	colName, fieldType := config.Get("column"), config.Get("type")
 	inString := fmt.Sprintf("%sInString", colName)
 	methods := []string{inString}
-	tableName := p.record.Get("tableName")
+	tableName := p.record.Get(constants.TableNameConfigOption)
 
 	symbols := map[string]string{
 		"VALUE_ARRAY":   "_values",
@@ -156,8 +157,8 @@ func writeFieldClauseMethods(writer writing.GoWriter, p blueprint, name string, 
 func writeStringClauseMethods(writer writing.GoWriter, p blueprint, name string, config url.Values) ([]string, error) {
 	colName := config.Get("column")
 	likeMethodName := fmt.Sprintf("%sLikeString", colName)
-	likeFieldName := fmt.Sprintf("%s%s", name, p.record.Get("blueprintLikeFieldSuffix"))
-	clauseTarget := fmt.Sprintf("%s.%s", p.record.Get("tableName"), colName)
+	likeFieldName := fmt.Sprintf("%s%s", name, p.record.Get(constants.BlueprintLikeFieldSuffixConfigOption))
+	clauseTarget := fmt.Sprintf("%s.%s", p.record.Get(constants.TableNameConfigOption), colName)
 
 	symbols := map[string]string{
 		"VALUE_ITEM":     "_v",
@@ -190,12 +191,12 @@ func writeStringClauseMethods(writer writing.GoWriter, p blueprint, name string,
 }
 
 func writeIntClauseMethods(writer writing.GoWriter, p blueprint, name string, config url.Values) ([]string, error) {
-	tableName := p.record.Get("tableName")
+	tableName := p.record.Get(constants.TableNameConfigOption)
 	colName := config.Get("column")
 	rangeMethodName := fmt.Sprintf("%sRangeString", colName)
 
 	methods := []string{rangeMethodName}
-	rangeFieldName := fmt.Sprintf("%s%s", name, p.record.Get("blueprintRangeFieldSuffix"))
+	rangeFieldName := fmt.Sprintf("%s%s", name, p.record.Get(constants.BlueprintRangeFieldSuffixConfigOption))
 
 	writer.WithMethod(rangeMethodName, p.Name(), nil, []string{"string"}, func(scope url.Values) error {
 		receiver := scope.Get("receiver")

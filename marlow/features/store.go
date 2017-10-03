@@ -4,11 +4,13 @@ import "io"
 import "fmt"
 import "net/url"
 import "github.com/dadleyy/marlow/marlow/writing"
+import "github.com/dadleyy/marlow/marlow/constants"
 
 func writeStore(destination io.Writer, record url.Values, imports chan<- string) error {
 	out := writing.NewGoWriter(destination)
+	storeName := record.Get(constants.StoreNameConfigOption)
 
-	e := out.WithStruct(record.Get("storeName"), func(url.Values) error {
+	e := out.WithStruct(storeName, func(url.Values) error {
 		out.Println("*sql.DB")
 		return nil
 	})
@@ -24,7 +26,7 @@ func writeStore(destination io.Writer, record url.Values, imports chan<- string)
 
 	qReturns := []string{"*sql.Rows", "error"}
 
-	e = out.WithMethod("q", record.Get("storeName"), qParams, qReturns, func(scope url.Values) error {
+	e = out.WithMethod("q", storeName, qParams, qReturns, func(scope url.Values) error {
 		receiver := scope.Get("receiver")
 		condition := fmt.Sprintf("%s.DB == nil || %s.Ping() != nil", receiver, receiver)
 
