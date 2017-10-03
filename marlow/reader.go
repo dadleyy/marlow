@@ -51,9 +51,10 @@ func Compile(destination io.Writer, reader io.Reader) error {
 
 	wg := &sync.WaitGroup{}
 
+	wg.Add(1)
+
 	// In a separate goroutine, iterate over all the received import names, adding them to the buffered output.
 	go func() {
-		wg.Add(1)
 		importList := make(map[string]bool)
 
 		for importName := range importChannel {
