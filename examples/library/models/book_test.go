@@ -143,7 +143,7 @@ func Test_Book(t *testing.T) {
 			g.Assert(len(books)).Equal(2)
 		})
 
-		g.It("allows the consumer to search for books w/ mutliple fields", func() {
+		g.It("allows the consumer to search for books w/ multiple fields", func() {
 			books, e := bookStore.FindBooks(&BookBlueprint{
 				ID:             []int{1},
 				PageCountRange: []int{0, 20},
