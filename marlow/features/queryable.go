@@ -187,7 +187,10 @@ func counter(writer io.Writer, record url.Values, fields map[string]url.Values, 
 	store := record.Get(constants.StoreNameConfigOption)
 
 	symbols := map[string]string{
-		"COUNT_METHOD_NAME": fmt.Sprintf("%s%s", record.Get("storeCountMethodPrefix"), recordName),
+		"COUNT_METHOD_NAME": fmt.Sprintf("%s%s",
+			record.Get(constants.StoreCountMethodPrefixConfigOption),
+			inflector.Pluralize(recordName),
+		),
 	}
 
 	gosrc := writing.NewGoWriter(writer)

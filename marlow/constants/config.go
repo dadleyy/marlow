@@ -23,4 +23,7 @@ const (
 
 	// StoreFindMethodPrefixConfigOption determines the prefix used when adding the main find/lookup method to the store.
 	StoreFindMethodPrefixConfigOption = "storeFindMethodPrefix"
+
+	// StoreCountMethodPrefixConfigOption determines the prefix used when adding the main count method to the store.
+	StoreCountMethodPrefixConfigOption = "storeCountMethodPrefix"
 )
