@@ -10,10 +10,12 @@ for interacting with a project's data persistence layer while maintaining strong
 ---- 
 
 [![travis.img]][travis.url] 
-[![godoc.img]][godoc.url]
-[![report.img]][report.url]
-[![tag.img]][tag.url]
 [![codecov.img]][codecov.url]
+[![report.img]][report.url]
+[![godoc.img]][godoc.url]
+[![tag.img]][tag.url]
+[![commits.img]][commits.url]
+[![awesome.img]][awesome.url]
 
 ---- 
 
@@ -157,3 +159,7 @@ overrides for default marlow assumptions about the table.
 [godoc.url]: https://godoc.org/github.com/dadleyy/marlow/marlow
 [field tags]: https://golang.org/pkg/reflect/#StructTag
 [logo.img]: https://s3.amazonaws.com/marlow-go/media/logo-text.svg
+[commits.img]: https://img.shields.io/github/commits-since/dadleyy/marlow/latest.svg?style=flat-square
+[commits.url]: https://github.com/dadleyy/marlow
+[awesome.img]: https://img.shields.io/badge/%F0%9F%95%B6-awesome--go-443f5e.svg?colorA=c3a1bb&style=flat-square
+[awesome.url]: https://github.com/avelino/awesome-go#orm
