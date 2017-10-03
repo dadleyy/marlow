@@ -108,6 +108,8 @@ overrides for default marlow assumptions about the table.
 | `tableName` | The name of the table (marlow will assume a lowercased &amp; pluralized version of the struct name). |
 | `defaultLimit` | When using the queryable feature, this will be the default maximum number of records to load. |
 | `storeName` | The name of the store type that will be generated, defaults to `%sStore`, where `%s` is the name of the struct. |
+| `blueprintRangeFieldSuffix` | A string that is added to numerical blueprint fields for range selections. |
+| `blueprintLikeFieldSuffix` | A string that is added to string/text blueprint fields for like selections. |
 
 **All other fields**
 
@@ -115,12 +117,18 @@ overrides for default marlow assumptions about the table.
 | :--- | :--- |
 | `column` | This is the column that any raw sql generated will target when scanning/selecting/querying this field. |
 
+
+| :video_camera: |
+| ---- |
+| [![preview]][preview] |
+
 ----
 
 ![logo][logo.img]
 
 ----
 
+[preview]: https://s3.amazonaws.com/marlow-go/media/marlow.gif
 [`ParseQuery`]: https://golang.org/pkg/net/url/#ParseQuery
 [`make`]: https://www.gnu.org/software/make/
 [`go generate`]: https://blog.golang.org/generate
