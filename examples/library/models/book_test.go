@@ -35,7 +35,7 @@ func addBookRow(db *sql.DB, values ...[]string) error {
 func Test_Book(t *testing.T) {
 	dbFile := "./book-library.db"
 	var db *sql.DB
-	var bookStore *BookStore
+	var store *BookStore
 
 	g := goblin.Goblin(t)
 
@@ -73,7 +73,7 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.BeforeEach(func() {
-			bookStore = &BookStore{DB: db}
+			store = &BookStore{DB: db}
 		})
 
 		g.After(func() {
@@ -83,74 +83,82 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.It("allows the consumer to search for books w/o a blueprint (default limit)", func() {
-			books, e := bookStore.FindBooks(nil)
+			books, e := store.FindBooks(nil)
 			g.Assert(e).Equal(nil)
 			g.Assert(len(books)).Equal(10)
 		})
 
 		g.It("allows the consumer to search for books w/ blueprint (explicit offset)", func() {
-			books, e := bookStore.FindBooks(&BookBlueprint{Offset: 1})
+			books, e := store.FindBooks(&BookBlueprint{Offset: 1})
 			g.Assert(e).Equal(nil)
 			g.Assert(len(books)).Equal(10)
 			g.Assert(books[0].ID).Equal(2)
 		})
 
 		g.It("allows the consumer to search for books w/ blueprint (explicit offset)", func() {
-			books, e := bookStore.FindBooks(&BookBlueprint{Limit: 20})
+			books, e := store.FindBooks(&BookBlueprint{Limit: 20})
 			g.Assert(e).Equal(nil)
 			g.Assert(len(books)).Equal(20)
 		})
 
 		g.It("allows the consumer to search for books w/ an exact match on the author id", func() {
 			q := &BookBlueprint{AuthorID: []int{11, 21, 100}}
-			books, e := bookStore.FindBooks(q)
+			books, e := store.FindBooks(q)
 			g.Assert(e).Equal(nil)
 			g.Assert(len(books)).Equal(2)
 		})
 
 		g.It("allows the consumer to search for books w/ an exact match on the id", func() {
 			q := &BookBlueprint{ID: []int{1, 2, 10e3}}
-			books, e := bookStore.FindBooks(q)
+			books, e := store.FindBooks(q)
 			g.Assert(e).Equal(nil)
 			g.Assert(len(books)).Equal(2)
 		})
 
 		g.It("allows the consumer to search for books w/ an exact match on the title", func() {
 			q := &BookBlueprint{Title: []string{"book-1"}}
-			books, e := bookStore.FindBooks(q)
+			books, e := store.FindBooks(q)
 			g.Assert(e).Equal(nil)
 			g.Assert(len(books)).Equal(1)
 		})
 
 		g.It("allows the consumer to search for books w/ an author id range", func() {
 			q := &BookBlueprint{AuthorIDRange: []int{0, 20}}
-			books, e := bookStore.FindBooks(q)
+			books, e := store.FindBooks(q)
 			g.Assert(e).Equal(nil)
 			g.Assert(len(books)).Equal(1)
 		})
 
 		g.It("allows the consumer to search for books w/ a page count range", func() {
 			q := &BookBlueprint{PageCountRange: []int{0, 20}}
-			books, e := bookStore.FindBooks(q)
+			books, e := store.FindBooks(q)
 			g.Assert(e).Equal(nil)
 			g.Assert(len(books)).Equal(1)
 		})
 
 		g.It("allows the consumer to search for books w/ an id range", func() {
 			q := &BookBlueprint{IDRange: []int{0, 3}}
-			books, e := bookStore.FindBooks(q)
+			books, e := store.FindBooks(q)
 			g.Assert(e).Equal(nil)
 			g.Assert(len(books)).Equal(2)
 		})
 
 		g.It("allows the consumer to search for books w/ multiple fields", func() {
-			books, e := bookStore.FindBooks(&BookBlueprint{
+			books, e := store.FindBooks(&BookBlueprint{
 				ID:             []int{1},
 				PageCountRange: []int{0, 20},
 			})
 
 			g.Assert(e).Equal(nil)
 			g.Assert(len(books)).Equal(1)
+		})
+
+		g.It("allows the consumer to count books by blueprint", func() {
+			count, e := store.CountBooks(&BookBlueprint{
+				ID: []int{1, 2},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(count).Equal(2)
 		})
 	})
 }

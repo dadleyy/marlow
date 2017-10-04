@@ -62,7 +62,7 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 	var clauseMethods []string
 
 	for name, config := range bp.fields {
-		methods, e := writeFieldClauseMethods(out, bp, name, config)
+		methods, e := fieldMethods(out, bp, name, config)
 
 		if e != nil {
 			return e
@@ -94,7 +94,7 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 	})
 }
 
-func writeFieldClauseMethods(writer writing.GoWriter, p blueprint, name string, config url.Values) ([]string, error) {
+func fieldMethods(writer writing.GoWriter, p blueprint, name string, config url.Values) ([]string, error) {
 	colName, fieldType := config.Get("column"), config.Get("type")
 	inString := fmt.Sprintf("%sInString", colName)
 	methods := []string{inString}
@@ -136,10 +136,10 @@ func writeFieldClauseMethods(writer writing.GoWriter, p blueprint, name string, 
 
 	switch fieldType {
 	case "int":
-		typeMethods, typeError = writeIntClauseMethods(writer, p, name, config)
+		typeMethods, typeError = numericalMethods(writer, p, name, config)
 		break
 	case "string":
-		typeMethods, typeError = writeStringClauseMethods(writer, p, name, config)
+		typeMethods, typeError = stringMethods(writer, p, name, config)
 		break
 	}
 
@@ -154,7 +154,7 @@ func writeFieldClauseMethods(writer writing.GoWriter, p blueprint, name string, 
 	return methods, nil
 }
 
-func writeStringClauseMethods(writer writing.GoWriter, p blueprint, name string, config url.Values) ([]string, error) {
+func stringMethods(writer writing.GoWriter, p blueprint, name string, config url.Values) ([]string, error) {
 	colName := config.Get("column")
 	likeMethodName := fmt.Sprintf("%sLikeString", colName)
 	likeFieldName := fmt.Sprintf("%s%s", name, p.record.Get(constants.BlueprintLikeFieldSuffixConfigOption))
@@ -190,7 +190,7 @@ func writeStringClauseMethods(writer writing.GoWriter, p blueprint, name string,
 	return []string{likeMethodName}, nil
 }
 
-func writeIntClauseMethods(writer writing.GoWriter, p blueprint, name string, config url.Values) ([]string, error) {
+func numericalMethods(writer writing.GoWriter, p blueprint, name string, config url.Values) ([]string, error) {
 	tableName := p.record.Get(constants.TableNameConfigOption)
 	colName := config.Get("column")
 	rangeMethodName := fmt.Sprintf("%sRangeString", colName)

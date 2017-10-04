@@ -185,20 +185,77 @@ func counter(writer io.Writer, record url.Values, fields map[string]url.Values, 
 	table := record.Get(constants.TableNameConfigOption)
 	recordName := record.Get(constants.RecordNameConfigOption)
 	store := record.Get(constants.StoreNameConfigOption)
+	blueprint := blueprint{record: record, fields: fields}
 
 	symbols := map[string]string{
 		"COUNT_METHOD_NAME": fmt.Sprintf("%s%s",
 			record.Get(constants.StoreCountMethodPrefixConfigOption),
 			inflector.Pluralize(recordName),
 		),
+		"BLUEPRINT_PARAM_NAME": "_blueprint",
+		"SELECTION_RESULT":     "_result",
+		"SELECTION_QUERY":      "_fullQuery",
+		"SELECTION_ERROR":      "_selectError",
+		"SCAN_RESULT":          "_countResult",
+		"SCAN_ERROR":           "_countError",
 	}
 
 	gosrc := writing.NewGoWriter(writer)
 
 	gosrc.Comment("[marlow feature]: counter on table[%s]", table)
 
-	return gosrc.WithMethod(symbols["COUNT_METHOD_NAME"], store, nil, nil, func(url.Values) error {
-		gosrc.Comment("[marlow feature]: counter on table[%s]", table)
+	params := []writing.FuncParam{
+		{Symbol: symbols["BLUEPRINT_PARAM_NAME"], Type: fmt.Sprintf("*%s", blueprint.Name())},
+	}
+
+	returns := []string{
+		"int",
+		"error",
+	}
+
+	imports <- "fmt"
+
+	return gosrc.WithMethod(symbols["COUNT_METHOD_NAME"], store, params, returns, func(scope url.Values) error {
+		receiver := scope.Get("receiver")
+		gosrc.WithIf("%s == nil", func(url.Values) error {
+			gosrc.Println("%s = &%s{}", params[0].Symbol, blueprint.Name())
+			return nil
+		}, params[0].Symbol)
+
+		gosrc.Println(
+			"%s := fmt.Sprintf(\"SELECT COUNT(*) FROM %s %%s;\", %s)",
+			symbols["SELECTION_QUERY"],
+			table,
+			params[0].Symbol,
+		)
+
+		gosrc.Println(
+			"%s, %s := %s.q(%s)",
+			symbols["SELECTION_RESULT"],
+			symbols["SELECTION_ERROR"],
+			receiver,
+			symbols["SELECTION_QUERY"],
+		)
+
+		gosrc.WithIf("%s != nil", func(url.Values) error {
+			gosrc.Println("return -1, %s", symbols["SELECTION_ERROR"])
+			return nil
+		}, symbols["SELECTION_ERROR"])
+
+		gosrc.WithIf("%s.Next() != true", func(url.Values) error {
+			gosrc.Println("return -1, fmt.Errorf(\"invalid-scan\")")
+			return nil
+		}, symbols["SELECTION_RESULT"])
+
+		gosrc.Println("var %s int", symbols["SCAN_RESULT"])
+		gosrc.Println("%s := %s.Scan(&%s)", symbols["SCAN_ERROR"], symbols["SELECTION_RESULT"], symbols["SCAN_RESULT"])
+
+		gosrc.WithIf("%s != nil", func(url.Values) error {
+			gosrc.Println("return -1, %s", symbols["SCAN_ERROR"])
+			return nil
+		}, symbols["SCAN_ERROR"])
+
+		gosrc.Println("return %s, nil", symbols["SCAN_RESULT"])
 		return nil
 	})
 }
