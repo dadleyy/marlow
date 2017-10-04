@@ -10,6 +10,7 @@ import "net/url"
 import "strings"
 import "github.com/gedex/inflector"
 import "github.com/dadleyy/marlow/marlow/features"
+import "github.com/dadleyy/marlow/marlow/constants"
 
 const (
 	// DefaultBlueprintLimit is the default limit that will be used in blueprints unless one is configured on the record.
@@ -18,14 +19,16 @@ const (
 
 func newRecordConfig(typeName string) url.Values {
 	config := make(url.Values)
-	config.Set("recordName", typeName)
+	config.Set(constants.RecordNameConfigOption, typeName)
 	tableName := strings.ToLower(inflector.Pluralize(typeName))
-	config.Set("tableName", tableName)
-	config.Set("defaultLimit", fmt.Sprintf("%d", DefaultBlueprintLimit))
+	config.Set(constants.TableNameConfigOption, tableName)
+	config.Set(constants.DefaultLimitConfigOption, fmt.Sprintf("%d", DefaultBlueprintLimit))
 	storeName := fmt.Sprintf("%sStore", typeName)
-	config.Set("storeName", storeName)
-	config.Set("blueprintRangeFieldSuffix", "Range")
-	config.Set("blueprintLikeFieldSuffix", "Like")
+	config.Set(constants.StoreNameConfigOption, storeName)
+	config.Set(constants.BlueprintRangeFieldSuffixConfigOption, "Range")
+	config.Set(constants.BlueprintLikeFieldSuffixConfigOption, "Like")
+	config.Set(constants.StoreFindMethodPrefixConfigOption, "Find")
+	config.Set(constants.StoreCountMethodPrefixConfigOption, "Count")
 	return config
 }
 

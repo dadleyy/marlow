@@ -41,6 +41,11 @@ func Test_Author(t *testing.T) {
 
 	g.Describe("AuthorBlueprint test suite", func() {
 
+		g.It("results in empty string w/o values", func() {
+			r := fmt.Sprintf("%s", &AuthorBlueprint{})
+			g.Assert(r).Equal("")
+		})
+
 		g.It("supports range on ID column querying", func() {
 			r := fmt.Sprintf("%s", &AuthorBlueprint{
 				IDRange: []int{1, 2},
@@ -135,6 +140,14 @@ func Test_Author(t *testing.T) {
 			})
 			g.Assert(e).Equal(nil)
 			g.Assert(len(authors)).Equal(2)
+		})
+
+		g.It("allows the consumer to count authors by blueprint", func() {
+			count, e := store.CountAuthors(&AuthorBlueprint{
+				ID: []int{1, 2},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(count).Equal(2)
 		})
 
 	})

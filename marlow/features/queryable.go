@@ -7,11 +7,14 @@ import "strings"
 import "net/url"
 import "github.com/gedex/inflector"
 import "github.com/dadleyy/marlow/marlow/writing"
+import "github.com/dadleyy/marlow/marlow/constants"
 
 type importsChannel chan<- string
 
-func writeQueryableLookup(o io.Writer, record url.Values, fields map[string]url.Values, imports importsChannel) error {
-	table, recordName, store := record.Get("tableName"), record.Get("recordName"), record.Get("storeName")
+func finder(writer io.Writer, record url.Values, fields map[string]url.Values, imports importsChannel) error {
+	table := record.Get(constants.TableNameConfigOption)
+	recordName := record.Get(constants.RecordNameConfigOption)
+	store := record.Get(constants.StoreNameConfigOption)
 
 	if table == "" || recordName == "" || store == "" {
 		return fmt.Errorf("invalid-record")
@@ -21,7 +24,7 @@ func writeQueryableLookup(o io.Writer, record url.Values, fields map[string]url.
 		return io.EOF
 	}
 
-	out := writing.NewGoWriter(o)
+	out := writing.NewGoWriter(writer)
 
 	bp := blueprint{
 		record: record,
@@ -37,7 +40,11 @@ func writeQueryableLookup(o io.Writer, record url.Values, fields map[string]url.
 		"LIMIT":             "_limit",
 		"OFFSET":            "_offset",
 		"RECORD_SLICE":      fmt.Sprintf("[]*%s", recordName),
-		"FUNC_NAME":         fmt.Sprintf("Find%s", inflector.Pluralize(recordName)),
+
+		"FUNC_NAME": fmt.Sprintf("%s%s",
+			record.Get(constants.StoreFindMethodPrefixConfigOption),
+			inflector.Pluralize(recordName),
+		),
 	}
 
 	params := []writing.FuncParam{
@@ -59,7 +66,7 @@ func writeQueryableLookup(o io.Writer, record url.Values, fields map[string]url.
 		fieldList = append(fieldList, expanded)
 	}
 
-	defaultLimit := record.Get("defaultLimit")
+	defaultLimit := record.Get(constants.DefaultLimitConfigOption)
 
 	if defaultLimit == "" {
 		return fmt.Errorf("invalid defaultLimit for record %s", recordName)
@@ -174,12 +181,107 @@ func writeQueryableLookup(o io.Writer, record url.Values, fields map[string]url.
 	return nil
 }
 
+func counter(writer io.Writer, record url.Values, fields map[string]url.Values, imports importsChannel) error {
+	table := record.Get(constants.TableNameConfigOption)
+	recordName := record.Get(constants.RecordNameConfigOption)
+	store := record.Get(constants.StoreNameConfigOption)
+	blueprint := blueprint{record: record, fields: fields}
+
+	symbols := map[string]string{
+		"COUNT_METHOD_NAME": fmt.Sprintf("%s%s",
+			record.Get(constants.StoreCountMethodPrefixConfigOption),
+			inflector.Pluralize(recordName),
+		),
+		"BLUEPRINT_PARAM_NAME": "_blueprint",
+		"SELECTION_RESULT":     "_result",
+		"SELECTION_QUERY":      "_fullQuery",
+		"SELECTION_ERROR":      "_selectError",
+		"SCAN_RESULT":          "_countResult",
+		"SCAN_ERROR":           "_countError",
+	}
+
+	gosrc := writing.NewGoWriter(writer)
+
+	gosrc.Comment("[marlow feature]: counter on table[%s]", table)
+
+	params := []writing.FuncParam{
+		{Symbol: symbols["BLUEPRINT_PARAM_NAME"], Type: fmt.Sprintf("*%s", blueprint.Name())},
+	}
+
+	returns := []string{
+		"int",
+		"error",
+	}
+
+	imports <- "fmt"
+
+	return gosrc.WithMethod(symbols["COUNT_METHOD_NAME"], store, params, returns, func(scope url.Values) error {
+		receiver := scope.Get("receiver")
+		gosrc.WithIf("%s == nil", func(url.Values) error {
+			gosrc.Println("%s = &%s{}", params[0].Symbol, blueprint.Name())
+			return nil
+		}, params[0].Symbol)
+
+		gosrc.Println(
+			"%s := fmt.Sprintf(\"SELECT COUNT(*) FROM %s %%s;\", %s)",
+			symbols["SELECTION_QUERY"],
+			table,
+			params[0].Symbol,
+		)
+
+		gosrc.Println(
+			"%s, %s := %s.q(%s)",
+			symbols["SELECTION_RESULT"],
+			symbols["SELECTION_ERROR"],
+			receiver,
+			symbols["SELECTION_QUERY"],
+		)
+
+		gosrc.WithIf("%s != nil", func(url.Values) error {
+			gosrc.Println("return -1, %s", symbols["SELECTION_ERROR"])
+			return nil
+		}, symbols["SELECTION_ERROR"])
+
+		gosrc.WithIf("%s.Next() != true", func(url.Values) error {
+			gosrc.Println("return -1, fmt.Errorf(\"invalid-scan\")")
+			return nil
+		}, symbols["SELECTION_RESULT"])
+
+		gosrc.Println("var %s int", symbols["SCAN_RESULT"])
+		gosrc.Println("%s := %s.Scan(&%s)", symbols["SCAN_ERROR"], symbols["SELECTION_RESULT"], symbols["SCAN_RESULT"])
+
+		gosrc.WithIf("%s != nil", func(url.Values) error {
+			gosrc.Println("return -1, %s", symbols["SCAN_ERROR"])
+			return nil
+		}, symbols["SCAN_ERROR"])
+
+		gosrc.Println("return %s, nil", symbols["SCAN_RESULT"])
+		return nil
+	})
+}
+
+type queryableFeatureWriter func(io.Writer, url.Values, map[string]url.Values, importsChannel) error
+
 // NewQueryableGenerator is responsible for returning a reader that will generate lookup functions for a given record.
 func NewQueryableGenerator(record url.Values, fields map[string]url.Values, imports importsChannel) io.Reader {
 	pr, pw := io.Pipe()
 
+	features := []queryableFeatureWriter{
+		finder,
+		counter,
+	}
+
 	go func() {
-		e := writeQueryableLookup(pw, record, fields, imports)
+		var e error
+
+		for _, f := range features {
+			e = f(pw, record, fields, imports)
+
+			if e != nil {
+				break
+			}
+		}
+
 		pw.CloseWithError(e)
 	}()
 

@@ -162,4 +162,4 @@ overrides for default marlow assumptions about the table.
 [commits.img]: https://img.shields.io/github/commits-since/dadleyy/marlow/latest.svg?style=flat-square
 [commits.url]: https://github.com/dadleyy/marlow
 [awesome.img]: https://img.shields.io/badge/%F0%9F%95%B6-awesome--go-443f5e.svg?colorA=c3a1bb&style=flat-square
-[awesome.url]: https://github.com/avelino/awesome-go#orm
+[awesome.url]: https://awesome-go.com/#orm
