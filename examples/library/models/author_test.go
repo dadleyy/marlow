@@ -47,16 +47,14 @@ func Test_Author(t *testing.T) {
 			g.Assert(r).Equal("")
 		})
 
-		/*
-			g.It("supports null values on sql.NullInt64 fields", func() {
-				r := fmt.Sprintf("%s", &AuthorBlueprint{
-					UniversityID: []sql.NullInt64{
-						{Valid: false},
-					},
-				})
-				g.Assert(r).Equal("WHERE authors.university_id IS NULL")
+		g.It("supports null values on sql.NullInt64 fields", func() {
+			r := fmt.Sprintf("%s", &AuthorBlueprint{
+				UniversityID: []sql.NullInt64{
+					{Valid: false},
+				},
 			})
-		*/
+			g.Assert(r).Equal("WHERE authors.university_id IS NULL")
+		})
 
 		g.It("supports range on ID column querying", func() {
 			r := fmt.Sprintf("%s", &AuthorBlueprint{

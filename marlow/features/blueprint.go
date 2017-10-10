@@ -3,6 +3,7 @@ package features
 import "io"
 import "fmt"
 import "sync"
+import "strings"
 import "net/url"
 import "github.com/gedex/inflector"
 import "github.com/dadleyy/marlow/marlow/writing"
@@ -135,7 +136,82 @@ func fieldMethods(print blueprint, name string, config url.Values, methods chan<
 		results = append(results, numericalMethods(print, name, config, methods))
 	}
 
+	if fieldType == "sql.NullInt64" {
+		results = append(results, nullableIntMethods(print, name, config, methods))
+	}
+
+	if len(results) == 0 {
+		warning := fmt.Sprintf("// [marlow] field %s (%s) unable to generate clauses. unsupported type", name, fieldType)
+
+		results = []io.Reader{strings.NewReader(warning)}
+	}
+
 	return results
+}
+
+func nullableIntMethods(print blueprint, fieldName string, config url.Values, methods chan<- string) io.Reader {
+	pr, pw := io.Pipe()
+	columnName := config.Get(constants.ColumnConfigOption)
+	tableName := print.record.Get(constants.TableNameConfigOption)
+	methodName := fmt.Sprintf("%sInString", columnName)
+
+	symbols := map[string]string{
+		"VALUE_ARRAY":   "_values",
+		"VALUE_ITEM":    "_v",
+		"JOINED_VALUES": "_joined",
+	}
+
+	columnReference := fmt.Sprintf("%s.%s", tableName, columnName)
+
+	write := func() {
+		writer := writing.NewGoWriter(pw)
+
+		writer.Comment("[marlow] nullable clause gen for \"%s\"", columnReference)
+
+		e := writer.WithMethod(methodName, print.Name(), nil, []string{"string"}, func(scope url.Values) error {
+			fieldReference := fmt.Sprintf("%s.%s", scope.Get("receiver"), fieldName)
+
+			// Add conditional check for length presence on lookup slice.
+			writer.WithIf("len(%s) == 0", func(url.Values) error {
+				writer.Println("return \"\"")
+				return nil
+			}, fieldReference)
+
+			writer.Println("%s := make([]string, 0, len(%s))", symbols["VALUE_ARRAY"], fieldReference)
+
+			writer.WithIter("_, %s := range %s", func(url.Values) error {
+
+				writer.WithIf("%s.Valid == false", func(url.Values) error {
+					writer.Println("return \"%s IS NULL\"", columnReference)
+					return nil
+				}, symbols["VALUE_ITEM"])
+
+				writer.Println(
+					"%s = append(%s, fmt.Sprintf(\"'%%v'\", %s.Int64))",
+					symbols["VALUE_ARRAY"],
+					symbols["VALUE_ARRAY"],
+					symbols["VALUE_ITEM"],
+				)
+
+				return nil
+			}, symbols["VALUE_ITEM"], fieldReference)
+
+			writer.Println("%s := strings.Join(%s, \",\")", symbols["JOINED_VALUES"], symbols["VALUE_ARRAY"])
+			writer.Println("return fmt.Sprintf(\"%s.%s IN (%%s)\", %s)", tableName, columnName, symbols["JOINED_VALUES"])
+
+			return nil
+		})
+
+		if e == nil {
+			methods <- methodName
+		}
+
+		pw.CloseWithError(e)
+	}
+
+	go write()
+
+	return pr
 }
 
 func simpleTypeIn(print blueprint, fieldName string, config url.Values, methods chan<- string) io.Reader {
