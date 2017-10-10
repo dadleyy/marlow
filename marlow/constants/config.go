@@ -29,4 +29,10 @@ const (
 
 	// ColumnConfigOption is the key of the value used on individual fields that represents which column marlow queries.
 	ColumnConfigOption = "column"
+
+	// QueryableConfigOption boolean value, true/false based on fields ability to be updated.
+	QueryableConfigOption = "query"
+
+	// UpdateableConfigOption boolean value, true/false based on fields ability to be updated.
+	UpdateableConfigOption = "updates"
 )

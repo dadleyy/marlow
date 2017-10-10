@@ -183,5 +183,10 @@ func Test_Book(t *testing.T) {
 			g.Assert(results[1]).Equal(20)
 		})
 
+		g.It("returns 0 recods when update is called with nil updates and nil clause", func() {
+			count, e := store.UpdateBooks(nil, nil)
+			g.Assert(e).Equal(nil)
+			g.Assert(count).Equal(0)
+		})
 	})
 }

@@ -128,12 +128,19 @@ func readRecord(writer io.Writer, config url.Values, fields map[string]url.Value
 	readers, enabled := make([]io.Reader, 0), make(map[string]bool)
 
 	for _, fieldConfig := range fields {
-		queryable := fieldConfig.Get("queryable")
+		queryable := fieldConfig.Get(constants.QueryableConfigOption)
+		updateable := fieldConfig.Get(constants.UpdateableConfigOption)
 
-		if _, e := enabled["queryable"]; queryable != "false" && !e {
+		if _, e := enabled[constants.QueryableConfigOption]; queryable != "false" && !e {
 			generator := features.NewQueryableGenerator(config, fields, imports)
 			readers = append(readers, generator)
-			enabled["queryable"] = true
+			enabled[constants.QueryableConfigOption] = true
+		}
+
+		if _, e := enabled[constants.UpdateableConfigOption]; updateable != "false" && !e {
+			generator := features.NewUpdateableGenerator(config, fields, imports)
+			readers = append(readers, generator)
+			enabled[constants.UpdateableConfigOption] = true
 		}
 	}
 
