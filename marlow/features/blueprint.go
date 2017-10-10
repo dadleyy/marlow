@@ -69,7 +69,7 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 
 	var readers []io.Reader
 	methodReceiver := make(chan string)
-	clauseMethods := make([]string, 0)
+	var clauseMethods []string
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 
