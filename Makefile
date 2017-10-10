@@ -29,7 +29,7 @@ MISSPELL=misspell
 LIB_SRC=$(wildcard $(LIB_DIR)/**/*.go $(LIB_DIR)/*.go)
 GO_SRC=$(wildcard $(MAIN) $(SRC_DIR)/**/*.go $(SRC_DIR)/*.go)
 
-EXAMPLE_EXE=$(EXAMPLE_DIR)/lib
+EXAMPLE_EXE=$(EXAMPLE_DIR)/library/library
 EXAMPLE_MAIN=$(wildcard $(EXAMPLE_DIR)/library/main.go)
 EXAMPLE_SRC=$(wildcard $(EXAMPLE_DIR)/library/**/*.go)
 EXAMPLE_OBJS=$(patsubst %.go,%.marlow.go,$(EXAMPLE_SRC))

@@ -33,32 +33,18 @@ func addBookRow(db *sql.DB, values ...[]string) error {
 }
 
 func Test_Book(t *testing.T) {
-	dbFile := "./book-library.db"
 	var db *sql.DB
 	var store *BookStore
 
 	g := goblin.Goblin(t)
 
-	defer os.Remove(dbFile)
+	dbFile := "./book-testing.db"
 
 	g.Describe("Book model & generated store", func() {
 
 		g.Before(func() {
-			var connError error
-			db, connError = sql.Open("sqlite3", dbFile)
-			g.Assert(connError).Equal(nil)
-
-			sqlStmt := `
-				create table books (
-					id integer not null primary key,
-					title text,
-					author_id integer not null,
-					page_count integer not null
-				);
-				delete from books;
-			`
-
-			_, e := db.Exec(sqlStmt)
+			var e error
+			db, e = loadDB(dbFile)
 			g.Assert(e).Equal(nil)
 
 			bookFixtures := [][]string{}

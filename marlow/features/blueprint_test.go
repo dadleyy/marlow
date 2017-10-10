@@ -102,9 +102,15 @@ func Test_Blueprint(t *testing.T) {
 					"type":   []string{"string"},
 					"column": []string{"name"},
 				}
+
 				f["PageCount"] = url.Values{
 					"type":   []string{"int"},
 					"column": []string{"page_count"},
+				}
+
+				f["CompanyID"] = url.Values{
+					"type":   []string{"sql.NullInt64"},
+					"column": []string{"company_id"},
 				}
 			})
 

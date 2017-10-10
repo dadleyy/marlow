@@ -91,7 +91,20 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 			fieldConfig.Set("column", strings.ToLower(name))
 		}
 
-		fieldConfig.Set("type", fmt.Sprintf("%v", f.Type))
+		// Convert our field's type to it's string counterpart.
+		fieldType := fmt.Sprintf("%v", f.Type)
+
+		// Check to see if this field is a complex type - one that refers to an exported type from another package.
+		selector, ok := f.Type.(*ast.SelectorExpr)
+
+		// If the field is a complex type, make an note of the import that it is referring to - this will be mapped to the
+		// original import path from the source package by our import processor.
+		if ok {
+			fieldType = fmt.Sprintf("%s.%s", selector.X, selector.Sel)
+			fieldConfig.Set("import", fmt.Sprintf("%s", selector.X))
+		}
+
+		fieldConfig.Set("type", fieldType)
 		recordFields[name] = fieldConfig
 	}
 
@@ -125,7 +138,10 @@ func readRecord(writer io.Writer, config url.Values, fields map[string]url.Value
 	}
 
 	if len(readers) == 0 {
-		comment := strings.NewReader(fmt.Sprintf("// [marlow no-features]: %s\n", config.Get("recordName")))
+		comment := strings.NewReader(
+			fmt.Sprintf("// [marlow no-features]: %s\n", config.Get(constants.RecordNameConfigOption)),
+		)
+
 		_, e := io.Copy(writer, comment)
 		return e
 	}

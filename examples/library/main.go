@@ -1,8 +1,10 @@
 package main
 
 import "os"
+import "io"
 import "log"
 import "fmt"
+import "bytes"
 import _ "github.com/mattn/go-sqlite3"
 import "database/sql"
 import "github.com/dadleyy/marlow/examples/library/models"
@@ -70,30 +72,32 @@ func main() {
 	os.Remove(dbFile)
 	defer os.Remove(dbFile)
 
-	db, err := sql.Open("sqlite3", dbFile)
+	db, e := sql.Open("sqlite3", dbFile)
 
-	if err != nil {
-		log.Fatal(err)
+	if e != nil {
+		log.Fatal(e)
 	}
 
 	defer db.Close()
 
-	sqlStmt := `
-	create table authors (id integer not null primary key, name text);
-	delete from authors;
-	create table books (
-		id integer not null primary key,
-		title text,
-		author_id integer not null,
-		page_count integer not null
-	);
-	delete from books;
-	`
+	schemaFile, e := os.Open("./schema.sql")
 
-	_, err = db.Exec(sqlStmt)
+	if e != nil {
+		log.Fatal(e)
+	}
 
-	if err != nil {
-		log.Printf("%q: %s\n", err, sqlStmt)
+	defer schemaFile.Close()
+
+	schemaBuffer := bytes.NewBuffer([]byte{})
+
+	if _, e := io.Copy(schemaBuffer, schemaFile); e != nil {
+		log.Fatal(e)
+	}
+
+	_, e = db.Exec(schemaBuffer.String())
+
+	if e != nil {
+		log.Printf("%q: %s\n", e, schemaBuffer.String())
 		return
 	}
 

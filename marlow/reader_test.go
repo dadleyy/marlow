@@ -72,6 +72,25 @@ func Test_Reader(t *testing.T) {
 			g.Assert(e).Equal(nil)
 		})
 
+		g.It("correctly generates imports in the output when struct fields use imported type", func() {
+			source := strings.NewReader(`
+			package marlowt
+
+			import "database/sql"
+
+			type Construct struct {
+				table string ` + "`marlow:\"name=constructs_table\"`" + `
+				Name string ` + "`marlow:\"column=name\"`" + `
+				ForeignID sql.NullInt64 ` + "`marlow:\"column=foreign\"`" + `
+			}
+			`)
+			e := Compile(output, source)
+			g.Assert(e).Equal(nil)
+			ts := token.NewFileSet()
+			_, e = parser.ParseFile(ts, "", output, parser.AllErrors)
+			g.Assert(e).Equal(nil)
+		})
+
 		g.It("returns an error if a field is mis-configured", func() {
 			source := strings.NewReader(`
 			package marlowt
