@@ -5,6 +5,8 @@ import "os"
 import "fmt"
 import "sync"
 import "bytes"
+import "strings"
+import "path/filepath"
 import "go/token"
 import "go/parser"
 import "go/format"
@@ -26,6 +28,18 @@ func Compile(destination io.Writer, reader io.Reader) error {
 
 	buffered, packageName := new(bytes.Buffer), packageAst.Name.String()
 	importChannel, recordReaders := make(chan string), make([]io.Reader, 0, len(packageAst.Decls))
+
+	// Establish a list of all the source package imports - we will use this to determine the full import name from an
+	// import sent by our features if all the feature can determine is the local name of the import.
+	packageImports := make(map[string]string)
+
+	for _, i := range packageAst.Imports {
+		cleansed := strings.Trim(i.Path.Value, "\"")
+		local := filepath.Base(cleansed)
+
+		// Save a reference to the full import path from the package name (final part of the import path).
+		packageImports[local] = cleansed
+	}
 
 	// Iterate over the declarations and construct the record store from the loaded ast.
 	for _, d := range packageAst.Decls {
@@ -58,6 +72,14 @@ func Compile(destination io.Writer, reader io.Reader) error {
 		importList := make(map[string]bool)
 
 		for importName := range importChannel {
+			// Check to see if the import sent to us is actually referring to one of the package imports from the source file.
+			fullImportPath, isLocal := packageImports[importName]
+
+			// If we are referring to an import from the source package, use it's full name.
+			if isLocal {
+				importName = fullImportPath
+			}
+
 			if _, dupe := importList[importName]; dupe == true {
 				continue
 			}

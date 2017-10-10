@@ -34,10 +34,11 @@ func addAuthorRow(db *sql.DB, values ...[]string) error {
 }
 
 func Test_Author(t *testing.T) {
-	dbFile := "./author-library.db"
 	g := goblin.Goblin(t)
 	var db *sql.DB
 	var store *AuthorStore
+
+	dbFile := "author-testing.db"
 
 	g.Describe("AuthorBlueprint test suite", func() {
 
@@ -73,16 +74,8 @@ func Test_Author(t *testing.T) {
 	g.Describe("Author model & generated store test suite", func() {
 
 		g.Before(func() {
-			var connError error
-			db, connError = sql.Open("sqlite3", dbFile)
-			g.Assert(connError).Equal(nil)
-			_, e := db.Exec(`
-				create table authors (
-					id integer not null primary key,
-					name text
-				);
-				delete from authors;
-			`)
+			var e error
+			db, e = loadDB(dbFile)
 			g.Assert(e).Equal(nil)
 
 			authors := [][]string{}

@@ -36,6 +36,10 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 				out.Println("%s%s []string", name, bp.record.Get(constants.BlueprintLikeFieldSuffixConfigOption))
 			}
 
+			if fieldImport := config.Get("import"); fieldImport != "" {
+				imports <- fieldImport
+			}
+
 			out.Println("%s []%s", name, fieldType)
 		}
 
