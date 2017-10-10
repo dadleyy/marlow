@@ -76,10 +76,12 @@ func main() {
 	options := struct {
 		input  string
 		stdout bool
+		silent bool
 	}{}
 
 	flag.StringVar(&options.input, "input", cwd, "the input to compile")
 	flag.BoolVar(&options.stdout, "stdout", false, "print generated code to stdout")
+	flag.BoolVar(&options.silent, "silent", false, "print nothing unless error")
 
 	flag.Usage = usage
 	flag.Parse()
@@ -96,7 +98,7 @@ func main() {
 
 	var progressOut io.Writer = new(bytes.Buffer)
 
-	if options.stdout == false {
+	if options.stdout == false && !options.silent {
 		progressOut = os.Stdout
 	}
 
@@ -178,6 +180,10 @@ func main() {
 	<-done
 
 	if (len(writtenFiles) >= 1) != true {
+		return
+	}
+
+	if options.silent == true {
 		return
 	}
 
