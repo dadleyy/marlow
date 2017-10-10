@@ -47,6 +47,17 @@ func Test_Author(t *testing.T) {
 			g.Assert(r).Equal("")
 		})
 
+		/*
+			g.It("supports null values on sql.NullInt64 fields", func() {
+				r := fmt.Sprintf("%s", &AuthorBlueprint{
+					UniversityID: []sql.NullInt64{
+						{Valid: false},
+					},
+				})
+				g.Assert(r).Equal("WHERE authors.university_id IS NULL")
+			})
+		*/
+
 		g.It("supports range on ID column querying", func() {
 			r := fmt.Sprintf("%s", &AuthorBlueprint{
 				IDRange: []int{1, 2},
@@ -86,6 +97,11 @@ func Test_Author(t *testing.T) {
 			}
 
 			g.Assert(addAuthorRow(db, authors...)).Equal(nil)
+
+			_, e = db.Exec("insert into authors (id,name,university_id) values(1337,'learned author',10);")
+			g.Assert(e).Equal(nil)
+			_, e = db.Exec("insert into authors (id,name,university_id) values(1338,'other author',null);")
+			g.Assert(e).Equal(nil)
 		})
 
 		g.BeforeEach(func() {
@@ -122,7 +138,6 @@ func Test_Author(t *testing.T) {
 			authors, e := store.FindAuthors(&AuthorBlueprint{
 				NameLike: []string{"%-100%"},
 			})
-			t.Logf("%s", &AuthorBlueprint{NameLike: []string{"%-100%"}})
 			g.Assert(e).Equal(nil)
 			g.Assert(len(authors)).Equal(1)
 		})
@@ -133,6 +148,29 @@ func Test_Author(t *testing.T) {
 			})
 			g.Assert(e).Equal(nil)
 			g.Assert(len(authors)).Equal(2)
+		})
+
+		g.It("correctly serializes null/not null values into a sql.NullInt64 field", func() {
+			authors, e := store.FindAuthors(&AuthorBlueprint{
+				ID: []int{1337, 1338},
+			})
+			g.Assert(e).Equal(nil)
+
+			g.Assert(authors[0].Name).Equal("learned author")
+			g.Assert(authors[0].UniversityID.Valid).Equal(true)
+			g.Assert(authors[0].UniversityID.Int64).Equal(10)
+
+			g.Assert(authors[1].Name).Equal("other author")
+			g.Assert(authors[1].UniversityID.Valid).Equal(false)
+		})
+
+		g.It("allows consumer to search by authors with null UniversityID", func() {
+			_, e := store.CountAuthors(&AuthorBlueprint{
+				UniversityID: []sql.NullInt64{
+					{Valid: false},
+				},
+			})
+			g.Assert(e).Equal(nil)
 		})
 
 		g.It("allows the consumer to count authors by blueprint", func() {

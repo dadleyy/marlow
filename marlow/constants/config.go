@@ -26,4 +26,7 @@ const (
 
 	// StoreCountMethodPrefixConfigOption determines the prefix used when adding the main count method to the store.
 	StoreCountMethodPrefixConfigOption = "storeCountMethodPrefix"
+
+	// ColumnConfigOption is the key of the value used on individual fields that represents which column marlow queries.
+	ColumnConfigOption = "column"
 )

@@ -2,6 +2,7 @@ package features
 
 import "io"
 import "fmt"
+import "sync"
 import "net/url"
 import "github.com/gedex/inflector"
 import "github.com/dadleyy/marlow/marlow/writing"
@@ -28,10 +29,12 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 				return fmt.Errorf("bad field type for field name: %s", name)
 			}
 
+			// Support IN lookup on string fields.
 			if fieldType == "int" {
 				out.Println("%s%s []int", name, bp.record.Get(constants.BlueprintRangeFieldSuffixConfigOption))
 			}
 
+			// Support LIKE lookup on string fields.
 			if fieldType == "string" {
 				out.Println("%s%s []string", name, bp.record.Get(constants.BlueprintLikeFieldSuffixConfigOption))
 			}
@@ -63,17 +66,35 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 		"CLAUSE_ITEM":  "_clauseItem",
 	}
 
-	var clauseMethods []string
+	var readers []io.Reader
+	methodReceiver := make(chan string)
+	clauseMethods := make([]string, 0)
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		for name := range methodReceiver {
+			clauseMethods = append(clauseMethods, name)
+		}
+		wg.Done()
+	}()
 
 	for name, config := range bp.fields {
-		methods, e := fieldMethods(out, bp, name, config)
+		fieldGenerators := fieldMethods(bp, name, config, methodReceiver)
 
-		if e != nil {
-			return e
+		if len(fieldGenerators) == 0 {
+			continue
 		}
 
-		clauseMethods = append(clauseMethods, methods...)
+		readers = append(readers, fieldGenerators...)
 	}
+
+	if _, e := io.Copy(destination, io.MultiReader(readers...)); e != nil {
+		return e
+	}
+
+	close(methodReceiver)
+	wg.Wait()
 
 	// With all of our fields having generated non-exported clause generation methods on our struct, we can create the
 	// final 'String' method which iterates over all of these, calling them and adding the non-empty string clauses to
@@ -98,11 +119,30 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 	})
 }
 
-func fieldMethods(writer writing.GoWriter, p blueprint, name string, config url.Values) ([]string, error) {
-	colName, fieldType := config.Get("column"), config.Get("type")
-	inString := fmt.Sprintf("%sInString", colName)
-	methods := []string{inString}
-	tableName := p.record.Get(constants.TableNameConfigOption)
+func fieldMethods(print blueprint, name string, config url.Values, methods chan<- string) []io.Reader {
+	fieldType := config.Get("type")
+	results := make([]io.Reader, 0, len(print.fields))
+
+	if fieldType == "string" || fieldType == "int" {
+		results = append(results, simpleTypeIn(print, name, config, methods))
+	}
+
+	if fieldType == "string" {
+		results = append(results, stringMethods(print, name, config, methods))
+	}
+
+	if fieldType == "int" {
+		results = append(results, numericalMethods(print, name, config, methods))
+	}
+
+	return results
+}
+
+func simpleTypeIn(print blueprint, fieldName string, config url.Values, methods chan<- string) io.Reader {
+	pr, pw := io.Pipe()
+	columnName := config.Get(constants.ColumnConfigOption)
+	tableName := print.record.Get(constants.TableNameConfigOption)
+	methodName := fmt.Sprintf("%sInString", columnName)
 
 	symbols := map[string]string{
 		"VALUE_ARRAY":   "_values",
@@ -110,59 +150,53 @@ func fieldMethods(writer writing.GoWriter, p blueprint, name string, config url.
 		"JOINED_VALUES": "_joined",
 	}
 
-	writer.WithMethod(inString, p.Name(), nil, []string{"string"}, func(scope url.Values) error {
-		fieldReference := fmt.Sprintf("%s.%s", scope.Get("receiver"), name)
+	write := func() {
+		writer := writing.NewGoWriter(pw)
 
-		writer.WithIf("len(%s) == 0", func(url.Values) error {
-			writer.Println("return \"\"")
+		e := writer.WithMethod(methodName, print.Name(), nil, []string{"string"}, func(scope url.Values) error {
+			fieldReference := fmt.Sprintf("%s.%s", scope.Get("receiver"), fieldName)
+
+			// Add conditional check for length presence on lookup slice.
+			writer.WithIf("len(%s) == 0", func(url.Values) error {
+				writer.Println("return \"\"")
+				return nil
+			}, fieldReference)
+
+			writer.Println("%s := make([]string, 0, len(%s))", symbols["VALUE_ARRAY"], fieldReference)
+
+			writer.WithIter("_, %s := range %s", func(url.Values) error {
+				writer.Println(
+					"%s = append(%s, fmt.Sprintf(\"'%%v'\", %s))",
+					symbols["VALUE_ARRAY"],
+					symbols["VALUE_ARRAY"],
+					symbols["VALUE_ITEM"],
+				)
+				return nil
+			}, symbols["VALUE_ITEM"], fieldReference)
+
+			writer.Println("%s := strings.Join(%s, \",\")", symbols["JOINED_VALUES"], symbols["VALUE_ARRAY"])
+			writer.Println("return fmt.Sprintf(\"%s.%s IN (%%s)\", %s)", tableName, columnName, symbols["JOINED_VALUES"])
 			return nil
-		}, fieldReference)
+		})
 
-		writer.Println("%s := make([]string, 0, len(%s))", symbols["VALUE_ARRAY"], fieldReference)
+		if e == nil {
+			methods <- methodName
+		}
 
-		writer.WithIter("_, %s := range %s", func(url.Values) error {
-			writer.Println(
-				"%s = append(%s, fmt.Sprintf(\"'%%v'\", %s))",
-				symbols["VALUE_ARRAY"],
-				symbols["VALUE_ARRAY"],
-				symbols["VALUE_ITEM"],
-			)
-			return nil
-		}, symbols["VALUE_ITEM"], fieldReference)
-
-		writer.Println("%s := strings.Join(%s, \",\")", symbols["JOINED_VALUES"], symbols["VALUE_ARRAY"])
-		writer.Println("return fmt.Sprintf(\"%s.%s IN (%%s)\", %s)", tableName, colName, symbols["JOINED_VALUES"])
-		return nil
-	})
-
-	var typeMethods []string
-	var typeError error
-
-	switch fieldType {
-	case "int":
-		typeMethods, typeError = numericalMethods(writer, p, name, config)
-		break
-	case "string":
-		typeMethods, typeError = stringMethods(writer, p, name, config)
-		break
+		pw.CloseWithError(e)
 	}
 
-	if typeError != nil {
-		return nil, typeError
-	}
+	go write()
 
-	if typeMethods != nil && len(typeMethods) >= 1 {
-		methods = append(methods, typeMethods...)
-	}
-
-	return methods, nil
+	return pr
 }
 
-func stringMethods(writer writing.GoWriter, p blueprint, name string, config url.Values) ([]string, error) {
-	colName := config.Get("column")
-	likeMethodName := fmt.Sprintf("%sLikeString", colName)
-	likeFieldName := fmt.Sprintf("%s%s", name, p.record.Get(constants.BlueprintLikeFieldSuffixConfigOption))
-	clauseTarget := fmt.Sprintf("%s.%s", p.record.Get(constants.TableNameConfigOption), colName)
+func stringMethods(print blueprint, name string, config url.Values, methods chan<- string) io.Reader {
+	columnName := config.Get(constants.ColumnConfigOption)
+
+	methodName := fmt.Sprintf("%sLikeString", columnName)
+	likeFieldName := fmt.Sprintf("%s%s", name, print.record.Get(constants.BlueprintLikeFieldSuffixConfigOption))
+	clauseTarget := fmt.Sprintf("%s.%s", print.record.Get(constants.TableNameConfigOption), columnName)
 
 	symbols := map[string]string{
 		"VALUE_ITEM":     "_v",
@@ -170,59 +204,86 @@ func stringMethods(writer writing.GoWriter, p blueprint, name string, config url
 		"LIKE_STATEMENT": "_statement",
 	}
 
-	writer.WithMethod(likeMethodName, p.Name(), nil, []string{"string"}, func(scope url.Values) error {
-		likeSlice := fmt.Sprintf("%s.%s", scope.Get("receiver"), likeFieldName)
+	pr, pw := io.Pipe()
 
-		writer.WithIf("%s == nil || len(%s) == 0", func(url.Values) error {
-			writer.Println("return \"\"")
+	write := func() {
+		writer := writing.NewGoWriter(pw)
+
+		e := writer.WithMethod(methodName, print.Name(), nil, []string{"string"}, func(scope url.Values) error {
+			likeSlice := fmt.Sprintf("%s.%s", scope.Get("receiver"), likeFieldName)
+
+			writer.WithIf("%s == nil || len(%s) == 0", func(url.Values) error {
+				writer.Println("return \"\"")
+				return nil
+			}, likeSlice, likeSlice)
+
+			writer.Println("%s := make([]string, 0, len(%s))", symbols["VALUE_ARRAY"], likeSlice)
+
+			writer.WithIter("_, %s := range %s", func(url.Values) error {
+				likeString := fmt.Sprintf("fmt.Sprintf(\"%s LIKE '%%s'\", %s)", clauseTarget, symbols["VALUE_ITEM"])
+				writer.Println("%s := %s", symbols["LIKE_STATEMENT"], likeString)
+				writer.Println("%s = append(%s, %s)", symbols["VALUE_ARRAY"], symbols["VALUE_ARRAY"], symbols["LIKE_STATEMENT"])
+				return nil
+			}, symbols["VALUE_ITEM"], likeSlice)
+
+			writer.Println("return strings.Join(%s, \" AND \")", symbols["VALUE_ARRAY"])
 			return nil
-		}, likeSlice, likeSlice)
+		})
 
-		writer.Println("%s := make([]string, 0, len(%s))", symbols["VALUE_ARRAY"], likeSlice)
+		if e == nil {
+			methods <- methodName
+		}
 
-		writer.WithIter("_, %s := range %s", func(url.Values) error {
-			likeString := fmt.Sprintf("fmt.Sprintf(\"%s LIKE '%%s'\", %s)", clauseTarget, symbols["VALUE_ITEM"])
-			writer.Println("%s := %s", symbols["LIKE_STATEMENT"], likeString)
-			writer.Println("%s = append(%s, %s)", symbols["VALUE_ARRAY"], symbols["VALUE_ARRAY"], symbols["LIKE_STATEMENT"])
-			return nil
-		}, symbols["VALUE_ITEM"], likeSlice)
+		pw.CloseWithError(e)
+	}
 
-		writer.Println("return strings.Join(%s, \" AND \")", symbols["VALUE_ARRAY"])
-		return nil
-	})
+	go write()
 
-	return []string{likeMethodName}, nil
+	return pr
 }
 
-func numericalMethods(writer writing.GoWriter, p blueprint, name string, config url.Values) ([]string, error) {
-	tableName := p.record.Get(constants.TableNameConfigOption)
-	colName := config.Get("column")
-	rangeMethodName := fmt.Sprintf("%sRangeString", colName)
+func numericalMethods(print blueprint, name string, config url.Values, methods chan<- string) io.Reader {
+	tableName := print.record.Get(constants.TableNameConfigOption)
+	columnName := config.Get(constants.ColumnConfigOption)
+	rangeMethodName := fmt.Sprintf("%sRangeString", columnName)
 
-	methods := []string{rangeMethodName}
-	rangeFieldName := fmt.Sprintf("%s%s", name, p.record.Get(constants.BlueprintRangeFieldSuffixConfigOption))
+	rangeFieldName := fmt.Sprintf("%s%s", name, print.record.Get(constants.BlueprintRangeFieldSuffixConfigOption))
 
-	writer.WithMethod(rangeMethodName, p.Name(), nil, []string{"string"}, func(scope url.Values) error {
-		receiver := scope.Get("receiver")
-		rangeArray := fmt.Sprintf("%s.%s", receiver, rangeFieldName)
-		clauseTarget := fmt.Sprintf("%s.%s", tableName, colName)
+	pr, pw := io.Pipe()
 
-		writer.WithIf("len(%s) != 2", func(url.Values) error {
-			writer.Println("return \"\"")
+	write := func() {
+		writer := writing.NewGoWriter(pw)
+
+		e := writer.WithMethod(rangeMethodName, print.Name(), nil, []string{"string"}, func(scope url.Values) error {
+			receiver := scope.Get("receiver")
+			rangeArray := fmt.Sprintf("%s.%s", receiver, rangeFieldName)
+			clauseTarget := fmt.Sprintf("%s.%s", tableName, columnName)
+
+			writer.WithIf("len(%s) != 2", func(url.Values) error {
+				writer.Println("return \"\"")
+				return nil
+			}, rangeArray)
+
+			writer.Println(
+				"return fmt.Sprintf(\"%s > %%d AND %s < %%d\", %s[0], %s[1])",
+				clauseTarget,
+				clauseTarget,
+				rangeArray,
+				rangeArray,
+			)
 			return nil
-		}, rangeArray)
+		})
 
-		writer.Println(
-			"return fmt.Sprintf(\"%s > %%d AND %s < %%d\", %s[0], %s[1])",
-			clauseTarget,
-			clauseTarget,
-			rangeArray,
-			rangeArray,
-		)
-		return nil
-	})
+		if e == nil {
+			methods <- rangeMethodName
+		}
 
-	return methods, nil
+		pw.CloseWithError(e)
+	}
+
+	go write()
+
+	return pr
 }
 
 // NewBlueprintGenerator returns a reader that will generate the basic query struct type used for record lookups.
