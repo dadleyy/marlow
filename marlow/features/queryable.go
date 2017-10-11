@@ -9,9 +9,7 @@ import "github.com/gedex/inflector"
 import "github.com/dadleyy/marlow/marlow/writing"
 import "github.com/dadleyy/marlow/marlow/constants"
 
-type importsChannel chan<- string
-
-func finder(record url.Values, fields map[string]url.Values, imports importsChannel) io.Reader {
+func finder(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
 	table := record.Get(constants.TableNameConfigOption)
 	recordName := record.Get(constants.RecordNameConfigOption)
 	store := record.Get(constants.StoreNameConfigOption)
@@ -192,7 +190,7 @@ func finder(record url.Values, fields map[string]url.Values, imports importsChan
 	return pr
 }
 
-func counter(record url.Values, fields map[string]url.Values, imports importsChannel) io.Reader {
+func counter(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
 	table := record.Get(constants.TableNameConfigOption)
 	recordName := record.Get(constants.RecordNameConfigOption)
 	store := record.Get(constants.StoreNameConfigOption)
@@ -284,7 +282,7 @@ func counter(record url.Values, fields map[string]url.Values, imports importsCha
 	return pr
 }
 
-func selector(record url.Values, name string, config url.Values, imports importsChannel) io.Reader {
+func selector(record url.Values, name string, config url.Values, imports chan<- string) io.Reader {
 	pr, pw := io.Pipe()
 	blueprint := blueprint{record: record}
 	methodName := fmt.Sprintf("Select%s", inflector.Pluralize(name))
@@ -384,7 +382,7 @@ func selector(record url.Values, name string, config url.Values, imports imports
 }
 
 // NewQueryableGenerator is responsible for returning a reader that will generate lookup functions for a given record.
-func NewQueryableGenerator(record url.Values, fields map[string]url.Values, imports importsChannel) io.Reader {
+func NewQueryableGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
 	pr, pw := io.Pipe()
 
 	table := record.Get(constants.TableNameConfigOption)
