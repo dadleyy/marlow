@@ -39,12 +39,29 @@ func Test_Author(t *testing.T) {
 	var store *AuthorStore
 
 	dbFile := "author-testing.db"
+	generatedAuthorCount := 150
 
 	g.Describe("AuthorBlueprint test suite", func() {
 
 		g.It("results in empty string w/o values", func() {
 			r := fmt.Sprintf("%s", &AuthorBlueprint{})
 			g.Assert(r).Equal("")
+		})
+
+		g.It("supports int values on sql.NullInt64 fields", func() {
+			r := fmt.Sprintf("%s", &AuthorBlueprint{
+				UniversityID: []sql.NullInt64{
+					{Int64: 10, Valid: true},
+				},
+			})
+			g.Assert(r).Equal("WHERE authors.university_id IN ('10')")
+		})
+
+		g.It("supports NOT NULL selection if present but empty on sql.NullInt64 fields", func() {
+			r := fmt.Sprintf("%s", &AuthorBlueprint{
+				UniversityID: []sql.NullInt64{},
+			})
+			g.Assert(r).Equal("WHERE authors.university_id NOT NULL")
 		})
 
 		g.It("supports null values on sql.NullInt64 fields", func() {
@@ -89,7 +106,7 @@ func Test_Author(t *testing.T) {
 
 			authors := [][]string{}
 
-			for i := 1; i < 150; i++ {
+			for i := 1; i < generatedAuthorCount; i++ {
 				id, name := fmt.Sprintf("%d", i), fmt.Sprintf("'author-%d'", (i*10)+1)
 				authors = append(authors, []string{id, name})
 			}
@@ -163,12 +180,67 @@ func Test_Author(t *testing.T) {
 		})
 
 		g.It("allows consumer to search by authors with null UniversityID", func() {
-			_, e := store.CountAuthors(&AuthorBlueprint{
+			count, e := store.CountAuthors(&AuthorBlueprint{
 				UniversityID: []sql.NullInt64{
 					{Valid: false},
 				},
 			})
 			g.Assert(e).Equal(nil)
+			g.Assert(count).Equal(generatedAuthorCount)
+		})
+
+		g.It("allows consumers to select individual university ids (result being null)", func() {
+			results, e := store.SelectUniversityIDs(&AuthorBlueprint{
+				ID: []int{10},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(len(results)).Equal(1)
+			g.Assert(results[0].Valid).Equal(false)
+		})
+
+		g.It("allows consumers to select individual university ids (result being valid)", func() {
+			results, e := store.SelectUniversityIDs(&AuthorBlueprint{
+				ID: []int{1337},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(len(results)).Equal(1)
+			g.Assert(results[0].Valid).Equal(true)
+			g.Assert(results[0].Int64).Equal(10)
+		})
+
+		g.It("allows consumers to select individual author names", func() {
+			results, e := store.SelectNames(&AuthorBlueprint{
+				ID: []int{10},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(len(results)).Equal(1)
+			g.Assert(results[0]).Equal("author-101")
+		})
+
+		g.It("allows consumers to select individual author ids", func() {
+			ids, e := store.SelectIDs(&AuthorBlueprint{
+				ID: []int{10},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(len(ids)).Equal(1)
+		})
+
+		g.It("allows consumer to search by authors where not null if empty", func() {
+			count, e := store.CountAuthors(&AuthorBlueprint{
+				UniversityID: []sql.NullInt64{},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(count).Equal(1)
+		})
+
+		g.It("allows consumer to search by authors with explicit UniversityID", func() {
+			count, e := store.CountAuthors(&AuthorBlueprint{
+				UniversityID: []sql.NullInt64{
+					{Int64: 10, Valid: true},
+				},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(count).Equal(1)
 		})
 
 		g.It("allows the consumer to count authors by blueprint", func() {

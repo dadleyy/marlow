@@ -10,7 +10,7 @@ VENDOR_DIR=vendor
 LINT=golint
 LINT_FLAGS=-set_exit_status
 
-EXE=mc
+EXE=./bin/marlowc
 MAIN=$(wildcard ./marlowc/main.go)
 
 GOVER=gover

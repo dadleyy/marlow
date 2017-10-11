@@ -95,9 +95,11 @@ func Test_QueryableGenerator(t *testing.T) {
 			})
 
 			g.It("acts as a no-op for valid records with zero fields", func() {
+				scaffold.record.Set("defaultLimit", "100")
 				scaffold.record.Set("storeName", "BookStore")
 				scaffold.record.Set("recordName", "Book")
 				scaffold.record.Set("tableName", "books")
+
 				_, e := io.Copy(scaffold.output, scaffold.g())
 				g.Assert(e).Equal(nil)
 				g.Assert(scaffold.output.Len()).Equal(0)
