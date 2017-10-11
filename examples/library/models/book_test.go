@@ -146,5 +146,42 @@ func Test_Book(t *testing.T) {
 			g.Assert(e).Equal(nil)
 			g.Assert(count).Equal(2)
 		})
+
+		g.It("allows the consumer to select explicit book ids", func() {
+			results, e := store.SelectIDs(&BookBlueprint{
+				ID: []int{1, 2},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(results[0]).Equal(1)
+			g.Assert(results[1]).Equal(2)
+		})
+
+		g.It("allows the consumer to select explicit book titles", func() {
+			results, e := store.SelectTitles(&BookBlueprint{
+				ID: []int{1, 2},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(results[0]).Equal("book-1")
+			g.Assert(results[1]).Equal("book-2")
+		})
+
+		g.It("allows the consumer to select explicit author ids", func() {
+			results, e := store.SelectAuthorIDs(&BookBlueprint{
+				ID: []int{1, 2},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(results[0]).Equal(11)
+			g.Assert(results[1]).Equal(21)
+		})
+
+		g.It("allows the consumer to select explicit page counts", func() {
+			results, e := store.SelectPageCounts(&BookBlueprint{
+				ID: []int{1, 2},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(results[0]).Equal(10)
+			g.Assert(results[1]).Equal(20)
+		})
+
 	})
 }
