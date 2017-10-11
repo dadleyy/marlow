@@ -172,8 +172,14 @@ func nullableIntMethods(print blueprint, fieldName string, config url.Values, me
 			fieldReference := fmt.Sprintf("%s.%s", scope.Get("receiver"), fieldName)
 
 			// Add conditional check for length presence on lookup slice.
-			writer.WithIf("len(%s) == 0", func(url.Values) error {
+			writer.WithIf("%s == nil", func(url.Values) error {
 				writer.Println("return \"\"")
+				return nil
+			}, fieldReference)
+
+			// Add conditional check for length presence on lookup slice.
+			writer.WithIf("len(%s) == 0", func(url.Values) error {
+				writer.Println("return \"%s NOT NULL\"", columnReference)
 				return nil
 			}, fieldReference)
 
