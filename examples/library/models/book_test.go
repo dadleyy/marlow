@@ -174,6 +174,67 @@ func Test_Book(t *testing.T) {
 			g.Assert(results[1]).Equal(21)
 		})
 
+		g.It("allows the consumer to update the book title", func() {
+			results, e, _ := store.UpdateBookTitle("Marlow the puppy", &BookBlueprint{
+				ID: []int{1},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(results).Equal(1)
+		})
+
+		g.It("allows the consumer to update the author id", func() {
+			results, e, _ := store.UpdateBookAuthorID(2001, &BookBlueprint{
+				ID: []int{1},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(results).Equal(1)
+		})
+
+		g.It("allows the consumer to update the book page count", func() {
+			results, e, _ := store.UpdateBookPageCount(10, &BookBlueprint{
+				ID: []int{10},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(results).Equal(1)
+		})
+
+		g.It("allows the consumer to update the book series id (valid: false)", func() {
+			results, e, _ := store.UpdateBookSeriesID(&sql.NullInt64{
+				Valid: false,
+			}, &BookBlueprint{
+				ID: []int{10},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(results).Equal(1)
+		})
+
+		g.It("allows the consumer to update the book series id (non-nil)", func() {
+			results, e, _ := store.UpdateBookSeriesID(&sql.NullInt64{
+				Valid: true,
+				Int64: 10,
+			}, &BookBlueprint{
+				ID: []int{10},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(results).Equal(1)
+		})
+
+		g.It("allows the consumer to update the book series id (nil)", func() {
+			results, e, _ := store.UpdateBookSeriesID(nil, &BookBlueprint{
+				ID: []int{10},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(results).Equal(1)
+		})
+
+		g.It("allows the consumer to update the book id", func() {
+			results, e, _ := store.UpdateBookID(2001, &BookBlueprint{
+				ID: []int{10},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(results).Equal(1)
+		})
+
 		g.It("allows the consumer to select explicit page counts", func() {
 			results, e := store.SelectPageCounts(&BookBlueprint{
 				ID: []int{1, 2},
