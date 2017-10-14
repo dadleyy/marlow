@@ -165,7 +165,6 @@ func nullableIntMethods(print blueprint, fieldName string, config url.Values, me
 
 	write := func() {
 		writer := writing.NewGoWriter(pw)
-
 		writer.Comment("[marlow] nullable clause gen for \"%s\"", columnReference)
 
 		e := writer.WithMethod(methodName, print.Name(), nil, []string{"string"}, func(scope url.Values) error {
@@ -225,6 +224,7 @@ func simpleTypeIn(print blueprint, fieldName string, config url.Values, methods 
 	columnName := config.Get(constants.ColumnConfigOption)
 	tableName := print.record.Get(constants.TableNameConfigOption)
 	methodName := fmt.Sprintf("%sInString", columnName)
+	columnReference := fmt.Sprintf("%s.%s", tableName, columnName)
 
 	symbols := map[string]string{
 		"VALUE_ARRAY":   "_values",
@@ -234,6 +234,7 @@ func simpleTypeIn(print blueprint, fieldName string, config url.Values, methods 
 
 	write := func() {
 		writer := writing.NewGoWriter(pw)
+		writer.Comment("[marlow] type IN clause for \"%s\"", columnReference)
 
 		e := writer.WithMethod(methodName, print.Name(), nil, []string{"string"}, func(scope url.Values) error {
 			fieldReference := fmt.Sprintf("%s.%s", scope.Get("receiver"), fieldName)
@@ -257,7 +258,7 @@ func simpleTypeIn(print blueprint, fieldName string, config url.Values, methods 
 			}, symbols["VALUE_ITEM"], fieldReference)
 
 			writer.Println("%s := strings.Join(%s, \",\")", symbols["JOINED_VALUES"], symbols["VALUE_ARRAY"])
-			writer.Println("return fmt.Sprintf(\"%s.%s IN (%%s)\", %s)", tableName, columnName, symbols["JOINED_VALUES"])
+			writer.Println("return fmt.Sprintf(\"%s IN (%%s)\", %s)", columnReference, symbols["JOINED_VALUES"])
 			return nil
 		})
 
@@ -275,10 +276,9 @@ func simpleTypeIn(print blueprint, fieldName string, config url.Values, methods 
 
 func stringMethods(print blueprint, name string, config url.Values, methods chan<- string) io.Reader {
 	columnName := config.Get(constants.ColumnConfigOption)
-
 	methodName := fmt.Sprintf("%sLikeString", columnName)
 	likeFieldName := fmt.Sprintf("%s%s", name, print.record.Get(constants.BlueprintLikeFieldSuffixConfigOption))
-	clauseTarget := fmt.Sprintf("%s.%s", print.record.Get(constants.TableNameConfigOption), columnName)
+	columnReference := fmt.Sprintf("%s.%s", print.record.Get(constants.TableNameConfigOption), columnName)
 
 	symbols := map[string]string{
 		"VALUE_ITEM":     "_v",
@@ -290,6 +290,7 @@ func stringMethods(print blueprint, name string, config url.Values, methods chan
 
 	write := func() {
 		writer := writing.NewGoWriter(pw)
+		writer.Comment("[marlow] string LIKE clause for \"%s\"", columnReference)
 
 		e := writer.WithMethod(methodName, print.Name(), nil, []string{"string"}, func(scope url.Values) error {
 			likeSlice := fmt.Sprintf("%s.%s", scope.Get("receiver"), likeFieldName)
@@ -302,7 +303,7 @@ func stringMethods(print blueprint, name string, config url.Values, methods chan
 			writer.Println("%s := make([]string, 0, len(%s))", symbols["VALUE_ARRAY"], likeSlice)
 
 			writer.WithIter("_, %s := range %s", func(url.Values) error {
-				likeString := fmt.Sprintf("fmt.Sprintf(\"%s LIKE '%%s'\", %s)", clauseTarget, symbols["VALUE_ITEM"])
+				likeString := fmt.Sprintf("fmt.Sprintf(\"%s LIKE '%%s'\", %s)", columnReference, symbols["VALUE_ITEM"])
 				writer.Println("%s := %s", symbols["LIKE_STATEMENT"], likeString)
 				writer.Println("%s = append(%s, %s)", symbols["VALUE_ARRAY"], symbols["VALUE_ARRAY"], symbols["LIKE_STATEMENT"])
 				return nil
@@ -328,18 +329,18 @@ func numericalMethods(print blueprint, name string, config url.Values, methods c
 	tableName := print.record.Get(constants.TableNameConfigOption)
 	columnName := config.Get(constants.ColumnConfigOption)
 	rangeMethodName := fmt.Sprintf("%sRangeString", columnName)
-
 	rangeFieldName := fmt.Sprintf("%s%s", name, print.record.Get(constants.BlueprintRangeFieldSuffixConfigOption))
+	columnReference := fmt.Sprintf("%s.%s", tableName, columnName)
 
 	pr, pw := io.Pipe()
 
 	write := func() {
 		writer := writing.NewGoWriter(pw)
+		writer.Comment("[marlow] range clause methods for %s", columnReference)
 
 		e := writer.WithMethod(rangeMethodName, print.Name(), nil, []string{"string"}, func(scope url.Values) error {
 			receiver := scope.Get("receiver")
 			rangeArray := fmt.Sprintf("%s.%s", receiver, rangeFieldName)
-			clauseTarget := fmt.Sprintf("%s.%s", tableName, columnName)
 
 			writer.WithIf("len(%s) != 2", func(url.Values) error {
 				writer.Println("return \"\"")
@@ -348,8 +349,8 @@ func numericalMethods(print blueprint, name string, config url.Values, methods c
 
 			writer.Println(
 				"return fmt.Sprintf(\"%s > %%d AND %s < %%d\", %s[0], %s[1])",
-				clauseTarget,
-				clauseTarget,
+				columnReference,
+				columnReference,
 				rangeArray,
 				rangeArray,
 			)

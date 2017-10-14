@@ -29,6 +29,7 @@ func newRecordConfig(typeName string) url.Values {
 	config.Set(constants.BlueprintLikeFieldSuffixConfigOption, "Like")
 	config.Set(constants.StoreFindMethodPrefixConfigOption, "Find")
 	config.Set(constants.StoreCountMethodPrefixConfigOption, "Count")
+	config.Set(constants.UpdateFieldMethodPrefixConfigOption, "Update")
 	return config
 }
 
