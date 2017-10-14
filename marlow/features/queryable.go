@@ -22,7 +22,7 @@ func finder(record url.Values, fields map[string]url.Values, imports chan<- stri
 
 	go func() {
 		gosrc := writing.NewGoWriter(pw)
-		gosrc.Comment("[marlow feature]: counter on table[%s]", table)
+		gosrc.Comment("[marlow feature]: finder on table[%s]", table)
 
 		bp := blueprint{
 			record: record,
@@ -249,6 +249,8 @@ func counter(record url.Values, fields map[string]url.Values, imports chan<- str
 				receiver,
 				symbols["SELECTION_QUERY"],
 			)
+
+			gosrc.Println("defer %s.Close()", symbols["SELECTION_RESULT"])
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
 				gosrc.Println("return -1, %s", symbols["SELECTION_ERROR"])
