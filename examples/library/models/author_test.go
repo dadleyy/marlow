@@ -276,7 +276,10 @@ func Test_Author(t *testing.T) {
 			g.Assert(e).Equal(nil)
 			g.Assert(c).Equal(0)
 
-			updatedCount, e, _ := store.UpdateAuthorName("danny", &AuthorBlueprint{ID: []int{1}})
+			updatedCount, e, q := store.UpdateAuthorName("danny", &AuthorBlueprint{ID: []int{1}})
+			if e != nil {
+				t.Logf("%s", q)
+			}
 			g.Assert(e).Equal(nil)
 			g.Assert(updatedCount).Equal(1)
 

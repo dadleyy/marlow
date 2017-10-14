@@ -38,15 +38,6 @@ func updater(record url.Values, name string, config url.Values, imports chan<- s
 		"string",
 	}
 
-	replacementFormatString := "'%s'"
-
-	switch config.Get("type") {
-	case "sql.NullInt64":
-		replacementFormatString = "%v"
-	case "int":
-		replacementFormatString = "%d"
-	}
-
 	go func() {
 		gosrc := writing.NewGoWriter(pw)
 		gosrc.Comment("[marlow] updater method for %s", name)
@@ -55,9 +46,8 @@ func updater(record url.Values, name string, config url.Values, imports chan<- s
 			gosrc.Println("%s := bytes.NewBufferString(\"UPDATE %s\")", symbols["QUERY_BUFFER"], tableName)
 
 			gosrc.Println(
-				"%s := fmt.Sprintf(\"%s\", %s)",
+				"%s := fmt.Sprintf(\"'%%v'\", %s)",
 				symbols["SET_VALUE"],
-				replacementFormatString,
 				symbols["VALUE_PARAM"],
 			)
 
