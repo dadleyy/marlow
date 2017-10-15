@@ -303,7 +303,12 @@ func stringMethods(print blueprint, name string, config url.Values, methods chan
 			writer.Println("%s := make([]string, 0, len(%s))", symbols["VALUE_ARRAY"], likeSlice)
 
 			writer.WithIter("_, %s := range %s", func(url.Values) error {
-				likeString := fmt.Sprintf("fmt.Sprintf(\"%s LIKE '%%s'\", %s)", columnReference, symbols["VALUE_ITEM"])
+				likeString := fmt.Sprintf(
+					"fmt.Sprintf(\"%s LIKE '%s%%s%s'\", %s)",
+					columnReference,
+					"%%", "%%",
+					symbols["VALUE_ITEM"],
+				)
 				writer.Println("%s := %s", symbols["LIKE_STATEMENT"], likeString)
 				writer.Println("%s = append(%s, %s)", symbols["VALUE_ARRAY"], symbols["VALUE_ARRAY"], symbols["LIKE_STATEMENT"])
 				return nil
