@@ -27,6 +27,15 @@ const (
 	// StoreCountMethodPrefixConfigOption determines the prefix used when adding the main count method to the store.
 	StoreCountMethodPrefixConfigOption = "storeCountMethodPrefix"
 
+	// UpdateFieldMethodPrefixConfigOption is the method prefix of update methods for individual fields.
+	UpdateFieldMethodPrefixConfigOption = "updateMethodPrefix"
+
 	// ColumnConfigOption is the key of the value used on individual fields that represents which column marlow queries.
 	ColumnConfigOption = "column"
+
+	// QueryableConfigOption boolean value, true/false based on fields ability to be updated.
+	QueryableConfigOption = "query"
+
+	// UpdateableConfigOption boolean value, true/false based on fields ability to be updated.
+	UpdateableConfigOption = "updates"
 )

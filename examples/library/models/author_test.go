@@ -243,6 +243,51 @@ func Test_Author(t *testing.T) {
 			g.Assert(count).Equal(1)
 		})
 
+		g.It("allows the consumer to update the author id", func() {
+			c, e, _ := store.UpdateAuthorID(1991, &AuthorBlueprint{ID: []int{8}})
+			g.Assert(e).Equal(nil)
+			g.Assert(c).Equal(1)
+		})
+
+		g.It("allows the consumer to update the author university id using nil", func() {
+			c, e, _ := store.UpdateAuthorUniversityID(nil, &AuthorBlueprint{ID: []int{1}})
+			g.Assert(e).Equal(nil)
+			g.Assert(c).Equal(1)
+		})
+
+		g.It("allows the consumer to update the author university id using valid: false", func() {
+			c, e, _ := store.UpdateAuthorUniversityID(&sql.NullInt64{Valid: false}, &AuthorBlueprint{ID: []int{2}})
+			g.Assert(e).Equal(nil)
+			g.Assert(c).Equal(1)
+		})
+
+		g.It("allows the consumer to update the author university id using valid: true", func() {
+			c, e, _ := store.UpdateAuthorUniversityID(&sql.NullInt64{
+				Valid: true,
+				Int64: 101,
+			}, &AuthorBlueprint{ID: []int{2}})
+
+			g.Assert(e).Equal(nil)
+			g.Assert(c).Equal(1)
+		})
+
+		g.It("allows the consumer to update the author name", func() {
+			c, e := store.CountAuthors(&AuthorBlueprint{Name: []string{"danny"}})
+			g.Assert(e).Equal(nil)
+			g.Assert(c).Equal(0)
+
+			updatedCount, e, q := store.UpdateAuthorName("danny", &AuthorBlueprint{ID: []int{1}})
+			if e != nil {
+				t.Logf("%s", q)
+			}
+			g.Assert(e).Equal(nil)
+			g.Assert(updatedCount).Equal(1)
+
+			a, e := store.FindAuthors(&AuthorBlueprint{ID: []int{1}})
+			g.Assert(e).Equal(nil)
+			g.Assert(a[0].Name).Equal("danny")
+		})
+
 		g.It("allows the consumer to count authors by blueprint", func() {
 			count, e := store.CountAuthors(&AuthorBlueprint{
 				ID: []int{1, 2},

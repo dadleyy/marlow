@@ -12,5 +12,6 @@ create table books (
   id integer not null primary key,
   title text,
   author_id integer not null,
+  series_id integer,
   page_count integer not null
 );
