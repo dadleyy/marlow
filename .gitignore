@@ -11,6 +11,7 @@
 .lint-results
 .env-*
 /env
+/dist
 .keys
 node_modules
 bin

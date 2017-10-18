@@ -43,8 +43,9 @@ MAX_TEST_CONCURRENCY=10
 TEST_FLAGS=-covermode=atomic -coverprofile={{.Dir}}/.coverprofile
 TEST_LIST_FMT='{{if len .TestGoFiles}}"go test {{.ImportPath}} $(TEST_FLAGS)"{{end}}'
 
-LIBRARY_EXAMPLE_COVERAGE_REPORT=./examples/library.coverage.txt
-LIBRARY_EXAMPLE_COVERAGE_DISTRIBUTABLE=./examples/library.coverage.html
+LIBRARY_COVERAGE_OUTPUT_DIR=./dist/coverage
+LIBRARY_EXAMPLE_COVERAGE_REPORT=$(LIBRARY_COVERAGE_OUTPUT_DIR)/library.coverage.txt
+LIBRARY_EXAMPLE_COVERAGE_DISTRIBUTABLE=$(LIBRARY_COVERAGE_OUTPUT_DIR)/library.coverage.html
 LIBRARY_EXAMPLE_TEST_FLAGS=-covermode=atomic -coverprofile=$(LIBRARY_EXAMPLE_COVERAGE_REPORT)
 
 all: $(EXE)
@@ -66,6 +67,7 @@ test: $(GO_SRC) $(VENDOR_DIR) $(INTERCHANGE_OBJ) lint
 	$(GOVER) $(LIB_DIR) $(GOVER_REPORT)
 
 test-example: $(LIBRARY_EXAMPLE_SRC)
+	mkdir -p $(LIBRARY_COVERAGE_OUTPUT_DIR)
 	$(GO) run $(MAIN) -input=$(LIBRARY_EXAMPLE_MODEL_DIR)
 	$(GO) test $(LIBRARY_EXAMPLE_TEST_FLAGS) -p=$(MAX_TEST_CONCURRENCY) $(LIBRARY_EXAMPLE_MODEL_DIR)
 	$(GO) tool cover -html $(LIBRARY_EXAMPLE_COVERAGE_REPORT) -o $(LIBRARY_EXAMPLE_COVERAGE_DISTRIBUTABLE)
@@ -88,6 +90,7 @@ example: $(LIBRARY_EXAMPLE_SRC) $(LIBRARY_EXAMPLE_MAIN)
 clean-example:
 	rm -rf $(LIBRARY_EXAMPLE_OBJS)
 	rm -rf $(LIBRARY_EXAMPLE_EXE)
+	rm -rf $(LIBRARY_COVERAGE_OUTPUT_DIR)
 
 clean: clean-example
 	rm -rf $(COVERAGE_REPORT)

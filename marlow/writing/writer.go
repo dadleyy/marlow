@@ -109,7 +109,7 @@ func (w *goWriter) formatArgList(args []FuncParam) string {
 }
 
 func (w *goWriter) withBlock(start string, block Block, v url.Values) error {
-	w.Printf("\n%s {", start)
+	w.Printf("%s {", start)
 	defer w.Logger.Printf("}\n\n")
 
 	if block == nil {
