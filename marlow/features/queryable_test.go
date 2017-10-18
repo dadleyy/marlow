@@ -12,10 +12,12 @@ import "go/parser"
 import "github.com/franela/goblin"
 
 type queryableTestScaffold struct {
-	output   *bytes.Buffer
-	imports  chan string
-	record   url.Values
-	fields   map[string]url.Values
+	output *bytes.Buffer
+
+	imports chan string
+	record  url.Values
+	fields  map[string]url.Values
+
 	received map[string]bool
 	closed   bool
 	wg       *sync.WaitGroup

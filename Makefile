@@ -19,7 +19,6 @@ GOVER_REPORT=coverage.txt
 LIB_DIR=./marlow
 SRC_DIR=./marlowc
 EXAMPLE_DIR=./examples
-EXAMPLE_MODEL_DIR=$(EXAMPLE_DIR)/library/models
 
 CYCLO=gocyclo
 CYCLO_FLAGS=-over 15
@@ -29,10 +28,12 @@ MISSPELL=misspell
 LIB_SRC=$(wildcard $(LIB_DIR)/**/*.go $(LIB_DIR)/*.go)
 GO_SRC=$(wildcard $(MAIN) $(SRC_DIR)/**/*.go $(SRC_DIR)/*.go)
 
-EXAMPLE_EXE=$(EXAMPLE_DIR)/library/library
-EXAMPLE_MAIN=$(wildcard $(EXAMPLE_DIR)/library/main.go)
-EXAMPLE_SRC=$(wildcard $(EXAMPLE_DIR)/library/**/*.go)
-EXAMPLE_OBJS=$(patsubst %.go,%.marlow.go,$(EXAMPLE_SRC))
+LIBRARY_EXAMPLE_DIR=$(EXAMPLE_DIR)/library
+LIBRARY_EXAMPLE_MODEL_DIR=$(LIBRARY_EXAMPLE_DIR)/models
+LIBRARY_EXAMPLE_EXE=$(LIBRARY_EXAMPLE_DIR)/library
+LIBRARY_EXAMPLE_MAIN=$(wildcard $(LIBRARY_EXAMPLE_DIR)/main.go)
+LIBRARY_EXAMPLE_SRC=$(wildcard $(LIBRARY_EXAMPLE_DIR)/**/*.go)
+LIBRARY_EXAMPLE_OBJS=$(patsubst %.go,%.marlow.go,$(EXAMPLE_SRC))
 
 VET=$(GO) vet
 VET_FLAGS=
@@ -42,8 +43,10 @@ MAX_TEST_CONCURRENCY=10
 TEST_FLAGS=-covermode=atomic -coverprofile={{.Dir}}/.coverprofile
 TEST_LIST_FMT='{{if len .TestGoFiles}}"go test {{.ImportPath}} $(TEST_FLAGS)"{{end}}'
 
-EXAMPLE_COVER_REPORT=./examples/coverage.txt
-EXAMPLE_TEST_FLAGS=-covermode=atomic -coverprofile=$(EXAMPLE_COVER_REPORT)
+LIBRARY_COVERAGE_OUTPUT_DIR=./dist/coverage
+LIBRARY_EXAMPLE_COVERAGE_REPORT=$(LIBRARY_COVERAGE_OUTPUT_DIR)/library.coverage.txt
+LIBRARY_EXAMPLE_COVERAGE_DISTRIBUTABLE=$(LIBRARY_COVERAGE_OUTPUT_DIR)/library.coverage.html
+LIBRARY_EXAMPLE_TEST_FLAGS=-covermode=atomic -coverprofile=$(LIBRARY_EXAMPLE_COVERAGE_REPORT)
 
 all: $(EXE)
 
@@ -63,10 +66,12 @@ test: $(GO_SRC) $(VENDOR_DIR) $(INTERCHANGE_OBJ) lint
 	$(GO) list -f $(TEST_LIST_FMT) $(LIB_DIR)/... | xargs -L 1 sh -c
 	$(GOVER) $(LIB_DIR) $(GOVER_REPORT)
 
-test-example: $(EXAMPLE_SRC)
-	$(GO) run $(MAIN) -input=$(EXAMPLE_MODEL_DIR)
-	$(GO) test $(EXAMPLE_TEST_FLAGS) -p=$(MAX_TEST_CONCURRENCY) $(EXAMPLE_MODEL_DIR)
-	$(VET) $(VET_FLAGS) $(EXAMPLE_MODEL_DIR)
+test-example: $(LIBRARY_EXAMPLE_SRC)
+	mkdir -p $(LIBRARY_COVERAGE_OUTPUT_DIR)
+	$(GO) run $(MAIN) -input=$(LIBRARY_EXAMPLE_MODEL_DIR)
+	$(GO) test $(LIBRARY_EXAMPLE_TEST_FLAGS) -p=$(MAX_TEST_CONCURRENCY) $(LIBRARY_EXAMPLE_MODEL_DIR)
+	$(GO) tool cover -html $(LIBRARY_EXAMPLE_COVERAGE_REPORT) -o $(LIBRARY_EXAMPLE_COVERAGE_DISTRIBUTABLE)
+	$(VET) $(VET_FLAGS) $(LIBRARY_EXAMPLE_MODEL_DIR)
 
 $(VENDOR_DIR):
 	$(GO) get -v -u github.com/modocache/gover
@@ -76,15 +81,16 @@ $(VENDOR_DIR):
 	$(GO) get -v -u github.com/golang/lint/golint
 	$(GLIDE) install
 
-example: $(EXAMPLE_SRC) $(EXAMPLE_MAIN)
-	$(GO) run $(MAIN) -input=$(EXAMPLE_MODEL_DIR)
+example: $(LIBRARY_EXAMPLE_SRC) $(LIBRARY_EXAMPLE_MAIN)
+	$(GO) run $(MAIN) -input=$(LIBRARY_EXAMPLE_MODEL_DIR)
 	$(GO) get -v github.com/mattn/go-sqlite3
 	$(GO) install -v -x github.com/mattn/go-sqlite3
-	$(COMPILE) $(BUILD_FLAGS) -o $(EXAMPLE_EXE) $(EXAMPLE_MAIN)
+	$(COMPILE) $(BUILD_FLAGS) -o $(LIBRARY_EXAMPLE_EXE) $(LIBRARY_EXAMPLE_MAIN)
 
 clean-example:
-	rm -rf $(EXAMPLE_OBJS)
-	rm -rf $(EXAMPLE_EXE)
+	rm -rf $(LIBRARY_EXAMPLE_OBJS)
+	rm -rf $(LIBRARY_EXAMPLE_EXE)
+	rm -rf $(LIBRARY_COVERAGE_OUTPUT_DIR)
 
 clean: clean-example
 	rm -rf $(COVERAGE_REPORT)

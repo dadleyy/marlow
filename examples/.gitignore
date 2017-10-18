@@ -1,2 +1,4 @@
 lib
 coverage.txt
+library.coverage.txt
+library.coverage.html
