@@ -40,7 +40,7 @@ func NewDeleteableGenerator(record url.Values, fields map[string]url.Values, imp
 
 		e := gosrc.WithMethod(methodName, storeName, params, returns, func(scope url.Values) error {
 			gosrc.WithIf("%s == nil || %s.String() == \"\"", func(url.Values) error {
-				gosrc.Println("return -1, fmt.Errorf(\"%s\")", constants.BlueprintLikeFieldSuffixConfigOption)
+				gosrc.Println("return -1, fmt.Errorf(\"%s\")", constants.InvalidDeletionBlueprint)
 				return nil
 			}, symbols["BLUEPRINT_PARAM"], symbols["BLUEPRINT_PARAM"])
 
