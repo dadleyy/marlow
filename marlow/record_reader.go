@@ -126,7 +126,11 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 
 func readRecord(writer io.Writer, config url.Values, fields map[string]url.Values, imports chan<- string) error {
 	buffer := new(bytes.Buffer)
-	readers, enabled := make([]io.Reader, 0), make(map[string]bool)
+	enabled := make(map[string]bool)
+
+	readers := []io.Reader{
+		features.NewDeleteableGenerator(config, fields, imports),
+	}
 
 	for _, fieldConfig := range fields {
 		queryable := fieldConfig.Get(constants.QueryableConfigOption)

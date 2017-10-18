@@ -296,5 +296,30 @@ func Test_Author(t *testing.T) {
 			g.Assert(count).Equal(2)
 		})
 
+		g.Describe("DeleteAuthors", func() {
+
+			g.It("returns an error and a negative number with an empty blueprint", func() {
+				c, e := store.DeleteAuthors(&AuthorBlueprint{})
+				g.Assert(e == nil).Equal(false)
+				g.Assert(c).Equal(-1)
+			})
+
+			g.It("returns an error and a negative number without a blueprint", func() {
+				c, e := store.DeleteAuthors(nil)
+				g.Assert(e == nil).Equal(false)
+				g.Assert(c).Equal(-1)
+			})
+
+			g.It("successfully deletes the records found by the blueprint", func() {
+				deleted, e := store.DeleteAuthors(&AuthorBlueprint{ID: []int{13}})
+				g.Assert(e).Equal(nil)
+				g.Assert(deleted).Equal(1)
+				found, e := store.CountAuthors(&AuthorBlueprint{ID: []int{13}})
+				g.Assert(e).Equal(nil)
+				g.Assert(found).Equal(0)
+			})
+
+		})
+
 	})
 }

@@ -290,5 +290,36 @@ func Test_Book(t *testing.T) {
 			g.Assert(results[0]).Equal(10)
 			g.Assert(results[1]).Equal(20)
 		})
+
+		g.Describe("DeleteBooks", func() {
+
+			g.It("returns an error and a negative number with an empty blueprint", func() {
+				c, e := store.DeleteBooks(&BookBlueprint{})
+				g.Assert(e == nil).Equal(false)
+				g.Assert(c).Equal(-1)
+			})
+
+			g.It("returns an error and a negative number without a blueprint", func() {
+				c, e := store.DeleteBooks(nil)
+				g.Assert(e == nil).Equal(false)
+				g.Assert(c).Equal(-1)
+			})
+
+			g.It("successfully returns 0 if no books were found to delete", func() {
+				deleted, e := store.DeleteBooks(&BookBlueprint{ID: []int{-1000}})
+				g.Assert(e).Equal(nil)
+				g.Assert(deleted).Equal(0)
+			})
+
+			g.It("successfully deletes the records found by the blueprint", func() {
+				deleted, e := store.DeleteBooks(&BookBlueprint{ID: []int{13}})
+				g.Assert(e).Equal(nil)
+				g.Assert(deleted).Equal(1)
+				found, e := store.CountBooks(&BookBlueprint{ID: []int{13}})
+				g.Assert(e).Equal(nil)
+				g.Assert(found).Equal(0)
+			})
+
+		})
 	})
 }
