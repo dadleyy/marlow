@@ -16,6 +16,7 @@ for interacting with a project's data persistence layer while maintaining strong
 [![tag.img]][tag.url]
 [![commits.img]][commits.url]
 [![awesome.img]][awesome.url]
+[![generated-coverage.img]][generated-coverage.url]
 
 ---- 
 
@@ -163,3 +164,5 @@ overrides for default marlow assumptions about the table.
 [commits.url]: https://github.com/dadleyy/marlow
 [awesome.img]: https://img.shields.io/badge/%F0%9F%95%B6-awesome--go-443f5e.svg?colorA=c3a1bb&style=flat-square
 [awesome.url]: https://awesome-go.com/#orm
+[generated-coverage.img]: https://img.shields.io/badge/generated--coverage-report-5272b4.svg?style=flat-square
+[generated-coverage.url]: http://marlow-go.s3.amazonaws.com/coverage/examples/library/latest/library.coverage.html
