@@ -141,6 +141,13 @@ func Test_Author(t *testing.T) {
 			g.Assert(len(authors)).Equal(20)
 		})
 
+		g.It("allows the consumer to search for authors w/ blueprint (explicit offset)", func() {
+			authors, e := store.FindAuthors(&AuthorBlueprint{Offset: 1, Limit: 1})
+			g.Assert(e).Equal(nil)
+			g.Assert(len(authors)).Equal(1)
+			g.Assert(authors[0].ID).Equal(2)
+		})
+
 		g.It("allows the consumer to search for authors by explicit Name", func() {
 			authors, e := store.FindAuthors(&AuthorBlueprint{
 				Name: []string{"author-11", "author-21", "not-exists"},
@@ -177,6 +184,12 @@ func Test_Author(t *testing.T) {
 
 			g.Assert(authors[1].Name).Equal("other author")
 			g.Assert(authors[1].UniversityID.Valid).Equal(false)
+		})
+
+		g.It("allows consumer to count w/ nil blueprint", func() {
+			count, e := store.CountAuthors(nil)
+			g.Assert(e).Equal(nil)
+			g.Assert(count).Equal(generatedAuthorCount + 1)
 		})
 
 		g.It("allows consumer to search by authors with null UniversityID", func() {
