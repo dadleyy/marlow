@@ -164,5 +164,5 @@ overrides for default marlow assumptions about the table.
 [commits.url]: https://github.com/dadleyy/marlow
 [awesome.img]: https://img.shields.io/badge/%F0%9F%95%B6-awesome--go-443f5e.svg?colorA=c3a1bb&style=flat-square
 [awesome.url]: https://awesome-go.com/#orm
-[generated-coverage.img]: https://img.shields.io/badge/generated--coverage-report-5272b4.svg?style=flat-square
-[generated-coverage.url]: http://marlow-go.s3.amazonaws.com/coverage/examples/library/latest/library.coverage.html
+[generated-coverage.img]: http://dadleyy.marlow.gendry.sizethree.cc
+[generated-coverage.url]: http://coverage.marlow.sizethree.cc/latest/library.coverage.html#file0
