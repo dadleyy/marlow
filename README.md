@@ -1,5 +1,5 @@
 <div style="text-align: center">
-  <img src="https://s3.amazonaws.com/marlow-go/media/logo-text.svg" width="65%" align="center"/>
+  <img src="https://s3.amazonaws.com/coverage.marlow.sizethree.cc/media/marlow.svg" width="65%" align="center"/>
 </div>
 
 ---
@@ -121,13 +121,11 @@ overrides for default marlow assumptions about the table.
 | `column` | This is the column that any raw sql generated will target when scanning/selecting/querying this field. |
 
 
-| :video_camera: |
-| ---- |
-| [![preview]][preview] |
-
 ----
 
 ![logo][logo.img]
+
+generated coverage badge provided by [gendry]
 
 ----
 
@@ -159,10 +157,11 @@ overrides for default marlow assumptions about the table.
 [godoc.img]: http://img.shields.io/badge/godoc-reference-5272B4.svg?style=flat-square
 [godoc.url]: https://godoc.org/github.com/dadleyy/marlow/marlow
 [field tags]: https://golang.org/pkg/reflect/#StructTag
-[logo.img]: https://s3.amazonaws.com/marlow-go/media/logo-text.svg
+[logo.img]: https://s3.amazonaws.com/coverage.marlow.sizethree.cc/media/marlow.svg
 [commits.img]: https://img.shields.io/github/commits-since/dadleyy/marlow/latest.svg?style=flat-square
 [commits.url]: https://github.com/dadleyy/marlow
 [awesome.img]: https://img.shields.io/badge/%F0%9F%95%B6-awesome--go-443f5e.svg?colorA=c3a1bb&style=flat-square
 [awesome.url]: https://awesome-go.com/#orm
-[generated-coverage.img]: http://dadleyy.marlow.gendry.sizethree.cc
-[generated-coverage.url]: http://coverage.marlow.sizethree.cc/latest/library.coverage.html#file0
+[generated-coverage.img]: http://coverage.marlow.sizethree.cc
+[generated-coverage.url]: http://coverage.marlow.sizethree.cc.s3.amazonaws.com/latest/library.coverage.html
+[gendry]: https://bitbucket.org/dadleyy/gendry
