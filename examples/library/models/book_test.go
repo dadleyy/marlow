@@ -186,12 +186,22 @@ func Test_Book(t *testing.T) {
 			g.Assert(len(books)).Equal(1)
 		})
 
-		g.It("allows the consumer to count books by blueprint", func() {
-			count, e := store.CountBooks(&BookBlueprint{
-				ID: []int{1, 2},
+		g.Describe("store.CountBooks", func() {
+
+			g.It("allows the consumer to count books with nil blueprint", func() {
+				count, e := store.CountBooks(nil)
+				g.Assert(e).Equal(nil)
+				g.Assert(count).Equal(testBookCount)
 			})
-			g.Assert(e).Equal(nil)
-			g.Assert(count).Equal(2)
+
+			g.It("allows the consumer to count books by blueprint", func() {
+				count, e := store.CountBooks(&BookBlueprint{
+					ID: []int{1, 2},
+				})
+				g.Assert(e).Equal(nil)
+				g.Assert(count).Equal(2)
+			})
+
 		})
 
 		g.It("allows the consumer to select explicit book ids", func() {
