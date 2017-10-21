@@ -4,6 +4,8 @@
 | :--- | :--- |
 | | |
 
-| :tophat: | @dadleyy |
+| [:tophat:][contributing] | @dadleyy |
 | :--- | :--- |
-| :paperclip: | |
+| [:paperclip:][contributing] | |
+
+[contributing]: https://github.com/dadleyy/marlow/blob/master/.github/CONTRIBUTING.md
