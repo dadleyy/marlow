@@ -9,6 +9,18 @@ If you are interested in contributing, please familiarize yourself with the auto
 for continuous integration _before_ opening a pull request; while not absolutely necessary, it will save you some
 surprises when you do open a pull request that could've been mitigated locally.
 
+### Pull requests
+
+When opening a pull request, be sure to use the `PULL_REQUEST_TEMPLATE.md` file in the `.github` directory (github should automatically fill your PR description with the contents of that file) as a template for your PR's description. The first table (underneath "Notable Changes") should explicitly call out any important line changes, as well as the github issue number and/or general reason for the change.
+
+The second table should be used to identify other developers that should review the code. This includes both the primary reviewer - using a `@mention` next to the :tophat: row - and any other developers that may be interested in the diff next to the :paperclip:. For example:
+
+> | :tophat: | @dadleyy |
+> | :--- | :--- |
+> | :paperclip: | @sizethree/golang |
+
+would indicate that @dadleyy is primarily responsible for reviewing the code, while the @sizethree/golang team would be interested in it.
+
 
 [Marlow]: https://github.com/dadleyy/marlow
 [travis]: https://travis-ci.org/dadleyy/marlow
