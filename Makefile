@@ -38,9 +38,9 @@ LIBRARY_EXAMPLE_OBJS=$(patsubst %.go,%.marlow.go,$(EXAMPLE_SRC))
 VET=$(GO) vet
 VET_FLAGS=
 
-MAX_TEST_CONCURRENCY=10
+MAX_TEST_CONCURRENCY=1
 
-TEST_FLAGS=-covermode=atomic -coverprofile={{.Dir}}/.coverprofile
+TEST_FLAGS=-covermode=atomic -v -coverprofile={{.Dir}}/.coverprofile
 TEST_LIST_FMT='{{if len .TestGoFiles}}"go test {{.ImportPath}} $(TEST_FLAGS)"{{end}}'
 
 LIBRARY_COVERAGE_OUTPUT_DIR=./dist/coverage
