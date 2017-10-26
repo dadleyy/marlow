@@ -65,6 +65,10 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 
 	recordConfig, recordFields := newRecordConfig(typeName), make(map[string]url.Values)
 
+	columnMap := make(map[string]string)
+
+	pr, pw := io.Pipe()
+
 	for _, f := range structType.Fields.List {
 		if f.Tag == nil {
 			continue
@@ -88,12 +92,34 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 			continue
 		}
 
-		if fieldConfig.Get("column") == "" {
-			fieldConfig.Set("column", strings.ToLower(name))
+		columnName := fieldConfig.Get(constants.ColumnConfigOption)
+
+		// If the column config option is the dash, skip any marlow related generation for it.
+		if columnName == "-" {
+			continue
 		}
+
+		// If the column name is empty, use the lowercased field name as the value.
+		if columnName == "" {
+			columnName = strings.ToLower(name)
+			fieldConfig.Set(constants.ColumnConfigOption, columnName)
+		}
+
+		if otherField, dupe := columnMap[columnName]; dupe == true {
+			pw.CloseWithError(fmt.Errorf("duplicate column \"%s\" for fields: %s & %s", columnName, otherField, name))
+			return pr, true
+		}
+
+		columnMap[columnName] = name
 
 		// Convert our field's type to it's string counterpart.
 		fieldType := fmt.Sprintf("%v", f.Type)
+
+		// Error on slice types
+		if _, ok := f.Type.(*ast.ArrayType); ok == true {
+			pw.CloseWithError(fmt.Errorf("slice types not supported by marlow, field: %s", name))
+			return pr, true
+		}
 
 		// Check to see if this field is a complex type - one that refers to an exported type from another package.
 		selector, ok := f.Type.(*ast.SelectorExpr)
@@ -108,8 +134,6 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 		fieldConfig.Set("type", fieldType)
 		recordFields[name] = fieldConfig
 	}
-
-	pr, pw := io.Pipe()
 
 	if v := regexp.MustCompile("^[A-z_]+$"); v.MatchString(recordConfig.Get("tableName")) != true {
 		pw.CloseWithError(fmt.Errorf("invalid-table"))

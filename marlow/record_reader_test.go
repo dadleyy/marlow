@@ -1,18 +1,20 @@
 package marlow
 
 import "io"
+import "sync"
 import "bytes"
 import "go/ast"
-import "go/token"
-import "go/parser"
 import "testing"
 import "strings"
+import "go/token"
+import "go/parser"
 import "github.com/franela/goblin"
 
 type recordReaderTestScaffold struct {
 	source  io.Reader
 	imports chan string
 	output  *bytes.Buffer
+	waiter  *sync.WaitGroup
 }
 
 func (s *recordReaderTestScaffold) root() ast.Decl {
@@ -29,56 +31,155 @@ func (s *recordReaderTestScaffold) root() ast.Decl {
 	return tree.Decls[0]
 }
 
+func (s *recordReaderTestScaffold) reset() {
+	s.imports = make(chan string)
+	s.output = new(bytes.Buffer)
+	s.waiter = &sync.WaitGroup{}
+}
+
 func Test_RecordReader(t *testing.T) {
 	g := goblin.Goblin(t)
 
 	var scaffold *recordReaderTestScaffold
 
-	g.Describe("newRecordReader", func() {
+	g.Describe("recordReader", func() {
 
 		g.BeforeEach(func() {
-			scaffold = &recordReaderTestScaffold{
-				imports: make(chan string),
-				output:  new(bytes.Buffer),
-			}
+			scaffold = &recordReaderTestScaffold{}
+			scaffold.reset()
 		})
 
-		g.It("returns false if the root is not a valid marlow struct", func() {
-			scaffold.source = strings.NewReader(`
-			package marlowt
+		g.BeforeEach(func() {
+			scaffold.waiter.Add(1)
 
-			func someFunction() {
-			}
-			`)
-			_, ok := newRecordReader(scaffold.root(), scaffold.imports)
-			g.Assert(ok).Equal(false)
+			go func() {
+				received := make(map[string]bool)
+
+				for importName := range scaffold.imports {
+					received[importName] = true
+				}
+
+				scaffold.waiter.Done()
+			}()
 		})
 
-		g.It("returns true if the root is a valid marlow struct", func() {
-			scaffold.source = strings.NewReader(`
-			package marlowt
+		g.AfterEach(func() {
+			//go func() { close(scaffold.imports) }()
+			scaffold.waiter.Wait()
+		})
 
-			type Book struct {
-				Title string ` + "`marlow:\"\"`" + `
-			}
-			`)
-			_, ok := newRecordReader(scaffold.root(), scaffold.imports)
+		g.It("with a valid source struct", func() {
+			scaffold.source = strings.NewReader(`
+				package marlowt
+				type Author struct {
+					Title string
+				}`)
+			reader, ok := newRecordReader(scaffold.root(), scaffold.imports)
 			g.Assert(ok).Equal(true)
+			_, e := io.Copy(scaffold.output, reader)
+			close(scaffold.imports)
+			g.Assert(e).Equal(nil)
 		})
 
-		g.It("returns a reader that will error during copy if the record has an invalid tableName", func() {
+		g.It("with a valid source struct including explicit column names", func() {
+			scaffold.source = strings.NewReader(`
+				package marlowt
+				type Author struct {
+					Title string ` + "`marlow:\"column=title\"`" + `
+				}`)
+			reader, ok := newRecordReader(scaffold.root(), scaffold.imports)
+			g.Assert(ok).Equal(true)
+			_, e := io.Copy(scaffold.output, reader)
+			close(scaffold.imports)
+			g.Assert(e).Equal(nil)
+		})
+
+		g.It("with a valid source struct including explicit table name from field", func() {
+			scaffold.source = strings.NewReader(`
+				package marlowt
+				type Author struct {
+					table string ` + "`marlow:\"tableName=authors\"`" + `
+					Title string
+				}`)
+			reader, ok := newRecordReader(scaffold.root(), scaffold.imports)
+			g.Assert(ok).Equal(true)
+			_, e := io.Copy(scaffold.output, reader)
+			close(scaffold.imports)
+			g.Assert(e).Equal(nil)
+		})
+
+		g.It("with a valid source struct with empty marlow field column config", func() {
 			scaffold.source = strings.NewReader(`
 			package marlowt
-
-			type Book struct {
-				table string ` + "`marlow:\"tableName=@@#\"`" + `
-				Title string ` + "`marlow:\"column=title\"`" + `
-			}
-			`)
-			r, ok := newRecordReader(scaffold.root(), scaffold.imports)
+			type Author struct {
+				Title 				string
+				IgnoredColumn string ` + "`marlow:\"\"`" + `
+			}`)
+			reader, ok := newRecordReader(scaffold.root(), scaffold.imports)
 			g.Assert(ok).Equal(true)
-			_, e := io.Copy(scaffold.output, r)
-			g.Assert(e.Error()).Equal("invalid-table")
+			_, e := io.Copy(scaffold.output, reader)
+			close(scaffold.imports)
+			g.Assert(e).Equal(nil)
+		})
+
+		g.It("with a valid source struct with explicit exclusions of certain columns", func() {
+			scaffold.source = strings.NewReader(`
+			package marlowt
+			type Author struct {
+				Title 				string
+				IgnoredColumn string ` + "`marlow:\"column=-\"`" + `
+			}`)
+			reader, ok := newRecordReader(scaffold.root(), scaffold.imports)
+			g.Assert(ok).Equal(true)
+			_, e := io.Copy(scaffold.output, reader)
+			close(scaffold.imports)
+			g.Assert(e).Equal(nil)
+		})
+
+		g.It("errors during copy if duplicate column names", func() {
+			scaffold.source = strings.NewReader(`
+			package marlowt
+			type Author struct {
+				Title 				string
+				IgnoredColumn string ` + "`marlow:\"column=dupe\"`" + `
+				OtherColumn string ` + "`marlow:\"column=dupe\"`" + `
+			}`)
+			reader, ok := newRecordReader(scaffold.root(), scaffold.imports)
+			g.Assert(ok).Equal(true)
+			_, e := io.Copy(scaffold.output, reader)
+			close(scaffold.imports)
+			g.Assert(e == nil).Equal(false)
+		})
+
+		g.It("errors during copy if slice field type", func() {
+			scaffold.source = strings.NewReader(`
+			package marlowt
+			type Author struct {
+				Title 			string
+				MiddleName  string
+				SliceColumn []string ` + "`marlow:\"column=dupe\"`" + `
+			}`)
+			reader, ok := newRecordReader(scaffold.root(), scaffold.imports)
+			g.Assert(ok).Equal(true)
+			_, e := io.Copy(scaffold.output, reader)
+			close(scaffold.imports)
+			g.Assert(e == nil).Equal(false)
+		})
+
+		g.It("errors during copy if duplicate column names (with other valid fields)", func() {
+			scaffold.source = strings.NewReader(`
+			package marlowt
+			type Author struct {
+				Title 				string
+				MiddleName 		string
+				IgnoredColumn string ` + "`marlow:\"column=dupe\"`" + `
+				OtherColumn 	string ` + "`marlow:\"column=dupe\"`" + `
+			}`)
+			reader, ok := newRecordReader(scaffold.root(), scaffold.imports)
+			g.Assert(ok).Equal(true)
+			_, e := io.Copy(scaffold.output, reader)
+			close(scaffold.imports)
+			g.Assert(e == nil).Equal(false)
 		})
 
 	})
