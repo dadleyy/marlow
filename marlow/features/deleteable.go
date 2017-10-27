@@ -7,6 +7,17 @@ import "github.com/gedex/inflector"
 import "github.com/dadleyy/marlow/marlow/writing"
 import "github.com/dadleyy/marlow/marlow/constants"
 
+type deleteableSymbols struct {
+	Error           string
+	RowCount        string
+	BlueprintParam  string
+	ExecResult      string
+	ExecError       string
+	StatementString string
+	StatementResult string
+	StatementError  string
+}
+
 // NewDeleteableGenerator is responsible for creating a generator that will write out the Delete api methods.
 func NewDeleteableGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
 	pr, pw := io.Pipe()
@@ -16,16 +27,19 @@ func NewDeleteableGenerator(record url.Values, fields map[string]url.Values, imp
 	methodName := fmt.Sprintf("Delete%s", inflector.Pluralize(recordName))
 	tableName := record.Get(constants.TableNameConfigOption)
 
-	symbols := map[string]string{
-		"ERROR":            "_error",
-		"ROW_COUNT":        "_rowCount",
-		"BLUEPRINT_PARAM":  "_blueprint",
-		"STATEMENT_STRING": "_statement",
-		"STATEMENT_RESULT": "_result",
+	symbols := deleteableSymbols{
+		Error:           "_e",
+		RowCount:        "_count",
+		BlueprintParam:  "_blueprint",
+		StatementString: "_query",
+		StatementResult: "_statement",
+		StatementError:  "_se",
+		ExecResult:      "_execResult",
+		ExecError:       "_ee",
 	}
 
 	params := []writing.FuncParam{
-		{Type: fmt.Sprintf("*%s", blueprint{record: record}.Name()), Symbol: symbols["BLUEPRINT_PARAM"]},
+		{Type: fmt.Sprintf("*%s", blueprint{record: record}.Name()), Symbol: symbols.BlueprintParam},
 	}
 
 	returns := []string{
@@ -42,38 +56,53 @@ func NewDeleteableGenerator(record url.Values, fields map[string]url.Values, imp
 			gosrc.WithIf("%s == nil || %s.String() == \"\"", func(url.Values) error {
 				gosrc.Println("return -1, fmt.Errorf(\"%s\")", constants.InvalidDeletionBlueprint)
 				return nil
-			}, symbols["BLUEPRINT_PARAM"], symbols["BLUEPRINT_PARAM"])
+			}, symbols.BlueprintParam, symbols.BlueprintParam)
 
 			deleteString := fmt.Sprintf("DELETE FROM %s", tableName)
 
 			gosrc.Println(
 				"%s := fmt.Sprintf(\"%s %%s\", %s)",
-				symbols["STATEMENT_STRING"],
+				symbols.StatementString,
 				deleteString,
-				symbols["BLUEPRINT_PARAM"],
+				symbols.BlueprintParam,
 			)
 
 			gosrc.Println(
-				"%s, %s := %s.e(%s + \";\")",
-				symbols["STATEMENT_RESULT"],
-				symbols["ERROR"],
+				"%s, %s := %s.Prepare(%s + \";\")",
+				symbols.StatementResult,
+				symbols.Error,
 				scope.Get("receiver"),
-				symbols["STATEMENT_STRING"],
+				symbols.StatementString,
 			)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("return -1, %s", symbols["ERROR"])
+				gosrc.Println("return -1, %s", symbols.Error)
 				return nil
-			}, symbols["ERROR"])
+			}, symbols.Error)
 
-			gosrc.Println("%s, %s := %s.RowsAffected()", symbols["ROW_COUNT"], symbols["ERROR"], symbols["STATEMENT_RESULT"])
+			gosrc.Println("defer %s.Close()", symbols.StatementResult)
+
+			gosrc.Println(
+				"%s, %s := %s.Exec(%s.Values()...)",
+				symbols.ExecResult,
+				symbols.ExecError,
+				symbols.StatementResult,
+				symbols.BlueprintParam,
+			)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("return -1, %s", symbols["ERROR"])
+				gosrc.Println("return -1, %s", symbols.ExecError)
 				return nil
-			}, symbols["ERROR"])
+			}, symbols.ExecError)
 
-			gosrc.Println("return %s, nil", symbols["ROW_COUNT"])
+			gosrc.Println("%s, %s := %s.RowsAffected()", symbols.RowCount, symbols.Error, symbols.ExecResult)
+
+			gosrc.WithIf("%s != nil", func(url.Values) error {
+				gosrc.Println("return -1, %s", symbols.Error)
+				return nil
+			}, symbols.Error)
+
+			gosrc.Println("return %s, nil", symbols.RowCount)
 
 			return nil
 		})
