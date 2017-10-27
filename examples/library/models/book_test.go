@@ -11,7 +11,7 @@ import "github.com/franela/goblin"
 func addBookRow(db *sql.DB, values ...[]string) error {
 	for _, rowValues := range values {
 		valueString := strings.Join(rowValues, ",")
-		statement := fmt.Sprintf("insert into books (id,page_count,author_id,title) values(%s);", valueString)
+		statement := fmt.Sprintf("insert into books (page_count,author,title) values(%s);", valueString)
 		r, e := db.Exec(statement)
 
 		if e != nil {
@@ -51,9 +51,9 @@ func Test_Book(t *testing.T) {
 			bookFixtures := [][]string{}
 
 			for i := 1; i < testBookCount+1; i++ {
-				id, pageCount, author := fmt.Sprintf("%d", i), fmt.Sprintf("%d", i*10), fmt.Sprintf("%d", (i*10)+1)
+				pageCount, author := fmt.Sprintf("%d", i*10), fmt.Sprintf("%d", (i*10)+1)
 				title := fmt.Sprintf("'book-%d'", i)
-				bookFixtures = append(bookFixtures, []string{id, pageCount, author, title})
+				bookFixtures = append(bookFixtures, []string{pageCount, author, title})
 			}
 
 			g.Assert(addBookRow(db, bookFixtures...)).Equal(nil)
@@ -329,7 +329,28 @@ func Test_Book(t *testing.T) {
 				g.Assert(e).Equal(nil)
 				g.Assert(found).Equal(0)
 			})
-
 		})
+
+		g.Describe("CreateBooks", func() {
+			g.It("returns immediately with 0 if no authors", func() {
+				s, e := store.CreateBooks()
+				g.Assert(e).Equal(nil)
+				g.Assert(s).Equal(0)
+			})
+
+			g.It("returns the number of authors created", func() {
+				s, e := store.CreateBooks([]Book{
+					{Title: "Lord of the Rings", PageCount: 100, AuthorID: 1},
+					{Title: "Harry Potter", PageCount: 100, AuthorID: 2},
+				}...)
+				g.Assert(e).Equal(nil)
+				g.Assert(s).Equal(2)
+				found, e := store.FindBooks(&BookBlueprint{Title: []string{"Harry Potter"}})
+				g.Assert(e).Equal(nil)
+				g.Assert(len(found)).Equal(1)
+				g.Assert(found[0].ID > 0).Equal(true)
+			})
+		})
+
 	})
 }

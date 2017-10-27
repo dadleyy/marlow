@@ -309,6 +309,24 @@ func Test_Author(t *testing.T) {
 			g.Assert(count).Equal(2)
 		})
 
+		g.Describe("CreateAuthors", func() {
+			g.It("returns immediately with 0 if no authors", func() {
+				s, e := store.CreateAuthors()
+				g.Assert(e).Equal(nil)
+				g.Assert(s).Equal(0)
+			})
+
+			g.It("returns the number of authors created", func() {
+				s, e := store.CreateAuthors(Author{Name: "Danny"}, Author{Name: "Amelia"})
+				g.Assert(e).Equal(nil)
+				g.Assert(s).Equal(2)
+				found, e := store.FindAuthors(&AuthorBlueprint{Name: []string{"Amelia"}})
+				g.Assert(e).Equal(nil)
+				g.Assert(len(found)).Equal(1)
+				g.Assert(found[0].ID > 0).Equal(true)
+			})
+		})
+
 		g.Describe("DeleteAuthors", func() {
 
 			g.It("returns an error and a negative number with an empty blueprint", func() {

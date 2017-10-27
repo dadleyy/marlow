@@ -9,7 +9,7 @@ import "database/sql"
 // Author represents an author of a book.
 type Author struct {
 	table        bool          `marlow:"tableName=authors"`
-	ID           int           `marlow:"column=id"`
+	ID           int           `marlow:"column=id&autoIncrement=true"`
 	Name         string        `marlow:"column=name"`
 	UniversityID sql.NullInt64 `marlow:"column=university_id"`
 }

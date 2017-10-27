@@ -152,7 +152,7 @@ generated coverage badge provided by [gendry]
 [golang]: https://golang.org
 [report.img]: https://goreportcard.com/badge/github.com/dadleyy/marlow?style=flat-square
 [report.url]: https://goreportcard.com/report/github.com/dadleyy/marlow
-[travis.img]: https://img.shields.io/travis/dadleyy/marlow.svg?style=flat-square
+[travis.img]: https://img.shields.io/travis/dadleyy/marlow/master.svg?style=flat-square
 [travis.url]: https://travis-ci.org/dadleyy/marlow
 [godoc.img]: http://img.shields.io/badge/godoc-reference-5272B4.svg?style=flat-square
 [godoc.url]: https://godoc.org/github.com/dadleyy/marlow/marlow

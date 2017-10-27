@@ -9,10 +9,10 @@ import "database/sql"
 // Book represents a book in the example application
 type Book struct {
 	table     string        `marlow:"defaultLimit=10"`
-	ID        int           `marlow:"column=id"`
+	ID        int           `marlow:"column=id&autoIncrement=true"`
 	Title     string        `marlow:"column=title"`
-	AuthorID  int           `marlow:"column=author_id&references=Author"`
-	SeriesID  sql.NullInt64 `marlow:"column=series_id&references=Author"`
+	AuthorID  int           `marlow:"column=author&references=Author"`
+	SeriesID  sql.NullInt64 `marlow:"column=series"`
 	PageCount int           `marlow:"column=page_count"`
 }
 

@@ -153,6 +153,7 @@ func readRecord(writer io.Writer, config url.Values, fields map[string]url.Value
 	enabled := make(map[string]bool)
 
 	readers := []io.Reader{
+		features.NewCreateableGenerator(config, fields, imports),
 		features.NewDeleteableGenerator(config, fields, imports),
 	}
 
