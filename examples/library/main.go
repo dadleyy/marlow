@@ -29,7 +29,7 @@ func withTx(db *sql.DB, block func(*sql.Tx) error) error {
 }
 
 func addBooks(tx *sql.Tx) error {
-	stmt, e := tx.Prepare("insert into books(id, title, author_id, page_count) values(?, ?, ?, ?)")
+	stmt, e := tx.Prepare("insert into books(id, title, author, page_count) values(?, ?, ?, ?)")
 
 	if e != nil {
 		log.Fatal(e)

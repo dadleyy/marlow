@@ -40,13 +40,14 @@ VET_FLAGS=
 
 MAX_TEST_CONCURRENCY=1
 
-TEST_FLAGS=-covermode=atomic -v -coverprofile={{.Dir}}/.coverprofile
+TEST_VERBOSITY=-v
+TEST_FLAGS=-covermode=atomic $(TEST_VERBOSITY) -coverprofile={{.Dir}}/.coverprofile
 TEST_LIST_FMT='{{if len .TestGoFiles}}"go test {{.ImportPath}} $(TEST_FLAGS)"{{end}}'
 
 LIBRARY_COVERAGE_OUTPUT_DIR=./dist/coverage
 LIBRARY_EXAMPLE_COVERAGE_REPORT=$(LIBRARY_COVERAGE_OUTPUT_DIR)/library.coverage.txt
 LIBRARY_EXAMPLE_COVERAGE_DISTRIBUTABLE=$(LIBRARY_COVERAGE_OUTPUT_DIR)/library.coverage.html
-LIBRARY_EXAMPLE_TEST_FLAGS=-covermode=atomic -coverprofile=$(LIBRARY_EXAMPLE_COVERAGE_REPORT)
+LIBRARY_EXAMPLE_TEST_FLAGS=-covermode=atomic $(TEST_VERBOSITY) -coverprofile=$(LIBRARY_EXAMPLE_COVERAGE_REPORT)
 
 all: $(EXE)
 
