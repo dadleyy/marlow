@@ -41,6 +41,13 @@ func Test_Book(t *testing.T) {
 
 	dbFile := "./book-testing.db"
 
+	g.Describe("Book Blueprint test suite", func() {
+		g.It("returns value placeholders for TitleLike", func() {
+			str := fmt.Sprintf("%s", &BookBlueprint{TitleLike: []string{"b"}})
+			g.Assert(str).Equal("WHERE books.title LIKE ?")
+		})
+	})
+
 	g.Describe("Book model & generated store", func() {
 
 		g.Before(func() {
@@ -95,7 +102,7 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.It("allows the consumer to search by title like", func() {
-			count, e := store.CountBooks(&BookBlueprint{TitleLike: []string{"b"}})
+			count, e := store.CountBooks(&BookBlueprint{TitleLike: []string{"%book-%"}})
 			g.Assert(e).Equal(nil)
 			g.Assert(count).Equal(testBookCount)
 		})
@@ -352,5 +359,23 @@ func Test_Book(t *testing.T) {
 			})
 		})
 
+		g.Describe("findAuthors", func() {
+			g.It("successully escapes single quote characters during searches on name", func() {
+				name := "mr astley's blueberries"
+				_, e := store.CreateBooks(Book{Title: name})
+				g.Assert(e).Equal(nil)
+
+				bp := &BookBlueprint{
+					Title: []string{name},
+				}
+
+				c, e := store.CountBooks(bp)
+				g.Assert(e).Equal(nil)
+				g.Assert(c).Equal(1)
+
+				_, e = store.DeleteBooks(bp)
+				g.Assert(e).Equal(nil)
+			})
+		})
 	})
 }

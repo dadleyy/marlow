@@ -54,7 +54,7 @@ func Test_Author(t *testing.T) {
 					{Int64: 10, Valid: true},
 				},
 			})
-			g.Assert(r).Equal("WHERE authors.university_id IN ('10')")
+			g.Assert(r).Equal("WHERE authors.university_id IN (?)")
 		})
 
 		g.It("supports NOT NULL selection if present but empty on sql.NullInt64 fields", func() {
@@ -78,12 +78,12 @@ func Test_Author(t *testing.T) {
 				IDRange: []int{1, 2},
 			})
 
-			g.Assert(r).Equal("WHERE authors.id > 1 AND authors.id < 2")
+			g.Assert(r).Equal("WHERE authors.id > ? AND authors.id < ?")
 		})
 
 		g.It("supports 'IN' on ID column querying", func() {
 			r := fmt.Sprintf("%s", &AuthorBlueprint{ID: []int{1, 2, 3}})
-			g.Assert(r).Equal("WHERE authors.id IN ('1','2','3')")
+			g.Assert(r).Equal("WHERE authors.id IN (?,?,?)")
 		})
 
 		g.It("supports a combination of range and 'IN' on ID column querying", func() {
@@ -92,7 +92,7 @@ func Test_Author(t *testing.T) {
 				IDRange: []int{1, 4},
 			})
 
-			g.Assert(r).Equal("WHERE authors.id IN ('1','2','3') AND authors.id > 1 AND authors.id < 4")
+			g.Assert(r).Equal("WHERE authors.id IN (?,?,?) AND authors.id > ? AND authors.id < ?")
 		})
 
 	})
@@ -351,6 +351,5 @@ func Test_Author(t *testing.T) {
 			})
 
 		})
-
 	})
 }
