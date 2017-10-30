@@ -101,13 +101,11 @@ func Test_Book(t *testing.T) {
 			g.Assert(len(books)).Equal(0)
 		})
 
-		/*
-			g.It("allows the consumer to search by title like", func() {
-				count, e := store.CountBooks(&BookBlueprint{TitleLike: []string{"b"}})
-				g.Assert(e).Equal(nil)
-				g.Assert(count).Equal(testBookCount)
-			})
-		*/
+		g.It("allows the consumer to search by title like", func() {
+			count, e := store.CountBooks(&BookBlueprint{TitleLike: []string{"%book-%"}})
+			g.Assert(e).Equal(nil)
+			g.Assert(count).Equal(testBookCount)
+		})
 
 		g.It("allows the consumer to select series id", func() {
 			ids, e := store.SelectSeriesIDs(&BookBlueprint{ID: []int{1}})
