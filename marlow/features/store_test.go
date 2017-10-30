@@ -88,7 +88,7 @@ func Test_StoreGenerator(t *testing.T) {
 			g.It("injects fmt and sql packages into import stream", func() {
 				io.Copy(scaffold.output, scaffold.g())
 				scaffold.close()
-				g.Assert(scaffold.received["fmt"]).Equal(true)
+				g.Assert(len(scaffold.received)).Equal(1)
 				g.Assert(scaffold.received["database/sql"]).Equal(true)
 			})
 

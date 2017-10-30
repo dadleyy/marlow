@@ -1,5 +1,6 @@
 package models
 
+import "fmt"
 import "database/sql"
 
 //go:generate marlowc -input book.go
@@ -17,6 +18,6 @@ type Book struct {
 }
 
 // GetPageContents is a dummy no-op function
-func (b *Book) GetPageContents(page int) (string, error) {
-	return "", nil
+func (b *Book) String() string {
+	return fmt.Sprintf("%s (%d pages)", b.Title, b.PageCount)
 }

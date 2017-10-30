@@ -220,6 +220,15 @@ func Test_Book(t *testing.T) {
 			g.Assert(results[1]).Equal(2)
 		})
 
+		g.It("returns source struct instances that support source method calls", func() {
+			results, e := store.FindBooks(&BookBlueprint{
+				ID: []int{1},
+			})
+			g.Assert(e).Equal(nil)
+			title := fmt.Sprintf("%s", results[0])
+			g.Assert(title).Equal("book-1 (10 pages)")
+		})
+
 		g.It("allows the consumer to select explicit book titles", func() {
 			results, e := store.SelectTitles(&BookBlueprint{
 				ID: []int{1, 2},
