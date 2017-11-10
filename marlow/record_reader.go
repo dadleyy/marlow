@@ -159,20 +159,22 @@ func readRecord(writer io.Writer, record marlowRecord, imports chan<- string) er
 
 	readers := make([]io.Reader, 0, 4)
 
-	if v := config.Get(constants.CreateableConfigOption); v != "false" {
-		readers = append(readers, newCreateableGenerator(config, fields, imports))
+	features := map[string]func(url.Values, map[string]url.Values, chan<- string) io.Reader{
+		constants.CreateableConfigOption: newCreateableGenerator,
+		constants.UpdateableConfigOption: newUpdateableGenerator,
+		constants.DeleteableConfigOption: newDeleteableGenerator,
+		constants.QueryableConfigOption:  newQueryableGenerator,
 	}
 
-	if v := config.Get(constants.DeleteableConfigOption); v != "false" {
-		readers = append(readers, newDeleteableGenerator(config, fields, imports))
-	}
+	for flag, generator := range features {
+		v := config.Get(flag)
 
-	if v := config.Get(constants.UpdateableConfigOption); v != "false" {
-		readers = append(readers, newUpdateableGenerator(config, fields, imports))
-	}
+		if v == "false" {
+			continue
+		}
 
-	if v := config.Get(constants.QueryableConfigOption); v != "false" {
-		readers = append(readers, newQueryableGenerator(config, fields, imports))
+		g := generator(config, fields, imports)
+		readers = append(readers, g)
 	}
 
 	if len(readers) == 0 {
