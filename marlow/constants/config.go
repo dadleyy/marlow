@@ -37,8 +37,14 @@ const (
 	ColumnConfigOption = "column"
 
 	// QueryableConfigOption boolean value, true/false based on fields ability to be updated.
-	QueryableConfigOption = "query"
+	QueryableConfigOption = "queryable"
 
 	// UpdateableConfigOption boolean value, true/false based on fields ability to be updated.
-	UpdateableConfigOption = "updates"
+	UpdateableConfigOption = "updateable"
+
+	// DeleteableConfigOption boolean record config option for generating the deletion api methods.
+	DeleteableConfigOption = "deletable"
+
+	// CreateableConfigOption boolean record config option for generating the creation api methods.
+	CreateableConfigOption = "createable"
 )

@@ -1,14 +1,14 @@
-package features
+package marlow
 
 import "io"
 import "sync"
 import "bytes"
-import "net/url"
 import "testing"
+import "net/url"
 import "github.com/franela/goblin"
 import "github.com/dadleyy/marlow/marlow/constants"
 
-type deleteableTestScaffold struct {
+type createableTestScaffold struct {
 	buffer *bytes.Buffer
 
 	imports chan string
@@ -20,26 +20,26 @@ type deleteableTestScaffold struct {
 	wg       *sync.WaitGroup
 }
 
-func (s *deleteableTestScaffold) g() io.Reader {
-	return NewDeleteableGenerator(s.record, s.fields, s.imports)
+func (s *createableTestScaffold) g() io.Reader {
+	return NewCreateableGenerator(s.record, s.fields, s.imports)
 }
 
-func Test_Deleteable(t *testing.T) {
+func Test_Createable(t *testing.T) {
 	g := goblin.Goblin(t)
 
-	var scaffold *deleteableTestScaffold
+	var scaffold *createableTestScaffold
 
-	g.Describe("Deleteable feature test suite", func() {
+	g.Describe("createable test suite", func() {
 
 		g.BeforeEach(func() {
-			scaffold = &deleteableTestScaffold{
+			scaffold = &createableTestScaffold{
 				buffer:   new(bytes.Buffer),
+				wg:       &sync.WaitGroup{},
 				imports:  make(chan string),
 				record:   make(url.Values),
 				fields:   make(map[string]url.Values),
 				received: make(map[string]bool),
 				closed:   false,
-				wg:       &sync.WaitGroup{},
 			}
 
 			scaffold.wg.Add(1)
@@ -53,10 +53,12 @@ func Test_Deleteable(t *testing.T) {
 		})
 
 		g.AfterEach(func() {
-			if scaffold.closed == false {
-				close(scaffold.imports)
-				scaffold.wg.Wait()
+			if scaffold.closed != false {
+				return
 			}
+
+			close(scaffold.imports)
+			scaffold.wg.Wait()
 		})
 
 		g.Describe("with a valid record config", func() {
@@ -84,8 +86,6 @@ func Test_Deleteable(t *testing.T) {
 				_, e := io.Copy(scaffold.buffer, scaffold.g())
 				g.Assert(e).Equal(nil)
 			})
-
 		})
-
 	})
 }

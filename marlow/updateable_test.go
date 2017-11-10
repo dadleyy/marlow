@@ -1,4 +1,4 @@
-package features
+package marlow
 
 import "io"
 import "sync"
@@ -8,38 +8,36 @@ import "net/url"
 import "github.com/franela/goblin"
 import "github.com/dadleyy/marlow/marlow/constants"
 
-type createableTestScaffold struct {
-	buffer *bytes.Buffer
-
-	imports chan string
-	record  url.Values
-	fields  map[string]url.Values
-
+type updateableTestScaffold struct {
+	buffer   *bytes.Buffer
+	imports  chan string
+	record   url.Values
+	fields   map[string]url.Values
 	received map[string]bool
 	closed   bool
 	wg       *sync.WaitGroup
 }
 
-func (s *createableTestScaffold) g() io.Reader {
-	return NewCreateableGenerator(s.record, s.fields, s.imports)
+func (s *updateableTestScaffold) g() io.Reader {
+	return NewUpdateableGenerator(s.record, s.fields, s.imports)
 }
 
-func Test_Createable(t *testing.T) {
+func Test_Updateable(t *testing.T) {
 	g := goblin.Goblin(t)
 
-	var scaffold *createableTestScaffold
+	var scaffold *updateableTestScaffold
 
-	g.Describe("createable test suite", func() {
+	g.Describe("Updateable test suite", func() {
 
 		g.BeforeEach(func() {
-			scaffold = &createableTestScaffold{
+			scaffold = &updateableTestScaffold{
 				buffer:   new(bytes.Buffer),
-				wg:       &sync.WaitGroup{},
 				imports:  make(chan string),
 				record:   make(url.Values),
 				fields:   make(map[string]url.Values),
 				received: make(map[string]bool),
 				closed:   false,
+				wg:       &sync.WaitGroup{},
 			}
 
 			scaffold.wg.Add(1)
@@ -53,15 +51,13 @@ func Test_Createable(t *testing.T) {
 		})
 
 		g.AfterEach(func() {
-			if scaffold.closed != false {
-				return
+			if scaffold.closed == false {
+				close(scaffold.imports)
+				scaffold.wg.Wait()
 			}
-
-			close(scaffold.imports)
-			scaffold.wg.Wait()
 		})
 
-		g.Describe("with a valid record config", func() {
+		g.Describe("with a record config that has nullable fields", func() {
 
 			g.BeforeEach(func() {
 				scaffold.record.Set(constants.RecordNameConfigOption, "Author")
@@ -86,6 +82,8 @@ func Test_Createable(t *testing.T) {
 				_, e := io.Copy(scaffold.buffer, scaffold.g())
 				g.Assert(e).Equal(nil)
 			})
+
 		})
+
 	})
 }

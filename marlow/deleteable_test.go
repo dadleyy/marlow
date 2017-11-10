@@ -1,36 +1,38 @@
-package features
+package marlow
 
 import "io"
 import "sync"
 import "bytes"
-import "testing"
 import "net/url"
+import "testing"
 import "github.com/franela/goblin"
 import "github.com/dadleyy/marlow/marlow/constants"
 
-type updateableTestScaffold struct {
-	buffer   *bytes.Buffer
-	imports  chan string
-	record   url.Values
-	fields   map[string]url.Values
+type deleteableTestScaffold struct {
+	buffer *bytes.Buffer
+
+	imports chan string
+	record  url.Values
+	fields  map[string]url.Values
+
 	received map[string]bool
 	closed   bool
 	wg       *sync.WaitGroup
 }
 
-func (s *updateableTestScaffold) g() io.Reader {
-	return NewUpdateableGenerator(s.record, s.fields, s.imports)
+func (s *deleteableTestScaffold) g() io.Reader {
+	return NewDeleteableGenerator(s.record, s.fields, s.imports)
 }
 
-func Test_Updateable(t *testing.T) {
+func Test_Deleteable(t *testing.T) {
 	g := goblin.Goblin(t)
 
-	var scaffold *updateableTestScaffold
+	var scaffold *deleteableTestScaffold
 
-	g.Describe("Updateable test suite", func() {
+	g.Describe("Deleteable feature test suite", func() {
 
 		g.BeforeEach(func() {
-			scaffold = &updateableTestScaffold{
+			scaffold = &deleteableTestScaffold{
 				buffer:   new(bytes.Buffer),
 				imports:  make(chan string),
 				record:   make(url.Values),
@@ -57,7 +59,7 @@ func Test_Updateable(t *testing.T) {
 			}
 		})
 
-		g.Describe("with a record config that has nullable fields", func() {
+		g.Describe("with a valid record config", func() {
 
 			g.BeforeEach(func() {
 				scaffold.record.Set(constants.RecordNameConfigOption, "Author")

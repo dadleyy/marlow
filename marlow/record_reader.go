@@ -9,7 +9,6 @@ import "reflect"
 import "net/url"
 import "strings"
 import "github.com/gedex/inflector"
-import "github.com/dadleyy/marlow/marlow/features"
 import "github.com/dadleyy/marlow/marlow/constants"
 
 const (
@@ -150,28 +149,23 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 
 func readRecord(writer io.Writer, config url.Values, fields map[string]url.Values, imports chan<- string) error {
 	buffer := new(bytes.Buffer)
-	enabled := make(map[string]bool)
 
-	readers := []io.Reader{
-		features.NewCreateableGenerator(config, fields, imports),
-		features.NewDeleteableGenerator(config, fields, imports),
+	readers := make([]io.Reader, 0, 4)
+
+	if v := config.Get(constants.CreateableConfigOption); v != "false" {
+		readers = append(readers, NewCreateableGenerator(config, fields, imports))
 	}
 
-	for _, fieldConfig := range fields {
-		queryable := fieldConfig.Get(constants.QueryableConfigOption)
-		updateable := fieldConfig.Get(constants.UpdateableConfigOption)
+	if v := config.Get(constants.DeleteableConfigOption); v != "false" {
+		readers = append(readers, NewDeleteableGenerator(config, fields, imports))
+	}
 
-		if _, e := enabled[constants.QueryableConfigOption]; queryable != "false" && !e {
-			generator := features.NewQueryableGenerator(config, fields, imports)
-			readers = append(readers, generator)
-			enabled[constants.QueryableConfigOption] = true
-		}
+	if v := config.Get(constants.UpdateableConfigOption); v != "false" {
+		readers = append(readers, NewUpdateableGenerator(config, fields, imports))
+	}
 
-		if _, e := enabled[constants.UpdateableConfigOption]; updateable != "false" && !e {
-			generator := features.NewUpdateableGenerator(config, fields, imports)
-			readers = append(readers, generator)
-			enabled[constants.UpdateableConfigOption] = true
-		}
+	if v := config.Get(constants.QueryableConfigOption); v != "false" {
+		readers = append(readers, NewQueryableGenerator(config, fields, imports))
 	}
 
 	if len(readers) == 0 {
@@ -186,8 +180,8 @@ func readRecord(writer io.Writer, config url.Values, fields map[string]url.Value
 	// If we had any features enabled, we need to also generate the blue print API.
 	readers = append(
 		readers,
-		features.NewStoreGenerator(config, imports),
-		features.NewBlueprintGenerator(config, fields, imports),
+		NewStoreGenerator(config, imports),
+		NewBlueprintGenerator(config, fields, imports),
 	)
 
 	// Iterate over all our collected features, copying them into the buffer
