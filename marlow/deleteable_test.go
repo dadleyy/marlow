@@ -21,7 +21,7 @@ type deleteableTestScaffold struct {
 }
 
 func (s *deleteableTestScaffold) g() io.Reader {
-	return NewDeleteableGenerator(s.record, s.fields, s.imports)
+	return newDeleteableGenerator(s.record, s.fields, s.imports)
 }
 
 func Test_Deleteable(t *testing.T) {
@@ -29,7 +29,7 @@ func Test_Deleteable(t *testing.T) {
 
 	var scaffold *deleteableTestScaffold
 
-	g.Describe("Deleteable feature test suite", func() {
+	g.Describe("deleteable feature generator test suite", func() {
 
 		g.BeforeEach(func() {
 			scaffold = &deleteableTestScaffold{

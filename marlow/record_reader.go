@@ -140,32 +140,39 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 	}
 
 	go func() {
-		e := readRecord(pw, recordConfig, recordFields, imports)
+		record := marlowRecord{
+			config: recordConfig,
+			fields: recordFields,
+		}
+
+		e := readRecord(pw, record, imports)
 		pw.CloseWithError(e)
 	}()
 
 	return pr, true
 }
 
-func readRecord(writer io.Writer, config url.Values, fields map[string]url.Values, imports chan<- string) error {
+func readRecord(writer io.Writer, record marlowRecord, imports chan<- string) error {
 	buffer := new(bytes.Buffer)
+
+	config, fields := record.config, record.fields
 
 	readers := make([]io.Reader, 0, 4)
 
 	if v := config.Get(constants.CreateableConfigOption); v != "false" {
-		readers = append(readers, NewCreateableGenerator(config, fields, imports))
+		readers = append(readers, newCreateableGenerator(config, fields, imports))
 	}
 
 	if v := config.Get(constants.DeleteableConfigOption); v != "false" {
-		readers = append(readers, NewDeleteableGenerator(config, fields, imports))
+		readers = append(readers, newDeleteableGenerator(config, fields, imports))
 	}
 
 	if v := config.Get(constants.UpdateableConfigOption); v != "false" {
-		readers = append(readers, NewUpdateableGenerator(config, fields, imports))
+		readers = append(readers, newUpdateableGenerator(config, fields, imports))
 	}
 
 	if v := config.Get(constants.QueryableConfigOption); v != "false" {
-		readers = append(readers, NewQueryableGenerator(config, fields, imports))
+		readers = append(readers, newQueryableGenerator(config, fields, imports))
 	}
 
 	if len(readers) == 0 {
@@ -180,8 +187,8 @@ func readRecord(writer io.Writer, config url.Values, fields map[string]url.Value
 	// If we had any features enabled, we need to also generate the blue print API.
 	readers = append(
 		readers,
-		NewStoreGenerator(config, imports),
-		NewBlueprintGenerator(config, fields, imports),
+		newStoreGenerator(config, imports),
+		newBlueprintGenerator(config, fields, imports),
 	)
 
 	// Iterate over all our collected features, copying them into the buffer

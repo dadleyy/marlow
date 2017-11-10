@@ -21,7 +21,7 @@ type storeTestScaffold struct {
 }
 
 func (s *storeTestScaffold) g() io.Reader {
-	return NewStoreGenerator(s.record, s.imports)
+	return newStoreGenerator(s.record, s.imports)
 }
 
 func (s *storeTestScaffold) parsed() (*ast.File, error) {
@@ -39,7 +39,7 @@ func Test_StoreGenerator(t *testing.T) {
 
 	var scaffold *storeTestScaffold
 
-	g.Describe("NewStoreGenerator", func() {
+	g.Describe("store generator test suite", func() {
 
 		g.BeforeEach(func() {
 			scaffold = &storeTestScaffold{

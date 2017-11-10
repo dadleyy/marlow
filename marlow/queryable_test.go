@@ -24,7 +24,7 @@ type queryableTestScaffold struct {
 }
 
 func (s *queryableTestScaffold) g() io.Reader {
-	return NewQueryableGenerator(s.record, s.fields, s.imports)
+	return newQueryableGenerator(s.record, s.fields, s.imports)
 }
 
 func (s *queryableTestScaffold) parsed() (*ast.File, error) {
@@ -36,7 +36,7 @@ func Test_QueryableGenerator(t *testing.T) {
 
 	var scaffold *queryableTestScaffold
 
-	g.Describe("NewQueryableGenerator", func() {
+	g.Describe("queryable feature test suite", func() {
 
 		g.BeforeEach(func() {
 			scaffold = &queryableTestScaffold{

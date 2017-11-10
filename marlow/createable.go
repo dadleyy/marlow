@@ -24,8 +24,8 @@ type createableSymbolList struct {
 	AffectedError            string
 }
 
-// NewCreateableGenerator returns a reader that will generate a record store's creation api.
-func NewCreateableGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
+// newCreateableGenerator returns a reader that will generate a record store's creation api.
+func newCreateableGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
 	pr, pw := io.Pipe()
 
 	storeName := record.Get(constants.StoreNameConfigOption)

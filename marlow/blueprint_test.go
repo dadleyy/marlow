@@ -36,7 +36,7 @@ func Test_Blueprint(t *testing.T) {
 		})
 	})
 
-	g.Describe("NewBlueprintGenerator", func() {
+	g.Describe("blueprint generator test suite", func() {
 
 		var inputs chan string
 		var receivedInputs map[string]bool
@@ -80,13 +80,13 @@ func Test_Blueprint(t *testing.T) {
 			})
 
 			g.It("returns an error if a field does not have a type", func() {
-				reader := NewBlueprintGenerator(r, f, inputs)
+				reader := newBlueprintGenerator(r, f, inputs)
 				_, e := io.Copy(b, reader)
 				g.Assert(e == nil).Equal(false)
 			})
 
 			g.It("did not send any imports over the channel", func() {
-				reader := NewBlueprintGenerator(r, f, inputs)
+				reader := newBlueprintGenerator(r, f, inputs)
 				io.Copy(b, reader)
 				close(inputs)
 				wg.Wait()
@@ -115,7 +115,7 @@ func Test_Blueprint(t *testing.T) {
 			})
 
 			g.It("injected the strings library to the import stream", func() {
-				io.Copy(b, NewBlueprintGenerator(r, f, inputs))
+				io.Copy(b, newBlueprintGenerator(r, f, inputs))
 				closed = true
 				close(inputs)
 				wg.Wait()
@@ -124,7 +124,7 @@ func Test_Blueprint(t *testing.T) {
 
 			g.It("produced valid a golang struct", func() {
 				fmt.Fprintln(b, "package marlowt")
-				_, e := io.Copy(b, NewBlueprintGenerator(r, f, inputs))
+				_, e := io.Copy(b, newBlueprintGenerator(r, f, inputs))
 				g.Assert(e).Equal(nil)
 				_, e = parser.ParseFile(token.NewFileSet(), "", b, parser.AllErrors)
 				g.Assert(e).Equal(nil)

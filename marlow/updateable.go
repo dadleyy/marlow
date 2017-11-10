@@ -139,8 +139,8 @@ func updater(record url.Values, name string, config url.Values, imports chan<- s
 	return pr
 }
 
-// NewUpdateableGenerator is responsible for generating updating store methods.
-func NewUpdateableGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
+// newUpdateableGenerator is responsible for generating updating store methods.
+func newUpdateableGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
 	readers := make([]io.Reader, 0, len(fields))
 
 	for name, config := range fields {

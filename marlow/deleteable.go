@@ -18,8 +18,8 @@ type deleteableSymbols struct {
 	StatementError  string
 }
 
-// NewDeleteableGenerator is responsible for creating a generator that will write out the Delete api methods.
-func NewDeleteableGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
+// newDeleteableGenerator is responsible for creating a generator that will write out the Delete api methods.
+func newDeleteableGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
 	pr, pw := io.Pipe()
 
 	storeName := record.Get(constants.StoreNameConfigOption)

@@ -19,7 +19,7 @@ type updateableTestScaffold struct {
 }
 
 func (s *updateableTestScaffold) g() io.Reader {
-	return NewUpdateableGenerator(s.record, s.fields, s.imports)
+	return newUpdateableGenerator(s.record, s.fields, s.imports)
 }
 
 func Test_Updateable(t *testing.T) {
@@ -27,7 +27,7 @@ func Test_Updateable(t *testing.T) {
 
 	var scaffold *updateableTestScaffold
 
-	g.Describe("Updateable test suite", func() {
+	g.Describe("updateable feature generator test suite", func() {
 
 		g.BeforeEach(func() {
 			scaffold = &updateableTestScaffold{

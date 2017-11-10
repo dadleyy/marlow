@@ -408,7 +408,7 @@ func numericalMethods(print blueprint, name string, config url.Values, methods c
 }
 
 // NewBlueprintGenerator returns a reader that will generate the basic query struct type used for record lookups.
-func NewBlueprintGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
+func newBlueprintGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
 	pr, pw := io.Pipe()
 
 	go func() {

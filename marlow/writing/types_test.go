@@ -4,7 +4,7 @@ import "fmt"
 import "testing"
 import "github.com/franela/goblin"
 
-func Test_mapListToWrappedCommaList(t *testing.T) {
+func Test_Types(t *testing.T) {
 	g := goblin.Goblin(t)
 
 	g.Describe("mapListToWrappedCommaList", func() {
@@ -23,10 +23,6 @@ func Test_mapListToWrappedCommaList(t *testing.T) {
 			g.Assert(v).Equal("")
 		})
 	})
-}
-
-func Test_StringSliceLiteral(t *testing.T) {
-	g := goblin.Goblin(t)
 
 	g.Describe("StringSliceLiteral", func() {
 		var l StringSliceLiteral
@@ -37,10 +33,6 @@ func Test_StringSliceLiteral(t *testing.T) {
 			g.Assert(v).Equal("[]string{\"hello\",\"world\"}")
 		})
 	})
-}
-
-func Test_SingleQuotedStringList(t *testing.T) {
-	g := goblin.Goblin(t)
 
 	g.Describe("SingleQuotedStringList", func() {
 		var l SingleQuotedStringList

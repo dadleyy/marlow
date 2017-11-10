@@ -467,8 +467,8 @@ func selector(record url.Values, name string, config url.Values, imports chan<- 
 	return pr
 }
 
-// NewQueryableGenerator is responsible for returning a reader that will generate lookup functions for a given record.
-func NewQueryableGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
+// newQueryableGenerator is responsible for returning a reader that will generate lookup functions for a given record.
+func newQueryableGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
 	pr, pw := io.Pipe()
 
 	table := record.Get(constants.TableNameConfigOption)

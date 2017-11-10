@@ -21,7 +21,7 @@ type createableTestScaffold struct {
 }
 
 func (s *createableTestScaffold) g() io.Reader {
-	return NewCreateableGenerator(s.record, s.fields, s.imports)
+	return newCreateableGenerator(s.record, s.fields, s.imports)
 }
 
 func Test_Createable(t *testing.T) {
@@ -29,7 +29,7 @@ func Test_Createable(t *testing.T) {
 
 	var scaffold *createableTestScaffold
 
-	g.Describe("createable test suite", func() {
+	g.Describe("createable feature generator test suite", func() {
 
 		g.BeforeEach(func() {
 			scaffold = &createableTestScaffold{
