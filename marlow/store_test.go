@@ -21,7 +21,12 @@ type storeTestScaffold struct {
 }
 
 func (s *storeTestScaffold) g() io.Reader {
-	return newStoreGenerator(s.record, s.imports)
+	record := marlowRecord{
+		importChannel: s.imports,
+		config:        s.record,
+	}
+
+	return newStoreGenerator(record)
 }
 
 func (s *storeTestScaffold) parsed() (*ast.File, error) {

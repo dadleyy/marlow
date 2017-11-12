@@ -23,13 +23,10 @@ type finderSymbols struct {
 	offset          string
 }
 
-func finder(record marlowRecord, imports chan<- string) io.Reader {
-	table := record.config.Get(constants.TableNameConfigOption)
-	recordName := record.config.Get(constants.RecordNameConfigOption)
-	store := record.config.Get(constants.StoreNameConfigOption)
+func finder(record marlowRecord) io.Reader {
 	methodName := fmt.Sprintf("%s%s",
 		record.config.Get(constants.StoreFindMethodPrefixConfigOption),
-		inflector.Pluralize(recordName),
+		inflector.Pluralize(record.name()),
 	)
 	pr, pw := io.Pipe()
 
@@ -51,12 +48,12 @@ func finder(record marlowRecord, imports chan<- string) io.Reader {
 		queryError:      "_qe",
 		limit:           "_limit",
 		offset:          "_offset",
-		recordSlice:     fmt.Sprintf("[]*%s", recordName),
+		recordSlice:     fmt.Sprintf("[]*%s", record.name()),
 	}
 
 	go func() {
 		gosrc := writing.NewGoWriter(pw)
-		gosrc.Comment("[marlow feature]: finder on table[%s]", table)
+		gosrc.Comment("[marlow feature]: finder on table[%s]", record.table())
 
 		params := []writing.FuncParam{
 			{Symbol: symbols.blueprint, Type: fmt.Sprintf("*%s", blueprintName)},
@@ -73,20 +70,20 @@ func finder(record marlowRecord, imports chan<- string) io.Reader {
 				colName = strings.ToLower(name)
 			}
 
-			expanded := fmt.Sprintf("%s.%s", table, colName)
+			expanded := fmt.Sprintf("%s.%s", record.table(), colName)
 			fieldList = append(fieldList, expanded)
 		}
 
 		defaultLimit := record.config.Get(constants.DefaultLimitConfigOption)
 
 		if defaultLimit == "" {
-			pw.CloseWithError(fmt.Errorf("invalid defaultLimit for record %s", recordName))
+			pw.CloseWithError(fmt.Errorf("invalid defaultLimit for record %s", record.name()))
 			return
 		}
 
 		sort.Strings(fieldList)
 
-		e := gosrc.WithMethod(methodName, store, params, returns, func(scope url.Values) error {
+		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
 			// Prepare the array that will be returned.
 			gosrc.Println("%s := make(%s, 0)\n", symbols.results, symbols.recordSlice)
 			defer gosrc.Println("return %s, nil", symbols.results)
@@ -96,7 +93,7 @@ func finder(record marlowRecord, imports chan<- string) io.Reader {
 				"%s := bytes.NewBufferString(\"SELECT %s FROM %s\")",
 				symbols.queryString,
 				strings.Join(fieldList, ","),
-				table,
+				record.table(),
 			)
 
 			// Write our where clauses
@@ -172,7 +169,7 @@ func finder(record marlowRecord, imports chan<- string) io.Reader {
 			}, symbols.queryError)
 
 			return gosrc.WithIter("%s.Next()", func(url.Values) error {
-				gosrc.Println("var %s %s", symbols.rowItem, recordName)
+				gosrc.Println("var %s %s", symbols.rowItem, record.name())
 				references := make([]string, 0, len(record.fields))
 
 				for name := range record.fields {
@@ -199,9 +196,7 @@ func finder(record marlowRecord, imports chan<- string) io.Reader {
 			return
 		}
 
-		imports <- "fmt"
-		imports <- "bytes"
-		imports <- "strings"
+		record.registerImports("fmt", "bytes", "strings")
 
 		pw.Close()
 	}()
@@ -221,11 +216,7 @@ type counterSymbols struct {
 	ScanError          string
 }
 
-func counter(record marlowRecord, imports chan<- string) io.Reader {
-	table := record.config.Get(constants.TableNameConfigOption)
-	recordName := record.config.Get(constants.RecordNameConfigOption)
-	store := record.config.Get(constants.StoreNameConfigOption)
-	blueprintName := record.config.Get(constants.BlueprintNameConfigOption)
+func counter(record marlowRecord) io.Reader {
 	pr, pw := io.Pipe()
 	methodPrefix := record.config.Get(constants.StoreCountMethodPrefixConfigOption)
 
@@ -235,7 +226,7 @@ func counter(record marlowRecord, imports chan<- string) io.Reader {
 	}
 
 	symbols := counterSymbols{
-		CountMethodName:    fmt.Sprintf("%s%s", methodPrefix, inflector.Pluralize(recordName)),
+		CountMethodName:    fmt.Sprintf("%s%s", methodPrefix, inflector.Pluralize(record.name())),
 		BlueprintParamName: "_blueprint",
 		StatementQuery:     "_raw",
 		StatementError:     "_statementError",
@@ -248,10 +239,10 @@ func counter(record marlowRecord, imports chan<- string) io.Reader {
 
 	go func() {
 		gosrc := writing.NewGoWriter(pw)
-		gosrc.Comment("[marlow feature]: counter on table[%s]", table)
+		gosrc.Comment("[marlow feature]: counter on table[%s]", record.table())
 
 		params := []writing.FuncParam{
-			{Symbol: symbols.BlueprintParamName, Type: fmt.Sprintf("*%s", blueprintName)},
+			{Symbol: symbols.BlueprintParamName, Type: fmt.Sprintf("*%s", record.blueprint())},
 		}
 
 		returns := []string{
@@ -259,17 +250,17 @@ func counter(record marlowRecord, imports chan<- string) io.Reader {
 			"error",
 		}
 
-		e := gosrc.WithMethod(symbols.CountMethodName, store, params, returns, func(scope url.Values) error {
+		e := gosrc.WithMethod(symbols.CountMethodName, record.store(), params, returns, func(scope url.Values) error {
 			receiver := scope.Get("receiver")
 			gosrc.WithIf("%s == nil", func(url.Values) error {
-				gosrc.Println("%s = &%s{}", params[0].Symbol, blueprintName)
+				gosrc.Println("%s = &%s{}", params[0].Symbol, record.blueprint())
 				return nil
 			}, symbols.BlueprintParamName)
 
 			gosrc.Println(
 				"%s := fmt.Sprintf(\"SELECT COUNT(*) FROM %s %%s;\", %s)",
 				symbols.StatementQuery,
-				table,
+				record.table(),
 				symbols.BlueprintParamName,
 			)
 
@@ -321,7 +312,7 @@ func counter(record marlowRecord, imports chan<- string) io.Reader {
 		})
 
 		if e == nil {
-			imports <- "fmt"
+			record.registerImports("fmt")
 		}
 
 		pw.CloseWithError(e)
@@ -342,14 +333,10 @@ type selectorSymbols struct {
 	ScanError       string
 }
 
-func selector(record marlowRecord, fieldName string, fieldConfig url.Values, imports chan<- string) io.Reader {
+func selector(record marlowRecord, fieldName string, fieldConfig url.Values) io.Reader {
 	pr, pw := io.Pipe()
-	blueprintName := record.config.Get(constants.BlueprintNameConfigOption)
 	methodName := fmt.Sprintf("Select%s", inflector.Pluralize(fieldName))
-
-	tableName := record.config.Get(constants.TableNameConfigOption)
 	columnName := fieldConfig.Get(constants.ColumnConfigOption)
-	storeName := record.config.Get(constants.StoreNameConfigOption)
 
 	returnItemType := fieldConfig.Get("type")
 	returnArrayType := fmt.Sprintf("[]%s", returnItemType)
@@ -372,24 +359,24 @@ func selector(record marlowRecord, fieldName string, fieldConfig url.Values, imp
 	}
 
 	params := []writing.FuncParam{
-		{Type: fmt.Sprintf("*%s", blueprintName), Symbol: symbols.BlueprintParam},
+		{Type: fmt.Sprintf("*%s", record.blueprint()), Symbol: symbols.BlueprintParam},
 	}
 
-	columnReference := fmt.Sprintf("%s.%s", tableName, columnName)
+	columnReference := fmt.Sprintf("%s.%s", record.table(), columnName)
 
 	go func() {
 		gosrc := writing.NewGoWriter(pw)
 
-		gosrc.Comment("[marlow] field selector for %s (%s) [print: %s]", fieldName, methodName, blueprintName)
+		gosrc.Comment("[marlow] field selector for %s (%s) [print: %s]", fieldName, methodName, record.blueprint())
 
-		e := gosrc.WithMethod(methodName, storeName, params, returns, func(scope url.Values) error {
+		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
 			gosrc.Println("%s := make(%s, 0)", symbols.ReturnSlice, returnArrayType)
 
 			gosrc.Println(
 				"%s := bytes.NewBufferString(\"SELECT %s FROM %s\")",
 				symbols.QueryString,
 				columnReference,
-				tableName,
+				record.table(),
 			)
 
 			// Write our where clauses
@@ -465,25 +452,21 @@ func selector(record marlowRecord, fieldName string, fieldConfig url.Values, imp
 }
 
 // newQueryableGenerator is responsible for returning a reader that will generate lookup functions for a given record.
-func newQueryableGenerator(record marlowRecord, imports chan<- string) io.Reader {
+func newQueryableGenerator(record marlowRecord) io.Reader {
 	pr, pw := io.Pipe()
 
-	table := record.config.Get(constants.TableNameConfigOption)
-	recordName := record.config.Get(constants.RecordNameConfigOption)
-	store := record.config.Get(constants.StoreNameConfigOption)
-
-	if len(table) == 0 || len(recordName) == 0 || len(store) == 0 {
+	if len(record.table()) == 0 || len(record.name()) == 0 || len(record.store()) == 0 {
 		pw.CloseWithError(fmt.Errorf("invalid record config"))
 		return pr
 	}
 
 	features := []io.Reader{
-		finder(record, imports),
-		counter(record, imports),
+		finder(record),
+		counter(record),
 	}
 
 	for name, config := range record.fields {
-		s := selector(record, name, config, imports)
+		s := selector(record, name, config)
 		features = append(features, s)
 	}
 

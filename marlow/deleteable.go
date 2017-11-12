@@ -19,13 +19,9 @@ type deleteableSymbols struct {
 }
 
 // newDeleteableGenerator is responsible for creating a generator that will write out the Delete api methods.
-func newDeleteableGenerator(record marlowRecord, imports chan<- string) io.Reader {
+func newDeleteableGenerator(record marlowRecord) io.Reader {
 	pr, pw := io.Pipe()
-
-	storeName := record.config.Get(constants.StoreNameConfigOption)
-	recordName := record.config.Get(constants.RecordNameConfigOption)
-	methodName := fmt.Sprintf("Delete%s", inflector.Pluralize(recordName))
-	tableName := record.config.Get(constants.TableNameConfigOption)
+	methodName := fmt.Sprintf("Delete%s", inflector.Pluralize(record.name()))
 
 	symbols := deleteableSymbols{
 		Error:           "_e",
@@ -38,10 +34,8 @@ func newDeleteableGenerator(record marlowRecord, imports chan<- string) io.Reade
 		ExecError:       "_ee",
 	}
 
-	blueprintName := record.config.Get(constants.BlueprintNameConfigOption)
-
 	params := []writing.FuncParam{
-		{Type: fmt.Sprintf("*%s", blueprintName), Symbol: symbols.BlueprintParam},
+		{Type: fmt.Sprintf("*%s", record.blueprint()), Symbol: symbols.BlueprintParam},
 	}
 
 	returns := []string{
@@ -54,13 +48,13 @@ func newDeleteableGenerator(record marlowRecord, imports chan<- string) io.Reade
 
 		gosrc.Comment("[marlow] deleteable")
 
-		e := gosrc.WithMethod(methodName, storeName, params, returns, func(scope url.Values) error {
+		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
 			gosrc.WithIf("%s == nil || %s.String() == \"\"", func(url.Values) error {
 				gosrc.Println("return -1, fmt.Errorf(\"%s\")", constants.InvalidDeletionBlueprint)
 				return nil
 			}, symbols.BlueprintParam, symbols.BlueprintParam)
 
-			deleteString := fmt.Sprintf("DELETE FROM %s", tableName)
+			deleteString := fmt.Sprintf("DELETE FROM %s", record.table())
 
 			gosrc.Println(
 				"%s := fmt.Sprintf(\"%s %%s\", %s)",
@@ -110,7 +104,7 @@ func newDeleteableGenerator(record marlowRecord, imports chan<- string) io.Reade
 		})
 
 		if e == nil {
-			imports <- "fmt"
+			record.registerImports("fmt")
 		}
 
 		pw.CloseWithError(e)

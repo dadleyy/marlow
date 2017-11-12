@@ -3,13 +3,11 @@ package marlow
 import "io"
 import "net/url"
 import "github.com/dadleyy/marlow/marlow/writing"
-import "github.com/dadleyy/marlow/marlow/constants"
 
-func writeStore(destination io.Writer, record url.Values, imports chan<- string) error {
+func writeStore(destination io.Writer, record marlowRecord) error {
 	out := writing.NewGoWriter(destination)
-	storeName := record.Get(constants.StoreNameConfigOption)
 
-	e := out.WithStruct(storeName, func(url.Values) error {
+	e := out.WithStruct(record.store(), func(url.Values) error {
 		out.Println("*sql.DB")
 		return nil
 	})
@@ -18,16 +16,16 @@ func writeStore(destination io.Writer, record url.Values, imports chan<- string)
 		return e
 	}
 
-	imports <- "database/sql"
+	record.registerImports("database/sql")
 	return nil
 }
 
 // newStoreGenerator returns a reader that will generate the centralized record store for a given record.
-func newStoreGenerator(record url.Values, imports chan<- string) io.Reader {
+func newStoreGenerator(record marlowRecord) io.Reader {
 	pr, pw := io.Pipe()
 
 	go func() {
-		e := writeStore(pw, record, imports)
+		e := writeStore(pw, record)
 		pw.CloseWithError(e)
 	}()
 

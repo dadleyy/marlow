@@ -22,10 +22,11 @@ type deleteableTestScaffold struct {
 
 func (s *deleteableTestScaffold) g() io.Reader {
 	record := marlowRecord{
-		config: s.record,
-		fields: s.fields,
+		config:        s.record,
+		fields:        s.fields,
+		importChannel: s.imports,
 	}
-	return newDeleteableGenerator(record, s.imports)
+	return newDeleteableGenerator(record)
 }
 
 func Test_Deleteable(t *testing.T) {

@@ -22,11 +22,12 @@ type createableTestScaffold struct {
 
 func (s *createableTestScaffold) g() io.Reader {
 	record := marlowRecord{
-		fields: s.fields,
-		config: s.record,
+		fields:        s.fields,
+		config:        s.record,
+		importChannel: s.imports,
 	}
 
-	return newCreateableGenerator(record, s.imports)
+	return newCreateableGenerator(record)
 }
 
 func Test_Createable(t *testing.T) {

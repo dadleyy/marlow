@@ -19,20 +19,15 @@ type updaterSymbols struct {
 	valueSlice      string
 }
 
-func updater(record marlowRecord, fieldName string, fieldConfig url.Values, imports chan<- string) io.Reader {
+func updater(record marlowRecord, fieldName string, fieldConfig url.Values) io.Reader {
 	pr, pw := io.Pipe()
-	recordName := record.config.Get(constants.RecordNameConfigOption)
-
 	methodName := fmt.Sprintf(
 		"%s%s%s",
 		record.config.Get(constants.UpdateFieldMethodPrefixConfigOption),
-		recordName,
+		record.name(),
 		fieldName,
 	)
-
-	tableName := record.config.Get(constants.TableNameConfigOption)
 	columnName := fieldConfig.Get(constants.ColumnConfigOption)
-	storeName := record.config.Get(constants.StoreNameConfigOption)
 
 	symbols := updaterSymbols{
 		valueParam:      "_updates",
@@ -66,11 +61,11 @@ func updater(record marlowRecord, fieldName string, fieldConfig url.Values, impo
 		gosrc := writing.NewGoWriter(pw)
 		gosrc.Comment("[marlow] updater method for %s", fieldName)
 
-		e := gosrc.WithMethod(methodName, storeName, params, returns, func(scope url.Values) error {
+		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
 			gosrc.Println(
 				"%s := bytes.NewBufferString(\"UPDATE %s set %s = ?\")",
 				symbols.queryString,
-				tableName,
+				record.table(),
 				columnName,
 			)
 
@@ -136,8 +131,7 @@ func updater(record marlowRecord, fieldName string, fieldConfig url.Values, impo
 		})
 
 		if e == nil {
-			imports <- "fmt"
-			imports <- "bytes"
+			record.registerImports("fmt", "bytes")
 		}
 
 		pw.CloseWithError(e)
@@ -147,11 +141,11 @@ func updater(record marlowRecord, fieldName string, fieldConfig url.Values, impo
 }
 
 // newUpdateableGenerator is responsible for generating updating store methods.
-func newUpdateableGenerator(record marlowRecord, imports chan<- string) io.Reader {
+func newUpdateableGenerator(record marlowRecord) io.Reader {
 	readers := make([]io.Reader, 0, len(record.fields))
 
 	for name, config := range record.fields {
-		u := updater(record, name, config, imports)
+		u := updater(record, name, config)
 		readers = append(readers, u)
 	}
 

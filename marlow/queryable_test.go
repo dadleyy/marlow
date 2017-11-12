@@ -25,10 +25,11 @@ type queryableTestScaffold struct {
 
 func (s *queryableTestScaffold) g() io.Reader {
 	record := marlowRecord{
-		config: s.record,
-		fields: s.fields,
+		config:        s.record,
+		fields:        s.fields,
+		importChannel: s.imports,
 	}
-	return newQueryableGenerator(record, s.imports)
+	return newQueryableGenerator(record)
 }
 
 func (s *queryableTestScaffold) parsed() (*ast.File, error) {

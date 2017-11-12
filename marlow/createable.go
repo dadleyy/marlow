@@ -25,13 +25,9 @@ type createableSymbolList struct {
 }
 
 // newCreateableGenerator returns a reader that will generate a record store's creation api.
-func newCreateableGenerator(record marlowRecord, imports chan<- string) io.Reader {
+func newCreateableGenerator(record marlowRecord) io.Reader {
 	pr, pw := io.Pipe()
-
-	storeName := record.config.Get(constants.StoreNameConfigOption)
-	recordName := record.config.Get(constants.RecordNameConfigOption)
-	methodName := fmt.Sprintf("Create%s", inflector.Pluralize(recordName))
-	tableName := record.config.Get(constants.TableNameConfigOption)
+	methodName := fmt.Sprintf("Create%s", inflector.Pluralize(record.name()))
 
 	symbols := createableSymbolList{
 		RecordParam:              "_records",
@@ -49,7 +45,7 @@ func newCreateableGenerator(record marlowRecord, imports chan<- string) io.Reade
 	}
 
 	params := []writing.FuncParam{
-		{Symbol: symbols.RecordParam, Type: fmt.Sprintf("...%s", recordName)},
+		{Symbol: symbols.RecordParam, Type: fmt.Sprintf("...%s", record.name())},
 	}
 
 	returns := []string{
@@ -62,9 +58,7 @@ func newCreateableGenerator(record marlowRecord, imports chan<- string) io.Reade
 
 		gosrc.Comment("[marlow] createable")
 
-		// gosrc.Println("/* %s %s %s %s", storeName, recordName, methodName, tableName)
-
-		e := gosrc.WithMethod(methodName, storeName, params, returns, func(scope url.Values) error {
+		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
 			gosrc.WithIf("len(%s) == 0", func(url.Values) error {
 				gosrc.Println("return 0, nil")
 				return nil
@@ -121,7 +115,7 @@ func newCreateableGenerator(record marlowRecord, imports chan<- string) io.Reade
 			gosrc.Println(
 				"fmt.Fprintf(%s, \"INSERT INTO %s ( %s ) VALUES %%s;\", strings.Join(%s, \", \"))\n",
 				symbols.QueryBuffer,
-				tableName,
+				record.table(),
 				strings.Join(columnList, ", "),
 				symbols.StatementPlaceholderList,
 			)
@@ -165,13 +159,8 @@ func newCreateableGenerator(record marlowRecord, imports chan<- string) io.Reade
 			return nil
 		})
 
-		gosrc.Println("/* %s %s %s %s", storeName, recordName, methodName, tableName)
-		gosrc.Println("*/")
-
 		if e == nil {
-			imports <- "fmt"
-			imports <- "bytes"
-			imports <- "strings"
+			record.registerImports("fmt", "bytes", "strings")
 		}
 
 		pw.CloseWithError(e)

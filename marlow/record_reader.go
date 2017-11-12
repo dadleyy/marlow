@@ -145,23 +145,24 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 
 	go func() {
 		record := marlowRecord{
-			config: recordConfig,
-			fields: recordFields,
+			config:        recordConfig,
+			fields:        recordFields,
+			importChannel: imports,
 		}
 
-		e := readRecord(pw, record, imports)
+		e := readRecord(pw, record)
 		pw.CloseWithError(e)
 	}()
 
 	return pr, true
 }
 
-func readRecord(writer io.Writer, record marlowRecord, imports chan<- string) error {
+func readRecord(writer io.Writer, record marlowRecord) error {
 	buffer := new(bytes.Buffer)
 
 	readers := make([]io.Reader, 0, 4)
 
-	features := map[string]func(marlowRecord, chan<- string) io.Reader{
+	features := map[string]func(marlowRecord) io.Reader{
 		constants.CreateableConfigOption: newCreateableGenerator,
 		constants.UpdateableConfigOption: newUpdateableGenerator,
 		constants.DeleteableConfigOption: newDeleteableGenerator,
@@ -175,7 +176,7 @@ func readRecord(writer io.Writer, record marlowRecord, imports chan<- string) er
 			continue
 		}
 
-		g := generator(record, imports)
+		g := generator(record)
 		readers = append(readers, g)
 	}
 
@@ -189,11 +190,7 @@ func readRecord(writer io.Writer, record marlowRecord, imports chan<- string) er
 	}
 
 	// If we had any features enabled, we need to also generate the blue print API.
-	readers = append(
-		readers,
-		newStoreGenerator(record.config, imports),
-		newBlueprintGenerator(record, imports),
-	)
+	readers = append(readers, newBlueprintGenerator(record), newStoreGenerator(record))
 
 	// Iterate over all our collected features, copying them into the buffer
 	if _, e := io.Copy(buffer, io.MultiReader(readers...)); e != nil {
