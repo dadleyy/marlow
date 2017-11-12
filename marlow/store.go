@@ -39,7 +39,7 @@ func writeStore(destination io.Writer, record marlowRecord, storeMethods map[str
 
 	e = out.WithInterface(record.external(), func(url.Values) error {
 		for _, method := range storeMethods {
-			params := make([]string, 0)
+			params := make([]string, 0, len(method.Params))
 			returns := strings.Join(method.Returns, ",")
 
 			for _, p := range method.Params {
