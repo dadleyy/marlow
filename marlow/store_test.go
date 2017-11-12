@@ -1,4 +1,4 @@
-package features
+package marlow
 
 import "fmt"
 import "io"
@@ -10,10 +10,12 @@ import "go/ast"
 import "go/token"
 import "go/parser"
 import "github.com/franela/goblin"
+import "github.com/dadleyy/marlow/marlow/writing"
 
 type storeTestScaffold struct {
 	output   *bytes.Buffer
 	imports  chan string
+	methods  map[string]writing.FuncDecl
 	record   url.Values
 	received map[string]bool
 	closed   bool
@@ -21,7 +23,12 @@ type storeTestScaffold struct {
 }
 
 func (s *storeTestScaffold) g() io.Reader {
-	return NewStoreGenerator(s.record, s.imports)
+	record := marlowRecord{
+		importChannel: s.imports,
+		config:        s.record,
+	}
+
+	return newStoreGenerator(record, s.methods)
 }
 
 func (s *storeTestScaffold) parsed() (*ast.File, error) {
@@ -39,13 +46,14 @@ func Test_StoreGenerator(t *testing.T) {
 
 	var scaffold *storeTestScaffold
 
-	g.Describe("NewStoreGenerator", func() {
+	g.Describe("store generator test suite", func() {
 
 		g.BeforeEach(func() {
 			scaffold = &storeTestScaffold{
 				output:   new(bytes.Buffer),
 				imports:  make(chan string),
 				record:   make(url.Values),
+				methods:  make(map[string]writing.FuncDecl),
 				received: make(map[string]bool),
 				closed:   false,
 				wg:       &sync.WaitGroup{},

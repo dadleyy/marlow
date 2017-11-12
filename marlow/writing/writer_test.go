@@ -59,7 +59,7 @@ func Test_goWriter(t *testing.T) {
 		})
 	})
 
-	g.Describe("New", func() {
+	g.Describe("writer test suite", func() {
 		var b *parseableBuffer
 		var w GoWriter
 

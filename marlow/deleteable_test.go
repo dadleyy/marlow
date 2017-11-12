@@ -1,17 +1,19 @@
-package features
+package marlow
 
 import "io"
 import "sync"
 import "bytes"
-import "testing"
 import "net/url"
+import "testing"
 import "github.com/franela/goblin"
+import "github.com/dadleyy/marlow/marlow/writing"
 import "github.com/dadleyy/marlow/marlow/constants"
 
-type createableTestScaffold struct {
+type deleteableTestScaffold struct {
 	buffer *bytes.Buffer
 
 	imports chan string
+	methods chan writing.FuncDecl
 	record  url.Values
 	fields  map[string]url.Values
 
@@ -20,29 +22,36 @@ type createableTestScaffold struct {
 	wg       *sync.WaitGroup
 }
 
-func (s *createableTestScaffold) g() io.Reader {
-	return NewCreateableGenerator(s.record, s.fields, s.imports)
+func (s *deleteableTestScaffold) g() io.Reader {
+	record := marlowRecord{
+		config:        s.record,
+		fields:        s.fields,
+		importChannel: s.imports,
+		storeChannel:  s.methods,
+	}
+	return newDeleteableGenerator(record)
 }
 
-func Test_Createable(t *testing.T) {
+func Test_Deleteable(t *testing.T) {
 	g := goblin.Goblin(t)
 
-	var scaffold *createableTestScaffold
+	var scaffold *deleteableTestScaffold
 
-	g.Describe("createable test suite", func() {
+	g.Describe("deleteable feature generator test suite", func() {
 
 		g.BeforeEach(func() {
-			scaffold = &createableTestScaffold{
+			scaffold = &deleteableTestScaffold{
 				buffer:   new(bytes.Buffer),
-				wg:       &sync.WaitGroup{},
 				imports:  make(chan string),
+				methods:  make(chan writing.FuncDecl),
 				record:   make(url.Values),
 				fields:   make(map[string]url.Values),
 				received: make(map[string]bool),
 				closed:   false,
+				wg:       &sync.WaitGroup{},
 			}
 
-			scaffold.wg.Add(1)
+			scaffold.wg.Add(2)
 
 			go func() {
 				for i := range scaffold.imports {
@@ -50,15 +59,20 @@ func Test_Createable(t *testing.T) {
 				}
 				scaffold.wg.Done()
 			}()
+
+			go func() {
+				for range scaffold.methods {
+				}
+				scaffold.wg.Done()
+			}()
 		})
 
 		g.AfterEach(func() {
-			if scaffold.closed != false {
-				return
+			if scaffold.closed == false {
+				close(scaffold.imports)
+				close(scaffold.methods)
+				scaffold.wg.Wait()
 			}
-
-			close(scaffold.imports)
-			scaffold.wg.Wait()
 		})
 
 		g.Describe("with a valid record config", func() {
@@ -86,6 +100,8 @@ func Test_Createable(t *testing.T) {
 				_, e := io.Copy(scaffold.buffer, scaffold.g())
 				g.Assert(e).Equal(nil)
 			})
+
 		})
+
 	})
 }

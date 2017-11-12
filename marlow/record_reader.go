@@ -3,13 +3,14 @@ package marlow
 import "io"
 import "fmt"
 import "bytes"
+import "sync"
 import "go/ast"
 import "regexp"
 import "reflect"
 import "net/url"
 import "strings"
 import "github.com/gedex/inflector"
-import "github.com/dadleyy/marlow/marlow/features"
+import "github.com/dadleyy/marlow/marlow/writing"
 import "github.com/dadleyy/marlow/marlow/constants"
 
 const (
@@ -24,9 +25,13 @@ func newRecordConfig(typeName string) url.Values {
 	config.Set(constants.TableNameConfigOption, tableName)
 	config.Set(constants.DefaultLimitConfigOption, fmt.Sprintf("%d", DefaultBlueprintLimit))
 	storeName := fmt.Sprintf("%sStore", typeName)
+	blueprintName := fmt.Sprintf("%s%s", typeName, constants.BlueprintNameSuffix)
 	config.Set(constants.StoreNameConfigOption, storeName)
+
+	config.Set(constants.BlueprintNameConfigOption, blueprintName)
 	config.Set(constants.BlueprintRangeFieldSuffixConfigOption, "Range")
 	config.Set(constants.BlueprintLikeFieldSuffixConfigOption, "Like")
+
 	config.Set(constants.StoreFindMethodPrefixConfigOption, "Find")
 	config.Set(constants.StoreCountMethodPrefixConfigOption, "Count")
 	config.Set(constants.UpdateFieldMethodPrefixConfigOption, "Update")
@@ -141,42 +146,46 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 	}
 
 	go func() {
-		e := readRecord(pw, recordConfig, recordFields, imports)
+		record := marlowRecord{
+			config:        recordConfig,
+			fields:        recordFields,
+			importChannel: imports,
+			storeChannel:  make(chan writing.FuncDecl),
+		}
+
+		e := readRecord(pw, record)
 		pw.CloseWithError(e)
 	}()
 
 	return pr, true
 }
 
-func readRecord(writer io.Writer, config url.Values, fields map[string]url.Values, imports chan<- string) error {
+func readRecord(writer io.Writer, record marlowRecord) error {
 	buffer := new(bytes.Buffer)
-	enabled := make(map[string]bool)
 
-	readers := []io.Reader{
-		features.NewCreateableGenerator(config, fields, imports),
-		features.NewDeleteableGenerator(config, fields, imports),
+	readers := make([]io.Reader, 0, 4)
+
+	features := map[string]func(marlowRecord) io.Reader{
+		constants.CreateableConfigOption: newCreateableGenerator,
+		constants.UpdateableConfigOption: newUpdateableGenerator,
+		constants.DeleteableConfigOption: newDeleteableGenerator,
+		constants.QueryableConfigOption:  newQueryableGenerator,
 	}
 
-	for _, fieldConfig := range fields {
-		queryable := fieldConfig.Get(constants.QueryableConfigOption)
-		updateable := fieldConfig.Get(constants.UpdateableConfigOption)
+	for flag, generator := range features {
+		v := record.config.Get(flag)
 
-		if _, e := enabled[constants.QueryableConfigOption]; queryable != "false" && !e {
-			generator := features.NewQueryableGenerator(config, fields, imports)
-			readers = append(readers, generator)
-			enabled[constants.QueryableConfigOption] = true
+		if v == "false" {
+			continue
 		}
 
-		if _, e := enabled[constants.UpdateableConfigOption]; updateable != "false" && !e {
-			generator := features.NewUpdateableGenerator(config, fields, imports)
-			readers = append(readers, generator)
-			enabled[constants.UpdateableConfigOption] = true
-		}
+		g := generator(record)
+		readers = append(readers, g)
 	}
 
 	if len(readers) == 0 {
 		comment := strings.NewReader(
-			fmt.Sprintf("// [marlow no-features]: %s\n", config.Get(constants.RecordNameConfigOption)),
+			fmt.Sprintf("// [marlow no-features]: %s\n", record.config.Get(constants.RecordNameConfigOption)),
 		)
 
 		_, e := io.Copy(writer, comment)
@@ -184,17 +193,32 @@ func readRecord(writer io.Writer, config url.Values, fields map[string]url.Value
 	}
 
 	// If we had any features enabled, we need to also generate the blue print API.
-	readers = append(
-		readers,
-		features.NewStoreGenerator(config, imports),
-		features.NewBlueprintGenerator(config, fields, imports),
-	)
+	readers = append(readers, newBlueprintGenerator(record))
+
+	methods := make(map[string]writing.FuncDecl)
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		for method := range record.storeChannel {
+			if _, d := methods[method.Name]; d {
+				continue
+			}
+
+			methods[method.Name] = method
+		}
+		wg.Done()
+	}()
 
 	// Iterate over all our collected features, copying them into the buffer
 	if _, e := io.Copy(buffer, io.MultiReader(readers...)); e != nil {
 		return e
 	}
 
-	_, e := io.Copy(writer, buffer)
+	close(record.storeChannel)
+	wg.Wait()
+
+	store := newStoreGenerator(record, methods)
+	_, e := io.Copy(writer, io.MultiReader(buffer, store))
 	return e
 }

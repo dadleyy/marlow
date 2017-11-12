@@ -1,4 +1,4 @@
-package features
+package marlow
 
 import "io"
 import "fmt"
@@ -24,14 +24,10 @@ type createableSymbolList struct {
 	AffectedError            string
 }
 
-// NewCreateableGenerator returns a reader that will generate a record store's creation api.
-func NewCreateableGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
+// newCreateableGenerator returns a reader that will generate a record store's creation api.
+func newCreateableGenerator(record marlowRecord) io.Reader {
 	pr, pw := io.Pipe()
-
-	storeName := record.Get(constants.StoreNameConfigOption)
-	recordName := record.Get(constants.RecordNameConfigOption)
-	methodName := fmt.Sprintf("Create%s", inflector.Pluralize(recordName))
-	tableName := record.Get(constants.TableNameConfigOption)
+	methodName := fmt.Sprintf("Create%s", inflector.Pluralize(record.name()))
 
 	symbols := createableSymbolList{
 		RecordParam:              "_records",
@@ -49,7 +45,7 @@ func NewCreateableGenerator(record url.Values, fields map[string]url.Values, imp
 	}
 
 	params := []writing.FuncParam{
-		{Symbol: symbols.RecordParam, Type: fmt.Sprintf("...%s", recordName)},
+		{Symbol: symbols.RecordParam, Type: fmt.Sprintf("...%s", record.name())},
 	}
 
 	returns := []string{
@@ -62,19 +58,17 @@ func NewCreateableGenerator(record url.Values, fields map[string]url.Values, imp
 
 		gosrc.Comment("[marlow] createable")
 
-		// gosrc.Println("/* %s %s %s %s", storeName, recordName, methodName, tableName)
-
-		e := gosrc.WithMethod(methodName, storeName, params, returns, func(scope url.Values) error {
+		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
 			gosrc.WithIf("len(%s) == 0", func(url.Values) error {
 				gosrc.Println("return 0, nil")
 				return nil
 			}, symbols.RecordParam)
 
-			columnList := make([]string, 0, len(fields))
-			placeholders := make([]string, 0, len(fields))
-			fieldLookup := make(map[string]string, len(fields))
+			columnList := make([]string, 0, len(record.fields))
+			placeholders := make([]string, 0, len(record.fields))
+			fieldLookup := make(map[string]string, len(record.fields))
 
-			for field, c := range fields {
+			for field, c := range record.fields {
 				columnName := c.Get(constants.ColumnConfigOption)
 
 				if c.Get(constants.ColumnAutoIncrementFlag) != "" {
@@ -121,7 +115,7 @@ func NewCreateableGenerator(record url.Values, fields map[string]url.Values, imp
 			gosrc.Println(
 				"fmt.Fprintf(%s, \"INSERT INTO %s ( %s ) VALUES %%s;\", strings.Join(%s, \", \"))\n",
 				symbols.QueryBuffer,
-				tableName,
+				record.table(),
 				strings.Join(columnList, ", "),
 				symbols.StatementPlaceholderList,
 			)
@@ -165,13 +159,13 @@ func NewCreateableGenerator(record url.Values, fields map[string]url.Values, imp
 			return nil
 		})
 
-		gosrc.Println("/* %s %s %s %s", storeName, recordName, methodName, tableName)
-		gosrc.Println("*/")
-
 		if e == nil {
-			imports <- "fmt"
-			imports <- "bytes"
-			imports <- "strings"
+			record.registerImports("fmt", "bytes", "strings")
+			record.registerStoreMethod(writing.FuncDecl{
+				Name:    methodName,
+				Params:  params,
+				Returns: returns,
+			})
 		}
 
 		pw.CloseWithError(e)

@@ -1,4 +1,4 @@
-package features
+package marlow
 
 import "io"
 import "fmt"
@@ -9,43 +9,26 @@ import "net/url"
 import "go/token"
 import "go/parser"
 import "github.com/franela/goblin"
+import "github.com/dadleyy/marlow/marlow/constants"
 
 func Test_Blueprint(t *testing.T) {
 	g := goblin.Goblin(t)
 
-	var p blueprint
 	var b *bytes.Buffer
 	var r url.Values
 	var f map[string]url.Values
+	var record marlowRecord
 
-	g.Describe("blueprint", func() {
+	g.Describe("blueprint generator test suite", func() {
 
-		g.BeforeEach(func() {
-			f = make(map[string]url.Values)
-			r = make(url.Values)
-			p = blueprint{
-				record: r,
-				fields: f,
-			}
-		})
-
-		g.It("generates the correct blueprint name based on the record's recordName config", func() {
-			r.Set("recordName", "Books")
-			n := p.Name()
-			g.Assert(n).Equal("BookBlueprint")
-		})
-	})
-
-	g.Describe("NewBlueprintGenerator", func() {
-
-		var inputs chan string
-		var receivedInputs map[string]bool
+		var imports chan string
+		var receivedImports map[string]bool
 		var wg *sync.WaitGroup
 		var closed bool
 
 		g.BeforeEach(func() {
-			inputs = make(chan string, 10)
-			receivedInputs = make(map[string]bool)
+			imports = make(chan string, 10)
+			receivedImports = make(map[string]bool)
 			wg = &sync.WaitGroup{}
 			closed = false
 
@@ -53,11 +36,17 @@ func Test_Blueprint(t *testing.T) {
 			f = make(map[string]url.Values)
 			r = make(url.Values)
 
+			record = marlowRecord{
+				config:        r,
+				fields:        f,
+				importChannel: imports,
+			}
+
 			wg.Add(1)
 
 			go func() {
-				for i := range inputs {
-					receivedInputs[i] = true
+				for i := range imports {
+					receivedImports[i] = true
 				}
 
 				wg.Done()
@@ -68,7 +57,7 @@ func Test_Blueprint(t *testing.T) {
 
 		g.AfterEach(func() {
 			if closed == false {
-				close(inputs)
+				close(imports)
 				wg.Wait()
 			}
 		})
@@ -80,17 +69,17 @@ func Test_Blueprint(t *testing.T) {
 			})
 
 			g.It("returns an error if a field does not have a type", func() {
-				reader := NewBlueprintGenerator(r, f, inputs)
+				reader := newBlueprintGenerator(record)
 				_, e := io.Copy(b, reader)
 				g.Assert(e == nil).Equal(false)
 			})
 
 			g.It("did not send any imports over the channel", func() {
-				reader := NewBlueprintGenerator(r, f, inputs)
+				reader := newBlueprintGenerator(record)
 				io.Copy(b, reader)
-				close(inputs)
+				close(imports)
 				wg.Wait()
-				g.Assert(len(receivedInputs)).Equal(0)
+				g.Assert(len(receivedImports)).Equal(0)
 				closed = true
 			})
 		})
@@ -112,19 +101,21 @@ func Test_Blueprint(t *testing.T) {
 					"type":   []string{"sql.NullInt64"},
 					"column": []string{"company_id"},
 				}
+
+				r.Set(constants.BlueprintNameConfigOption, "SomeBlueprint")
 			})
 
 			g.It("injected the strings library to the import stream", func() {
-				io.Copy(b, NewBlueprintGenerator(r, f, inputs))
+				io.Copy(b, newBlueprintGenerator(record))
 				closed = true
-				close(inputs)
+				close(imports)
 				wg.Wait()
-				g.Assert(receivedInputs["strings"]).Equal(true)
+				g.Assert(receivedImports["strings"]).Equal(true)
 			})
 
 			g.It("produced valid a golang struct", func() {
 				fmt.Fprintln(b, "package marlowt")
-				_, e := io.Copy(b, NewBlueprintGenerator(r, f, inputs))
+				_, e := io.Copy(b, newBlueprintGenerator(record))
 				g.Assert(e).Equal(nil)
 				_, e = parser.ParseFile(token.NewFileSet(), "", b, parser.AllErrors)
 				g.Assert(e).Equal(nil)

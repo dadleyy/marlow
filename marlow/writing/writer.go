@@ -77,12 +77,20 @@ func (w *goWriter) WithIf(condition string, block Block, symbols ...interface{})
 	return w.withBlock(fmt.Sprintf("if %s", formattedCondition), block, make(url.Values))
 }
 
+func (w *goWriter) WithInterface(name string, block Block) error {
+	return w.withType(name, "interface", block)
+}
+
 func (w *goWriter) WithStruct(name string, block Block) error {
+	return w.withType(name, "struct", block)
+}
+
+func (w *goWriter) withType(name string, typename string, block Block) error {
 	if len(name) == 0 {
 		return fmt.Errorf("invalid-name")
 	}
 
-	return w.withBlock(fmt.Sprintf("type %s struct", name), block, make(url.Values))
+	return w.withBlock(fmt.Sprintf("type %s %s", name, typename), block, make(url.Values))
 }
 
 func (w *goWriter) formatReturns(returns []string) (returnList string) {

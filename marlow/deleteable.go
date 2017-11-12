@@ -1,4 +1,4 @@
-package features
+package marlow
 
 import "io"
 import "fmt"
@@ -18,14 +18,10 @@ type deleteableSymbols struct {
 	StatementError  string
 }
 
-// NewDeleteableGenerator is responsible for creating a generator that will write out the Delete api methods.
-func NewDeleteableGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
+// newDeleteableGenerator is responsible for creating a generator that will write out the Delete api methods.
+func newDeleteableGenerator(record marlowRecord) io.Reader {
 	pr, pw := io.Pipe()
-
-	storeName := record.Get(constants.StoreNameConfigOption)
-	recordName := record.Get(constants.RecordNameConfigOption)
-	methodName := fmt.Sprintf("Delete%s", inflector.Pluralize(recordName))
-	tableName := record.Get(constants.TableNameConfigOption)
+	methodName := fmt.Sprintf("Delete%s", inflector.Pluralize(record.name()))
 
 	symbols := deleteableSymbols{
 		Error:           "_e",
@@ -39,7 +35,7 @@ func NewDeleteableGenerator(record url.Values, fields map[string]url.Values, imp
 	}
 
 	params := []writing.FuncParam{
-		{Type: fmt.Sprintf("*%s", blueprint{record: record}.Name()), Symbol: symbols.BlueprintParam},
+		{Type: fmt.Sprintf("*%s", record.blueprint()), Symbol: symbols.BlueprintParam},
 	}
 
 	returns := []string{
@@ -52,13 +48,13 @@ func NewDeleteableGenerator(record url.Values, fields map[string]url.Values, imp
 
 		gosrc.Comment("[marlow] deleteable")
 
-		e := gosrc.WithMethod(methodName, storeName, params, returns, func(scope url.Values) error {
+		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
 			gosrc.WithIf("%s == nil || %s.String() == \"\"", func(url.Values) error {
 				gosrc.Println("return -1, fmt.Errorf(\"%s\")", constants.InvalidDeletionBlueprint)
 				return nil
 			}, symbols.BlueprintParam, symbols.BlueprintParam)
 
-			deleteString := fmt.Sprintf("DELETE FROM %s", tableName)
+			deleteString := fmt.Sprintf("DELETE FROM %s", record.table())
 
 			gosrc.Println(
 				"%s := fmt.Sprintf(\"%s %%s\", %s)",
@@ -108,7 +104,12 @@ func NewDeleteableGenerator(record url.Values, fields map[string]url.Values, imp
 		})
 
 		if e == nil {
-			imports <- "fmt"
+			record.registerImports("fmt")
+			record.registerStoreMethod(writing.FuncDecl{
+				Name:    methodName,
+				Returns: returns,
+				Params:  params,
+			})
 		}
 
 		pw.CloseWithError(e)

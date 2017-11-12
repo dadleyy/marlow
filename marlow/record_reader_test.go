@@ -83,10 +83,10 @@ func Test_RecordReader(t *testing.T) {
 
 		g.It("with a valid source struct including explicit column names", func() {
 			scaffold.source = strings.NewReader(`
-				package marlowt
-				type Author struct {
-					Title string ` + "`marlow:\"column=title\"`" + `
-				}`)
+					package marlowt
+					type Author struct {
+						Title string ` + "`marlow:\"column=title\"`" + `
+					}`)
 			reader, ok := newRecordReader(scaffold.root(), scaffold.imports)
 			g.Assert(ok).Equal(true)
 			_, e := io.Copy(scaffold.output, reader)
@@ -96,11 +96,11 @@ func Test_RecordReader(t *testing.T) {
 
 		g.It("with a valid source struct including explicit table name from field", func() {
 			scaffold.source = strings.NewReader(`
-				package marlowt
-				type Author struct {
-					table string ` + "`marlow:\"tableName=authors\"`" + `
-					Title string
-				}`)
+					package marlowt
+					type Author struct {
+						table string ` + "`marlow:\"tableName=authors\"`" + `
+						Title string
+					}`)
 			reader, ok := newRecordReader(scaffold.root(), scaffold.imports)
 			g.Assert(ok).Equal(true)
 			_, e := io.Copy(scaffold.output, reader)
@@ -110,11 +110,11 @@ func Test_RecordReader(t *testing.T) {
 
 		g.It("with a valid source struct with empty marlow field column config", func() {
 			scaffold.source = strings.NewReader(`
-			package marlowt
-			type Author struct {
-				Title 				string
-				IgnoredColumn string ` + "`marlow:\"\"`" + `
-			}`)
+				package marlowt
+				type Author struct {
+					Title 				string
+					IgnoredColumn string ` + "`marlow:\"\"`" + `
+				}`)
 			reader, ok := newRecordReader(scaffold.root(), scaffold.imports)
 			g.Assert(ok).Equal(true)
 			_, e := io.Copy(scaffold.output, reader)
@@ -124,11 +124,11 @@ func Test_RecordReader(t *testing.T) {
 
 		g.It("with a valid source struct with explicit exclusions of certain columns", func() {
 			scaffold.source = strings.NewReader(`
-			package marlowt
-			type Author struct {
-				Title 				string
-				IgnoredColumn string ` + "`marlow:\"column=-\"`" + `
-			}`)
+				package marlowt
+				type Author struct {
+					Title 				string
+					IgnoredColumn string ` + "`marlow:\"column=-\"`" + `
+				}`)
 			reader, ok := newRecordReader(scaffold.root(), scaffold.imports)
 			g.Assert(ok).Equal(true)
 			_, e := io.Copy(scaffold.output, reader)
@@ -138,12 +138,12 @@ func Test_RecordReader(t *testing.T) {
 
 		g.It("errors during copy if duplicate column names", func() {
 			scaffold.source = strings.NewReader(`
-			package marlowt
-			type Author struct {
-				Title 				string
-				IgnoredColumn string ` + "`marlow:\"column=dupe\"`" + `
-				OtherColumn string ` + "`marlow:\"column=dupe\"`" + `
-			}`)
+				package marlowt
+				type Author struct {
+					Title 				string
+					IgnoredColumn string ` + "`marlow:\"column=dupe\"`" + `
+					OtherColumn string ` + "`marlow:\"column=dupe\"`" + `
+				}`)
 			reader, ok := newRecordReader(scaffold.root(), scaffold.imports)
 			g.Assert(ok).Equal(true)
 			_, e := io.Copy(scaffold.output, reader)
@@ -153,12 +153,12 @@ func Test_RecordReader(t *testing.T) {
 
 		g.It("errors during copy if slice field type", func() {
 			scaffold.source = strings.NewReader(`
-			package marlowt
-			type Author struct {
-				Title 			string
-				MiddleName  string
-				SliceColumn []string ` + "`marlow:\"column=dupe\"`" + `
-			}`)
+				package marlowt
+				type Author struct {
+					Title 			string
+					MiddleName  string
+					SliceColumn []string ` + "`marlow:\"column=dupe\"`" + `
+				}`)
 			reader, ok := newRecordReader(scaffold.root(), scaffold.imports)
 			g.Assert(ok).Equal(true)
 			_, e := io.Copy(scaffold.output, reader)
@@ -168,13 +168,13 @@ func Test_RecordReader(t *testing.T) {
 
 		g.It("errors during copy if duplicate column names (with other valid fields)", func() {
 			scaffold.source = strings.NewReader(`
-			package marlowt
-			type Author struct {
-				Title 				string
-				MiddleName 		string
-				IgnoredColumn string ` + "`marlow:\"column=dupe\"`" + `
-				OtherColumn 	string ` + "`marlow:\"column=dupe\"`" + `
-			}`)
+				package marlowt
+				type Author struct {
+					Title 				string
+					MiddleName 		string
+					IgnoredColumn string ` + "`marlow:\"column=dupe\"`" + `
+					OtherColumn 	string ` + "`marlow:\"column=dupe\"`" + `
+				}`)
 			reader, ok := newRecordReader(scaffold.root(), scaffold.imports)
 			g.Assert(ok).Equal(true)
 			_, e := io.Copy(scaffold.output, reader)
