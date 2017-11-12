@@ -5,25 +5,15 @@ import "fmt"
 import "sync"
 import "strings"
 import "net/url"
-import "github.com/gedex/inflector"
 import "github.com/dadleyy/marlow/marlow/writing"
 import "github.com/dadleyy/marlow/marlow/constants"
 
-type blueprint struct {
-	record url.Values
-	fields map[string]url.Values
-}
-
-func (p blueprint) Name() string {
-	singular := inflector.Singularize(p.record.Get(constants.RecordNameConfigOption))
-	return fmt.Sprintf("%sBlueprint", singular)
-}
-
-func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) error {
+func writeBlueprint(destination io.Writer, record marlowRecord, imports chan<- string) error {
 	out := writing.NewGoWriter(destination)
+	blueprintName := record.config.Get(constants.BlueprintNameConfigOption)
 
-	e := out.WithStruct(bp.Name(), func(url.Values) error {
-		for name, config := range bp.fields {
+	e := out.WithStruct(blueprintName, func(url.Values) error {
+		for name, config := range record.fields {
 			fieldType := config.Get("type")
 
 			if fieldType == "" {
@@ -32,12 +22,12 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 
 			// Support IN lookup on string fields.
 			if fieldType == "int" {
-				out.Println("%s%s []int", name, bp.record.Get(constants.BlueprintRangeFieldSuffixConfigOption))
+				out.Println("%s%s []int", name, record.config.Get(constants.BlueprintRangeFieldSuffixConfigOption))
 			}
 
 			// Support LIKE lookup on string fields.
 			if fieldType == "string" {
-				out.Println("%s%s []string", name, bp.record.Get(constants.BlueprintLikeFieldSuffixConfigOption))
+				out.Println("%s%s []string", name, record.config.Get(constants.BlueprintLikeFieldSuffixConfigOption))
 			}
 
 			if fieldImport := config.Get("import"); fieldImport != "" {
@@ -75,8 +65,8 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 		wg.Done()
 	}()
 
-	for name, config := range bp.fields {
-		fieldGenerators := fieldMethods(bp, name, config, methodReceiver)
+	for name, config := range record.fields {
+		fieldGenerators := fieldMethods(record, name, config, methodReceiver)
 
 		if len(fieldGenerators) == 0 {
 			continue
@@ -100,7 +90,7 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 	// With all of our fields having generated non-exported clause generation methods on our struct, we can create the
 	// final 'String' method which iterates over all of these, calling them and adding the non-empty string clauses to
 	// a list, which eventually is returned as a joined string.
-	e = out.WithMethod("String", bp.Name(), nil, []string{"string"}, func(scope url.Values) error {
+	e = out.WithMethod("String", blueprintName, nil, []string{"string"}, func(scope url.Values) error {
 		out.Println("%s := make([]string, 0, %d)", symbols.ClauseSlice, len(clauseMethods))
 
 		for _, method := range clauseMethods {
@@ -123,7 +113,7 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 		return e
 	}
 
-	return out.WithMethod("Values", bp.Name(), nil, []string{"[]interface{}"}, func(scope url.Values) error {
+	return out.WithMethod("Values", blueprintName, nil, []string{"[]interface{}"}, func(scope url.Values) error {
 		out.Println("%s := make([]interface{}, 0, %d)", symbols.ClauseSlice, len(clauseMethods))
 
 		out.WithIf("%s == nil", func(url.Values) error {
@@ -144,24 +134,24 @@ func writeBlueprint(destination io.Writer, bp blueprint, imports chan<- string) 
 	})
 }
 
-func fieldMethods(print blueprint, name string, config url.Values, methods chan<- string) []io.Reader {
+func fieldMethods(record marlowRecord, name string, config url.Values, methods chan<- string) []io.Reader {
 	fieldType := config.Get("type")
-	results := make([]io.Reader, 0, len(print.fields))
+	results := make([]io.Reader, 0, len(record.fields))
 
 	if fieldType == "string" || fieldType == "int" {
-		results = append(results, simpleTypeIn(print, name, config, methods))
+		results = append(results, simpleTypeIn(record, name, config, methods))
 	}
 
 	if fieldType == "string" {
-		results = append(results, stringMethods(print, name, config, methods))
+		results = append(results, stringMethods(record, name, config, methods))
 	}
 
 	if fieldType == "int" {
-		results = append(results, numericalMethods(print, name, config, methods))
+		results = append(results, numericalMethods(record, name, config, methods))
 	}
 
 	if fieldType == "sql.NullInt64" {
-		results = append(results, nullableIntMethods(print, name, config, methods))
+		results = append(results, nullableIntMethods(record, name, config, methods))
 	}
 
 	if len(results) == 0 {
@@ -173,10 +163,10 @@ func fieldMethods(print blueprint, name string, config url.Values, methods chan<
 	return results
 }
 
-func nullableIntMethods(print blueprint, fieldName string, config url.Values, methods chan<- string) io.Reader {
+func nullableIntMethods(record marlowRecord, fieldName string, config url.Values, methods chan<- string) io.Reader {
 	pr, pw := io.Pipe()
 	columnName := config.Get(constants.ColumnConfigOption)
-	tableName := print.record.Get(constants.TableNameConfigOption)
+	tableName := record.config.Get(constants.TableNameConfigOption)
 	methodName := fmt.Sprintf("%sInString", columnName)
 
 	symbols := struct {
@@ -187,12 +177,15 @@ func nullableIntMethods(print blueprint, fieldName string, config url.Values, me
 	}{"_placeholders", "_values", "_v", "_joined"}
 
 	columnReference := fmt.Sprintf("%s.%s", tableName, columnName)
+	blueprintName := record.config.Get(constants.BlueprintNameConfigOption)
+
+	returns := []string{"string", "[]interface{}"}
 
 	write := func() {
 		writer := writing.NewGoWriter(pw)
 		writer.Comment("[marlow] nullable clause gen for \"%s\"", columnReference)
 
-		e := writer.WithMethod(methodName, print.Name(), nil, []string{"string", "[]interface{}"}, func(scope url.Values) error {
+		e := writer.WithMethod(methodName, blueprintName, nil, returns, func(scope url.Values) error {
 			fieldReference := fmt.Sprintf("%s.%s", scope.Get("receiver"), fieldName)
 
 			// Add conditional check for length presence on lookup slice.
@@ -244,12 +237,13 @@ func nullableIntMethods(print blueprint, fieldName string, config url.Values, me
 	return pr
 }
 
-func simpleTypeIn(print blueprint, fieldName string, config url.Values, methods chan<- string) io.Reader {
+func simpleTypeIn(record marlowRecord, fieldName string, fieldConfig url.Values, methods chan<- string) io.Reader {
 	pr, pw := io.Pipe()
-	columnName := config.Get(constants.ColumnConfigOption)
-	tableName := print.record.Get(constants.TableNameConfigOption)
+	columnName := fieldConfig.Get(constants.ColumnConfigOption)
+	tableName := record.config.Get(constants.TableNameConfigOption)
 	methodName := fmt.Sprintf("%sInString", columnName)
 	columnReference := fmt.Sprintf("%s.%s", tableName, columnName)
+	blueprintName := record.config.Get(constants.BlueprintNameConfigOption)
 
 	symbols := struct {
 		PlaceholderSlice string
@@ -258,11 +252,13 @@ func simpleTypeIn(print blueprint, fieldName string, config url.Values, methods 
 		JoinedValues     string
 	}{"_placeholder", "_values", "_v", "_joined"}
 
+	returns := []string{"string", "[]interface{}"}
+
 	write := func() {
 		writer := writing.NewGoWriter(pw)
 		writer.Comment("[marlow] type IN clause for \"%s\"", columnReference)
 
-		e := writer.WithMethod(methodName, print.Name(), nil, []string{"string", "[]interface{}"}, func(scope url.Values) error {
+		e := writer.WithMethod(methodName, blueprintName, nil, returns, func(scope url.Values) error {
 			fieldReference := fmt.Sprintf("%s.%s", scope.Get("receiver"), fieldName)
 
 			// Add conditional check for length presence on lookup slice.
@@ -302,11 +298,14 @@ func simpleTypeIn(print blueprint, fieldName string, config url.Values, methods 
 	return pr
 }
 
-func stringMethods(print blueprint, name string, config url.Values, methods chan<- string) io.Reader {
-	columnName := config.Get(constants.ColumnConfigOption)
+func stringMethods(record marlowRecord, fieldName string, fieldConfig url.Values, methods chan<- string) io.Reader {
+	columnName := fieldConfig.Get(constants.ColumnConfigOption)
 	methodName := fmt.Sprintf("%sLikeString", columnName)
-	likeFieldName := fmt.Sprintf("%s%s", name, print.record.Get(constants.BlueprintLikeFieldSuffixConfigOption))
-	columnReference := fmt.Sprintf("%s.%s", print.record.Get(constants.TableNameConfigOption), columnName)
+	likeSuffix := record.config.Get(constants.BlueprintLikeFieldSuffixConfigOption)
+	likeFieldName := fmt.Sprintf("%s%s", fieldName, likeSuffix)
+	tableName := record.config.Get(constants.TableNameConfigOption)
+	columnReference := fmt.Sprintf("%s.%s", tableName, columnName)
+	blueprintName := record.config.Get(constants.BlueprintNameConfigOption)
 
 	symbols := struct {
 		PlaceholderSlice string
@@ -323,7 +322,7 @@ func stringMethods(print blueprint, name string, config url.Values, methods chan
 		writer := writing.NewGoWriter(pw)
 		writer.Comment("[marlow] string LIKE clause for \"%s\"", columnReference)
 
-		e := writer.WithMethod(methodName, print.Name(), nil, returns, func(scope url.Values) error {
+		e := writer.WithMethod(methodName, blueprintName, nil, returns, func(scope url.Values) error {
 			likeSlice := fmt.Sprintf("%s.%s", scope.Get("receiver"), likeFieldName)
 
 			writer.WithIf("%s == nil || %s == nil || len(%s) == 0", func(url.Values) error {
@@ -358,12 +357,13 @@ func stringMethods(print blueprint, name string, config url.Values, methods chan
 	return pr
 }
 
-func numericalMethods(print blueprint, name string, config url.Values, methods chan<- string) io.Reader {
-	tableName := print.record.Get(constants.TableNameConfigOption)
-	columnName := config.Get(constants.ColumnConfigOption)
+func numericalMethods(record marlowRecord, fieldName string, fieldConfig url.Values, methods chan<- string) io.Reader {
+	tableName := record.config.Get(constants.TableNameConfigOption)
+	columnName := fieldConfig.Get(constants.ColumnConfigOption)
 	rangeMethodName := fmt.Sprintf("%sRangeString", columnName)
-	rangeFieldName := fmt.Sprintf("%s%s", name, print.record.Get(constants.BlueprintRangeFieldSuffixConfigOption))
+	rangeFieldName := fmt.Sprintf("%s%s", fieldName, record.config.Get(constants.BlueprintRangeFieldSuffixConfigOption))
 	columnReference := fmt.Sprintf("%s.%s", tableName, columnName)
+	blueprintName := record.config.Get(constants.BlueprintNameConfigOption)
 
 	pr, pw := io.Pipe()
 
@@ -377,7 +377,7 @@ func numericalMethods(print blueprint, name string, config url.Values, methods c
 		writer := writing.NewGoWriter(pw)
 		writer.Comment("[marlow] range clause methods for %s", columnReference)
 
-		e := writer.WithMethod(rangeMethodName, print.Name(), nil, returns, func(scope url.Values) error {
+		e := writer.WithMethod(rangeMethodName, blueprintName, nil, returns, func(scope url.Values) error {
 			receiver := scope.Get("receiver")
 			rangeArray := fmt.Sprintf("%s.%s", receiver, rangeFieldName)
 
@@ -408,16 +408,11 @@ func numericalMethods(print blueprint, name string, config url.Values, methods c
 }
 
 // NewBlueprintGenerator returns a reader that will generate the basic query struct type used for record lookups.
-func newBlueprintGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
+func newBlueprintGenerator(record marlowRecord, imports chan<- string) io.Reader {
 	pr, pw := io.Pipe()
 
 	go func() {
-		bp := blueprint{
-			record: record,
-			fields: fields,
-		}
-
-		e := writeBlueprint(pw, bp, imports)
+		e := writeBlueprint(pw, record, imports)
 		pw.CloseWithError(e)
 	}()
 

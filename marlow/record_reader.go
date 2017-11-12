@@ -23,9 +23,13 @@ func newRecordConfig(typeName string) url.Values {
 	config.Set(constants.TableNameConfigOption, tableName)
 	config.Set(constants.DefaultLimitConfigOption, fmt.Sprintf("%d", DefaultBlueprintLimit))
 	storeName := fmt.Sprintf("%sStore", typeName)
+	blueprintName := fmt.Sprintf("%s%s", typeName, constants.BlueprintNameSuffix)
 	config.Set(constants.StoreNameConfigOption, storeName)
+
+	config.Set(constants.BlueprintNameConfigOption, blueprintName)
 	config.Set(constants.BlueprintRangeFieldSuffixConfigOption, "Range")
 	config.Set(constants.BlueprintLikeFieldSuffixConfigOption, "Like")
+
 	config.Set(constants.StoreFindMethodPrefixConfigOption, "Find")
 	config.Set(constants.StoreCountMethodPrefixConfigOption, "Count")
 	config.Set(constants.UpdateFieldMethodPrefixConfigOption, "Update")
@@ -155,11 +159,9 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 func readRecord(writer io.Writer, record marlowRecord, imports chan<- string) error {
 	buffer := new(bytes.Buffer)
 
-	config, fields := record.config, record.fields
-
 	readers := make([]io.Reader, 0, 4)
 
-	features := map[string]func(url.Values, map[string]url.Values, chan<- string) io.Reader{
+	features := map[string]func(marlowRecord, chan<- string) io.Reader{
 		constants.CreateableConfigOption: newCreateableGenerator,
 		constants.UpdateableConfigOption: newUpdateableGenerator,
 		constants.DeleteableConfigOption: newDeleteableGenerator,
@@ -167,19 +169,19 @@ func readRecord(writer io.Writer, record marlowRecord, imports chan<- string) er
 	}
 
 	for flag, generator := range features {
-		v := config.Get(flag)
+		v := record.config.Get(flag)
 
 		if v == "false" {
 			continue
 		}
 
-		g := generator(config, fields, imports)
+		g := generator(record, imports)
 		readers = append(readers, g)
 	}
 
 	if len(readers) == 0 {
 		comment := strings.NewReader(
-			fmt.Sprintf("// [marlow no-features]: %s\n", config.Get(constants.RecordNameConfigOption)),
+			fmt.Sprintf("// [marlow no-features]: %s\n", record.config.Get(constants.RecordNameConfigOption)),
 		)
 
 		_, e := io.Copy(writer, comment)
@@ -189,8 +191,8 @@ func readRecord(writer io.Writer, record marlowRecord, imports chan<- string) er
 	// If we had any features enabled, we need to also generate the blue print API.
 	readers = append(
 		readers,
-		newStoreGenerator(config, imports),
-		newBlueprintGenerator(config, fields, imports),
+		newStoreGenerator(record.config, imports),
+		newBlueprintGenerator(record, imports),
 	)
 
 	// Iterate over all our collected features, copying them into the buffer

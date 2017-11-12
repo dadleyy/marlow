@@ -25,13 +25,13 @@ type createableSymbolList struct {
 }
 
 // newCreateableGenerator returns a reader that will generate a record store's creation api.
-func newCreateableGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
+func newCreateableGenerator(record marlowRecord, imports chan<- string) io.Reader {
 	pr, pw := io.Pipe()
 
-	storeName := record.Get(constants.StoreNameConfigOption)
-	recordName := record.Get(constants.RecordNameConfigOption)
+	storeName := record.config.Get(constants.StoreNameConfigOption)
+	recordName := record.config.Get(constants.RecordNameConfigOption)
 	methodName := fmt.Sprintf("Create%s", inflector.Pluralize(recordName))
-	tableName := record.Get(constants.TableNameConfigOption)
+	tableName := record.config.Get(constants.TableNameConfigOption)
 
 	symbols := createableSymbolList{
 		RecordParam:              "_records",
@@ -70,11 +70,11 @@ func newCreateableGenerator(record url.Values, fields map[string]url.Values, imp
 				return nil
 			}, symbols.RecordParam)
 
-			columnList := make([]string, 0, len(fields))
-			placeholders := make([]string, 0, len(fields))
-			fieldLookup := make(map[string]string, len(fields))
+			columnList := make([]string, 0, len(record.fields))
+			placeholders := make([]string, 0, len(record.fields))
+			fieldLookup := make(map[string]string, len(record.fields))
 
-			for field, c := range fields {
+			for field, c := range record.fields {
 				columnName := c.Get(constants.ColumnConfigOption)
 
 				if c.Get(constants.ColumnAutoIncrementFlag) != "" {

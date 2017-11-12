@@ -19,13 +19,13 @@ type deleteableSymbols struct {
 }
 
 // newDeleteableGenerator is responsible for creating a generator that will write out the Delete api methods.
-func newDeleteableGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
+func newDeleteableGenerator(record marlowRecord, imports chan<- string) io.Reader {
 	pr, pw := io.Pipe()
 
-	storeName := record.Get(constants.StoreNameConfigOption)
-	recordName := record.Get(constants.RecordNameConfigOption)
+	storeName := record.config.Get(constants.StoreNameConfigOption)
+	recordName := record.config.Get(constants.RecordNameConfigOption)
 	methodName := fmt.Sprintf("Delete%s", inflector.Pluralize(recordName))
-	tableName := record.Get(constants.TableNameConfigOption)
+	tableName := record.config.Get(constants.TableNameConfigOption)
 
 	symbols := deleteableSymbols{
 		Error:           "_e",
@@ -38,8 +38,10 @@ func newDeleteableGenerator(record url.Values, fields map[string]url.Values, imp
 		ExecError:       "_ee",
 	}
 
+	blueprintName := record.config.Get(constants.BlueprintNameConfigOption)
+
 	params := []writing.FuncParam{
-		{Type: fmt.Sprintf("*%s", blueprint{record: record}.Name()), Symbol: symbols.BlueprintParam},
+		{Type: fmt.Sprintf("*%s", blueprintName), Symbol: symbols.BlueprintParam},
 	}
 
 	returns := []string{

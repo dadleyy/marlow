@@ -9,32 +9,15 @@ import "net/url"
 import "go/token"
 import "go/parser"
 import "github.com/franela/goblin"
+import "github.com/dadleyy/marlow/marlow/constants"
 
 func Test_Blueprint(t *testing.T) {
 	g := goblin.Goblin(t)
 
-	var p blueprint
 	var b *bytes.Buffer
 	var r url.Values
 	var f map[string]url.Values
-
-	g.Describe("blueprint", func() {
-
-		g.BeforeEach(func() {
-			f = make(map[string]url.Values)
-			r = make(url.Values)
-			p = blueprint{
-				record: r,
-				fields: f,
-			}
-		})
-
-		g.It("generates the correct blueprint name based on the record's recordName config", func() {
-			r.Set("recordName", "Books")
-			n := p.Name()
-			g.Assert(n).Equal("BookBlueprint")
-		})
-	})
+	var record marlowRecord
 
 	g.Describe("blueprint generator test suite", func() {
 
@@ -52,6 +35,11 @@ func Test_Blueprint(t *testing.T) {
 			b = new(bytes.Buffer)
 			f = make(map[string]url.Values)
 			r = make(url.Values)
+
+			record = marlowRecord{
+				config: r,
+				fields: f,
+			}
 
 			wg.Add(1)
 
@@ -80,13 +68,13 @@ func Test_Blueprint(t *testing.T) {
 			})
 
 			g.It("returns an error if a field does not have a type", func() {
-				reader := newBlueprintGenerator(r, f, inputs)
+				reader := newBlueprintGenerator(record, inputs)
 				_, e := io.Copy(b, reader)
 				g.Assert(e == nil).Equal(false)
 			})
 
 			g.It("did not send any imports over the channel", func() {
-				reader := newBlueprintGenerator(r, f, inputs)
+				reader := newBlueprintGenerator(record, inputs)
 				io.Copy(b, reader)
 				close(inputs)
 				wg.Wait()
@@ -112,10 +100,12 @@ func Test_Blueprint(t *testing.T) {
 					"type":   []string{"sql.NullInt64"},
 					"column": []string{"company_id"},
 				}
+
+				r.Set(constants.BlueprintNameConfigOption, "SomeBlueprint")
 			})
 
 			g.It("injected the strings library to the import stream", func() {
-				io.Copy(b, newBlueprintGenerator(r, f, inputs))
+				io.Copy(b, newBlueprintGenerator(record, inputs))
 				closed = true
 				close(inputs)
 				wg.Wait()
@@ -124,7 +114,7 @@ func Test_Blueprint(t *testing.T) {
 
 			g.It("produced valid a golang struct", func() {
 				fmt.Fprintln(b, "package marlowt")
-				_, e := io.Copy(b, newBlueprintGenerator(r, f, inputs))
+				_, e := io.Copy(b, newBlueprintGenerator(record, inputs))
 				g.Assert(e).Equal(nil)
 				_, e = parser.ParseFile(token.NewFileSet(), "", b, parser.AllErrors)
 				g.Assert(e).Equal(nil)

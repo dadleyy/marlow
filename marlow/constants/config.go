@@ -21,6 +21,12 @@ const (
 	// searching by the queryable interface.
 	BlueprintLikeFieldSuffixConfigOption = "blueprintLikeFieldSuffix"
 
+	// BlueprintNameSuffix is added after the record name for the type that can be stringifyed into valid sql code.
+	BlueprintNameSuffix = "Blueprint"
+
+	// BlueprintNameConfigOption holds the blueprint name on the record config.
+	BlueprintNameConfigOption = "blueprintName"
+
 	// StoreFindMethodPrefixConfigOption determines the prefix used when adding the main find/lookup method to the store.
 	StoreFindMethodPrefixConfigOption = "storeFindMethodPrefix"
 

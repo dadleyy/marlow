@@ -19,7 +19,11 @@ type updateableTestScaffold struct {
 }
 
 func (s *updateableTestScaffold) g() io.Reader {
-	return newUpdateableGenerator(s.record, s.fields, s.imports)
+	record := marlowRecord{
+		config: s.record,
+		fields: s.fields,
+	}
+	return newUpdateableGenerator(record, s.imports)
 }
 
 func Test_Updateable(t *testing.T) {

@@ -19,13 +19,20 @@ type updaterSymbols struct {
 	valueSlice      string
 }
 
-func updater(record url.Values, name string, config url.Values, imports chan<- string) io.Reader {
+func updater(record marlowRecord, fieldName string, fieldConfig url.Values, imports chan<- string) io.Reader {
 	pr, pw := io.Pipe()
-	blueprint := blueprint{record: record}
-	recordName := record.Get(constants.RecordNameConfigOption)
-	methodName := fmt.Sprintf("%s%s%s", record.Get(constants.UpdateFieldMethodPrefixConfigOption), recordName, name)
-	tableName, columnName := record.Get(constants.TableNameConfigOption), config.Get(constants.ColumnConfigOption)
-	storeName := record.Get(constants.StoreNameConfigOption)
+	recordName := record.config.Get(constants.RecordNameConfigOption)
+
+	methodName := fmt.Sprintf(
+		"%s%s%s",
+		record.config.Get(constants.UpdateFieldMethodPrefixConfigOption),
+		recordName,
+		fieldName,
+	)
+
+	tableName := record.config.Get(constants.TableNameConfigOption)
+	columnName := fieldConfig.Get(constants.ColumnConfigOption)
+	storeName := record.config.Get(constants.StoreNameConfigOption)
 
 	symbols := updaterSymbols{
 		valueParam:      "_updates",
@@ -41,12 +48,12 @@ func updater(record url.Values, name string, config url.Values, imports chan<- s
 	}
 
 	params := []writing.FuncParam{
-		{Type: config.Get("type"), Symbol: symbols.valueParam},
-		{Type: fmt.Sprintf("*%s", blueprint.Name()), Symbol: symbols.blueprintParam},
+		{Type: fieldConfig.Get("type"), Symbol: symbols.valueParam},
+		{Type: fmt.Sprintf("*%s", record.config.Get(constants.BlueprintNameConfigOption)), Symbol: symbols.blueprintParam},
 	}
 
-	if config.Get("type") == "sql.NullInt64" {
-		params[0].Type = fmt.Sprintf("*%s", config.Get("type"))
+	if fieldConfig.Get("type") == "sql.NullInt64" {
+		params[0].Type = fmt.Sprintf("*%s", fieldConfig.Get("type"))
 	}
 
 	returns := []string{
@@ -57,7 +64,7 @@ func updater(record url.Values, name string, config url.Values, imports chan<- s
 
 	go func() {
 		gosrc := writing.NewGoWriter(pw)
-		gosrc.Comment("[marlow] updater method for %s", name)
+		gosrc.Comment("[marlow] updater method for %s", fieldName)
 
 		e := gosrc.WithMethod(methodName, storeName, params, returns, func(scope url.Values) error {
 			gosrc.Println(
@@ -140,11 +147,12 @@ func updater(record url.Values, name string, config url.Values, imports chan<- s
 }
 
 // newUpdateableGenerator is responsible for generating updating store methods.
-func newUpdateableGenerator(record url.Values, fields map[string]url.Values, imports chan<- string) io.Reader {
-	readers := make([]io.Reader, 0, len(fields))
+func newUpdateableGenerator(record marlowRecord, imports chan<- string) io.Reader {
+	readers := make([]io.Reader, 0, len(record.fields))
 
-	for name, config := range fields {
-		readers = append(readers, updater(record, name, config, imports))
+	for name, config := range record.fields {
+		u := updater(record, name, config, imports)
+		readers = append(readers, u)
 	}
 
 	return io.MultiReader(readers...)

@@ -24,7 +24,11 @@ type queryableTestScaffold struct {
 }
 
 func (s *queryableTestScaffold) g() io.Reader {
-	return newQueryableGenerator(s.record, s.fields, s.imports)
+	record := marlowRecord{
+		config: s.record,
+		fields: s.fields,
+	}
+	return newQueryableGenerator(record, s.imports)
 }
 
 func (s *queryableTestScaffold) parsed() (*ast.File, error) {
@@ -117,6 +121,7 @@ func Test_QueryableGenerator(t *testing.T) {
 			g.BeforeEach(func() {
 				scaffold.record.Set("defaultLimit", "20")
 				scaffold.record.Set("storeName", "BookStore")
+				scaffold.record.Set("blueprintName", "BookBlueprint")
 				scaffold.record.Set("recordName", "Book")
 				scaffold.record.Set("tableName", "books")
 				scaffold.fields["Title"] = url.Values{
