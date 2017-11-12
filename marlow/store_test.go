@@ -10,10 +10,12 @@ import "go/ast"
 import "go/token"
 import "go/parser"
 import "github.com/franela/goblin"
+import "github.com/dadleyy/marlow/marlow/writing"
 
 type storeTestScaffold struct {
 	output   *bytes.Buffer
 	imports  chan string
+	methods  map[string]writing.FuncDecl
 	record   url.Values
 	received map[string]bool
 	closed   bool
@@ -26,7 +28,7 @@ func (s *storeTestScaffold) g() io.Reader {
 		config:        s.record,
 	}
 
-	return newStoreGenerator(record)
+	return newStoreGenerator(record, s.methods)
 }
 
 func (s *storeTestScaffold) parsed() (*ast.File, error) {
@@ -51,6 +53,7 @@ func Test_StoreGenerator(t *testing.T) {
 				output:   new(bytes.Buffer),
 				imports:  make(chan string),
 				record:   make(url.Values),
+				methods:  make(map[string]writing.FuncDecl),
 				received: make(map[string]bool),
 				closed:   false,
 				wg:       &sync.WaitGroup{},

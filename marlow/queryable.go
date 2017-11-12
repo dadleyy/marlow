@@ -196,6 +196,11 @@ func finder(record marlowRecord) io.Reader {
 			return
 		}
 
+		record.registerStoreMethod(writing.FuncDecl{
+			Name:    methodName,
+			Params:  params,
+			Returns: returns,
+		})
 		record.registerImports("fmt", "bytes", "strings")
 
 		pw.Close()
@@ -205,7 +210,7 @@ func finder(record marlowRecord) io.Reader {
 }
 
 type counterSymbols struct {
-	CountMethodName    string
+	countMethodName    string
 	BlueprintParamName string
 	StatementQuery     string
 	StatementResult    string
@@ -226,7 +231,7 @@ func counter(record marlowRecord) io.Reader {
 	}
 
 	symbols := counterSymbols{
-		CountMethodName:    fmt.Sprintf("%s%s", methodPrefix, inflector.Pluralize(record.name())),
+		countMethodName:    fmt.Sprintf("%s%s", methodPrefix, inflector.Pluralize(record.name())),
 		BlueprintParamName: "_blueprint",
 		StatementQuery:     "_raw",
 		StatementError:     "_statementError",
@@ -250,7 +255,7 @@ func counter(record marlowRecord) io.Reader {
 			"error",
 		}
 
-		e := gosrc.WithMethod(symbols.CountMethodName, record.store(), params, returns, func(scope url.Values) error {
+		e := gosrc.WithMethod(symbols.countMethodName, record.store(), params, returns, func(scope url.Values) error {
 			receiver := scope.Get("receiver")
 			gosrc.WithIf("%s == nil", func(url.Values) error {
 				gosrc.Println("%s = &%s{}", params[0].Symbol, record.blueprint())
@@ -313,6 +318,11 @@ func counter(record marlowRecord) io.Reader {
 
 		if e == nil {
 			record.registerImports("fmt")
+			record.registerStoreMethod(writing.FuncDecl{
+				Name:    symbols.countMethodName,
+				Params:  params,
+				Returns: returns,
+			})
 		}
 
 		pw.CloseWithError(e)
@@ -441,6 +451,11 @@ func selector(record marlowRecord, fieldName string, fieldConfig url.Values) io.
 				return e
 			}
 
+			record.registerStoreMethod(writing.FuncDecl{
+				Name:    methodName,
+				Params:  params,
+				Returns: returns,
+			})
 			gosrc.Println("return %s, nil", symbols.ReturnSlice)
 			return nil
 		})

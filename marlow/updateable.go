@@ -132,6 +132,11 @@ func updater(record marlowRecord, fieldName string, fieldConfig url.Values) io.R
 
 		if e == nil {
 			record.registerImports("fmt", "bytes")
+			record.registerStoreMethod(writing.FuncDecl{
+				Name:    methodName,
+				Params:  params,
+				Returns: returns,
+			})
 		}
 
 		pw.CloseWithError(e)

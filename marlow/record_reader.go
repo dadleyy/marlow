@@ -3,12 +3,14 @@ package marlow
 import "io"
 import "fmt"
 import "bytes"
+import "sync"
 import "go/ast"
 import "regexp"
 import "reflect"
 import "net/url"
 import "strings"
 import "github.com/gedex/inflector"
+import "github.com/dadleyy/marlow/marlow/writing"
 import "github.com/dadleyy/marlow/marlow/constants"
 
 const (
@@ -148,6 +150,7 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 			config:        recordConfig,
 			fields:        recordFields,
 			importChannel: imports,
+			storeChannel:  make(chan writing.FuncDecl),
 		}
 
 		e := readRecord(pw, record)
@@ -190,13 +193,32 @@ func readRecord(writer io.Writer, record marlowRecord) error {
 	}
 
 	// If we had any features enabled, we need to also generate the blue print API.
-	readers = append(readers, newBlueprintGenerator(record), newStoreGenerator(record))
+	readers = append(readers, newBlueprintGenerator(record))
+
+	methods := make(map[string]writing.FuncDecl)
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		for method := range record.storeChannel {
+			if _, d := methods[method.Name]; d {
+				continue
+			}
+
+			methods[method.Name] = method
+		}
+		wg.Done()
+	}()
 
 	// Iterate over all our collected features, copying them into the buffer
 	if _, e := io.Copy(buffer, io.MultiReader(readers...)); e != nil {
 		return e
 	}
 
-	_, e := io.Copy(writer, buffer)
+	close(record.storeChannel)
+	wg.Wait()
+
+	store := newStoreGenerator(record, methods)
+	_, e := io.Copy(writer, io.MultiReader(buffer, store))
 	return e
 }

@@ -36,7 +36,7 @@ func addAuthorRow(db *sql.DB, values ...[]string) error {
 func Test_Author(t *testing.T) {
 	g := goblin.Goblin(t)
 	var db *sql.DB
-	var store *AuthorStore
+	var store AuthorStore
 
 	dbFile := "author-testing.db"
 	generatedAuthorCount := 150
@@ -120,7 +120,7 @@ func Test_Author(t *testing.T) {
 		})
 
 		g.BeforeEach(func() {
-			store = &AuthorStore{DB: db}
+			store = NewAuthorStore(db)
 		})
 
 		g.After(func() {

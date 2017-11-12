@@ -6,11 +6,13 @@ import "bytes"
 import "testing"
 import "net/url"
 import "github.com/franela/goblin"
+import "github.com/dadleyy/marlow/marlow/writing"
 import "github.com/dadleyy/marlow/marlow/constants"
 
 type updateableTestScaffold struct {
 	buffer   *bytes.Buffer
 	imports  chan string
+	methods  chan writing.FuncDecl
 	record   url.Values
 	fields   map[string]url.Values
 	received map[string]bool
@@ -18,11 +20,23 @@ type updateableTestScaffold struct {
 	wg       *sync.WaitGroup
 }
 
+func (s *updateableTestScaffold) close() {
+	if s == nil || s.closed == true {
+		return
+	}
+
+	s.closed = true
+	close(s.methods)
+	close(s.imports)
+	s.wg.Wait()
+}
+
 func (s *updateableTestScaffold) g() io.Reader {
 	record := marlowRecord{
 		config:        s.record,
 		fields:        s.fields,
 		importChannel: s.imports,
+		storeChannel:  s.methods,
 	}
 	return newUpdateableGenerator(record)
 }
@@ -38,6 +52,7 @@ func Test_Updateable(t *testing.T) {
 			scaffold = &updateableTestScaffold{
 				buffer:   new(bytes.Buffer),
 				imports:  make(chan string),
+				methods:  make(chan writing.FuncDecl),
 				record:   make(url.Values),
 				fields:   make(map[string]url.Values),
 				received: make(map[string]bool),
@@ -45,7 +60,13 @@ func Test_Updateable(t *testing.T) {
 				wg:       &sync.WaitGroup{},
 			}
 
-			scaffold.wg.Add(1)
+			scaffold.wg.Add(2)
+
+			go func() {
+				for range scaffold.methods {
+				}
+				scaffold.wg.Done()
+			}()
 
 			go func() {
 				for i := range scaffold.imports {
@@ -56,10 +77,7 @@ func Test_Updateable(t *testing.T) {
 		})
 
 		g.AfterEach(func() {
-			if scaffold.closed == false {
-				close(scaffold.imports)
-				scaffold.wg.Wait()
-			}
+			scaffold.close()
 		})
 
 		g.Describe("with a record config that has nullable fields", func() {

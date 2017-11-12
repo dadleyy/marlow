@@ -2,6 +2,13 @@ package writing
 
 import "net/url"
 
+// FuncDecl provides the structure of a golang function definition. ast.FuncDecl was too complex.
+type FuncDecl struct {
+	Name    string
+	Params  []FuncParam
+	Returns []string
+}
+
 // FuncParam represents the golang function parameter syntax
 type FuncParam struct {
 	Type   string
@@ -20,6 +27,7 @@ type GoWriter interface {
 	WithIf(string, Block, ...interface{}) error
 	WithIter(string, Block, ...interface{}) error
 	WithStruct(string, Block) error
+	WithInterface(string, Block) error
 	Println(string, ...interface{})
 	Comment(string, ...interface{})
 }

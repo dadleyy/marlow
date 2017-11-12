@@ -6,12 +6,14 @@ import "bytes"
 import "net/url"
 import "testing"
 import "github.com/franela/goblin"
+import "github.com/dadleyy/marlow/marlow/writing"
 import "github.com/dadleyy/marlow/marlow/constants"
 
 type deleteableTestScaffold struct {
 	buffer *bytes.Buffer
 
 	imports chan string
+	methods chan writing.FuncDecl
 	record  url.Values
 	fields  map[string]url.Values
 
@@ -25,6 +27,7 @@ func (s *deleteableTestScaffold) g() io.Reader {
 		config:        s.record,
 		fields:        s.fields,
 		importChannel: s.imports,
+		storeChannel:  s.methods,
 	}
 	return newDeleteableGenerator(record)
 }
@@ -40,6 +43,7 @@ func Test_Deleteable(t *testing.T) {
 			scaffold = &deleteableTestScaffold{
 				buffer:   new(bytes.Buffer),
 				imports:  make(chan string),
+				methods:  make(chan writing.FuncDecl),
 				record:   make(url.Values),
 				fields:   make(map[string]url.Values),
 				received: make(map[string]bool),
@@ -47,11 +51,17 @@ func Test_Deleteable(t *testing.T) {
 				wg:       &sync.WaitGroup{},
 			}
 
-			scaffold.wg.Add(1)
+			scaffold.wg.Add(2)
 
 			go func() {
 				for i := range scaffold.imports {
 					scaffold.received[i] = true
+				}
+				scaffold.wg.Done()
+			}()
+
+			go func() {
+				for range scaffold.methods {
 				}
 				scaffold.wg.Done()
 			}()
@@ -60,6 +70,7 @@ func Test_Deleteable(t *testing.T) {
 		g.AfterEach(func() {
 			if scaffold.closed == false {
 				close(scaffold.imports)
+				close(scaffold.methods)
 				scaffold.wg.Wait()
 			}
 		})

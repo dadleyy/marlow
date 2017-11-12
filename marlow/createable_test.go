@@ -6,18 +6,32 @@ import "bytes"
 import "testing"
 import "net/url"
 import "github.com/franela/goblin"
+import "github.com/dadleyy/marlow/marlow/writing"
 import "github.com/dadleyy/marlow/marlow/constants"
 
 type createableTestScaffold struct {
 	buffer *bytes.Buffer
 
 	imports chan string
-	record  url.Values
-	fields  map[string]url.Values
+	methods chan writing.FuncDecl
+
+	record url.Values
+	fields map[string]url.Values
 
 	received map[string]bool
 	closed   bool
 	wg       *sync.WaitGroup
+}
+
+func (s *createableTestScaffold) close() {
+	if s == nil || s.closed {
+		return
+	}
+
+	s.closed = true
+	close(s.imports)
+	close(s.methods)
+	s.wg.Wait()
 }
 
 func (s *createableTestScaffold) g() io.Reader {
@@ -25,6 +39,7 @@ func (s *createableTestScaffold) g() io.Reader {
 		fields:        s.fields,
 		config:        s.record,
 		importChannel: s.imports,
+		storeChannel:  s.methods,
 	}
 
 	return newCreateableGenerator(record)
@@ -39,16 +54,25 @@ func Test_Createable(t *testing.T) {
 
 		g.BeforeEach(func() {
 			scaffold = &createableTestScaffold{
-				buffer:   new(bytes.Buffer),
-				wg:       &sync.WaitGroup{},
-				imports:  make(chan string),
+				buffer: new(bytes.Buffer),
+				wg:     &sync.WaitGroup{},
+
+				imports: make(chan string),
+				methods: make(chan writing.FuncDecl),
+
 				record:   make(url.Values),
 				fields:   make(map[string]url.Values),
 				received: make(map[string]bool),
 				closed:   false,
 			}
 
-			scaffold.wg.Add(1)
+			scaffold.wg.Add(2)
+
+			go func() {
+				for range scaffold.methods {
+				}
+				scaffold.wg.Done()
+			}()
 
 			go func() {
 				for i := range scaffold.imports {
@@ -59,12 +83,7 @@ func Test_Createable(t *testing.T) {
 		})
 
 		g.AfterEach(func() {
-			if scaffold.closed != false {
-				return
-			}
-
-			close(scaffold.imports)
-			scaffold.wg.Wait()
+			scaffold.close()
 		})
 
 		g.Describe("with a valid record config", func() {

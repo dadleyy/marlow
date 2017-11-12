@@ -161,6 +161,11 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 
 		if e == nil {
 			record.registerImports("fmt", "bytes", "strings")
+			record.registerStoreMethod(writing.FuncDecl{
+				Name:    methodName,
+				Params:  params,
+				Returns: returns,
+			})
 		}
 
 		pw.CloseWithError(e)

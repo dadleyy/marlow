@@ -105,6 +105,11 @@ func newDeleteableGenerator(record marlowRecord) io.Reader {
 
 		if e == nil {
 			record.registerImports("fmt")
+			record.registerStoreMethod(writing.FuncDecl{
+				Name:    methodName,
+				Returns: returns,
+				Params:  params,
+			})
 		}
 
 		pw.CloseWithError(e)

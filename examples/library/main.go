@@ -119,7 +119,7 @@ func main() {
 		NameLike: []string{"danny"},
 	})
 
-	authorStore := models.AuthorStore{DB: db}
+	authorStore := models.NewAuthorStore(db)
 
 	a, e := authorStore.FindAuthors(&models.AuthorBlueprint{
 		ID: []int{1, 2, 3},
@@ -133,7 +133,7 @@ func main() {
 		log.Printf("found author name[%s]", author.Name)
 	}
 
-	bookStore := models.BookStore{DB: db}
+	bookStore := models.NewBookStore(db)
 	b, e := bookStore.FindBooks(&models.BookBlueprint{
 		ID: []int{1, 2},
 	})

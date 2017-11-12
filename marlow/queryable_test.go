@@ -11,10 +11,13 @@ import "go/token"
 import "go/parser"
 import "github.com/franela/goblin"
 
+import "github.com/dadleyy/marlow/marlow/writing"
+
 type queryableTestScaffold struct {
 	output *bytes.Buffer
 
 	imports chan string
+	methods chan writing.FuncDecl
 	record  url.Values
 	fields  map[string]url.Values
 
@@ -28,8 +31,20 @@ func (s *queryableTestScaffold) g() io.Reader {
 		config:        s.record,
 		fields:        s.fields,
 		importChannel: s.imports,
+		storeChannel:  s.methods,
 	}
 	return newQueryableGenerator(record)
+}
+
+func (s *queryableTestScaffold) close() {
+	if s == nil || s.closed {
+		return
+	}
+
+	s.closed = true
+	close(s.methods)
+	close(s.imports)
+	s.wg.Wait()
 }
 
 func (s *queryableTestScaffold) parsed() (*ast.File, error) {
@@ -47,6 +62,7 @@ func Test_QueryableGenerator(t *testing.T) {
 			scaffold = &queryableTestScaffold{
 				output:   new(bytes.Buffer),
 				imports:  make(chan string),
+				methods:  make(chan writing.FuncDecl),
 				record:   make(url.Values),
 				fields:   make(map[string]url.Values),
 				received: make(map[string]bool),
@@ -54,7 +70,13 @@ func Test_QueryableGenerator(t *testing.T) {
 				wg:       &sync.WaitGroup{},
 			}
 
-			scaffold.wg.Add(1)
+			scaffold.wg.Add(2)
+
+			go func() {
+				for range scaffold.methods {
+				}
+				scaffold.wg.Done()
+			}()
 
 			go func() {
 				for i := range scaffold.imports {
@@ -65,10 +87,7 @@ func Test_QueryableGenerator(t *testing.T) {
 		})
 
 		g.AfterEach(func() {
-			if scaffold.closed == false {
-				close(scaffold.imports)
-				scaffold.wg.Wait()
-			}
+			scaffold.close()
 		})
 
 		g.Describe("with invalid record config", func() {
@@ -110,9 +129,7 @@ func Test_QueryableGenerator(t *testing.T) {
 				_, e := io.Copy(scaffold.output, scaffold.g())
 				g.Assert(e).Equal(nil)
 				g.Assert(scaffold.output.Len()).Equal(0)
-				scaffold.closed = true
-				close(scaffold.imports)
-				scaffold.wg.Wait()
+				scaffold.close()
 				g.Assert(len(scaffold.received)).Equal(0)
 			})
 		})
@@ -142,9 +159,7 @@ func Test_QueryableGenerator(t *testing.T) {
 			g.It("injected the fmt, bytes and strings packages to the import channel", func() {
 				fmt.Fprintln(scaffold.output, "package marlowt")
 				io.Copy(scaffold.output, scaffold.g())
-				scaffold.closed = true
-				close(scaffold.imports)
-				scaffold.wg.Wait()
+				scaffold.close()
 
 				g.Assert(scaffold.received["fmt"]).Equal(true)
 				g.Assert(scaffold.received["strings"]).Equal(true)
