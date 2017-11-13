@@ -3,7 +3,9 @@ drop table if exists authors;
 create table authors (
   id INTEGER PRIMARY KEY,
   name TEXT,
-  university_id INTEGER
+  university_id INTEGER,
+  rating REAL NOT NULL DEFAULT '100.00',
+  flags INTEGER NOT NULL DEFAULT 0
 );
 
 drop table if exists books;

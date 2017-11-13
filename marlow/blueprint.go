@@ -5,8 +5,24 @@ import "fmt"
 import "sync"
 import "strings"
 import "net/url"
+import "go/types"
 import "github.com/dadleyy/marlow/marlow/writing"
 import "github.com/dadleyy/marlow/marlow/constants"
+
+func getTypeInfo(fieldType string) types.BasicInfo {
+	var typeInfo types.BasicInfo
+
+	for _, t := range types.Typ {
+		n := t.Name()
+
+		if fieldType != n {
+			continue
+		}
+
+		typeInfo = t.Info()
+	}
+	return typeInfo
+}
 
 func writeBlueprint(destination io.Writer, record marlowRecord) error {
 	out := writing.NewGoWriter(destination)
@@ -19,13 +35,15 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 				return fmt.Errorf("bad field type for field name: %s", name)
 			}
 
+			typeInfo := getTypeInfo(fieldType)
+
 			// Support IN lookup on string fields.
-			if fieldType == "int" {
-				out.Println("%s%s []int", name, record.config.Get(constants.BlueprintRangeFieldSuffixConfigOption))
+			if typeInfo&types.IsNumeric != 0 {
+				out.Println("%s%s []%s", name, record.config.Get(constants.BlueprintRangeFieldSuffixConfigOption), fieldType)
 			}
 
 			// Support LIKE lookup on string fields.
-			if fieldType == "string" {
+			if typeInfo&types.IsString != 0 {
 				out.Println("%s%s []string", name, record.config.Get(constants.BlueprintLikeFieldSuffixConfigOption))
 			}
 
@@ -135,16 +153,17 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 func fieldMethods(record marlowRecord, name string, config url.Values, methods chan<- string) []io.Reader {
 	fieldType := config.Get("type")
 	results := make([]io.Reader, 0, len(record.fields))
+	typeInfo := getTypeInfo(fieldType)
 
-	if fieldType == "string" || fieldType == "int" {
+	if typeInfo&types.IsConstType != 0 {
 		results = append(results, simpleTypeIn(record, name, config, methods))
 	}
 
-	if fieldType == "string" {
+	if typeInfo&types.IsString != 0 {
 		results = append(results, stringMethods(record, name, config, methods))
 	}
 
-	if fieldType == "int" {
+	if typeInfo&types.IsNumeric != 0 {
 		results = append(results, numericalMethods(record, name, config, methods))
 	}
 
@@ -153,8 +172,7 @@ func fieldMethods(record marlowRecord, name string, config url.Values, methods c
 	}
 
 	if len(results) == 0 {
-		warning := fmt.Sprintf("// [marlow] field %s (%s) unable to generate clauses. unsupported type", name, fieldType)
-
+		warning := fmt.Sprintf("/* [marlow] %s (%s) unsupported type %b */\n\n", name, fieldType, typeInfo)
 		results = []io.Reader{strings.NewReader(warning)}
 	}
 
