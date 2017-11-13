@@ -148,7 +148,7 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 				return nil
 			}, symbols.ExecError)
 
-			gosrc.Println("%s, %s := %s.RowsAffected()", symbols.AffectedResult, symbols.AffectedError, symbols.ExecResult)
+			gosrc.Println("%s, %s := %s.LastInsertId()", symbols.AffectedResult, symbols.AffectedError, symbols.ExecResult)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
 				gosrc.Println("return -1, %s", symbols.AffectedError)

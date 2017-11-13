@@ -339,11 +339,10 @@ func Test_Author(t *testing.T) {
 			g.It("returns the number of authors created", func() {
 				s, e := store.CreateAuthors(Author{Name: "Danny"}, Author{Name: "Amelia"})
 				g.Assert(e).Equal(nil)
-				g.Assert(s).Equal(2)
-				found, e := store.FindAuthors(&AuthorBlueprint{Name: []string{"Amelia"}})
+				found, e := store.FindAuthors(&AuthorBlueprint{ID: []int{int(s)}})
 				g.Assert(e).Equal(nil)
 				g.Assert(len(found)).Equal(1)
-				g.Assert(found[0].ID > 0).Equal(true)
+				g.Assert(found[0].Name).Equal("Amelia")
 			})
 		})
 
