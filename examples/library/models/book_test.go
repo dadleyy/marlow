@@ -360,7 +360,11 @@ func Test_Book(t *testing.T) {
 					{Title: "Harry Potter", PageCount: 100, AuthorID: 2},
 				}...)
 				g.Assert(e).Equal(nil)
-				g.Assert(s).Equal(2)
+
+				p, e := store.FindBooks(&BookBlueprint{ID: []int{int(s)}})
+				g.Assert(e).Equal(nil)
+				g.Assert(p[0].Title).Equal("Harry Potter")
+
 				found, e := store.FindBooks(&BookBlueprint{Title: []string{"Harry Potter"}})
 				g.Assert(e).Equal(nil)
 				g.Assert(len(found)).Equal(1)
