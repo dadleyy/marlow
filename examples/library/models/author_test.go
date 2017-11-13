@@ -81,6 +81,26 @@ func Test_Author(t *testing.T) {
 			g.Assert(r).Equal("WHERE authors.id > ? AND authors.id < ?")
 		})
 
+		g.It("supports in on uint column querying", func() {
+			r := fmt.Sprintf("%s", &AuthorBlueprint{AuthorFlags: []uint8{1, 2}})
+			g.Assert(r).Equal("WHERE authors.flags IN (?,?)")
+		})
+
+		g.It("supports range on uint column querying", func() {
+			r := fmt.Sprintf("%s", &AuthorBlueprint{AuthorFlagsRange: []uint8{1, 2}})
+			g.Assert(r).Equal("WHERE authors.flags > ? AND authors.flags < ?")
+		})
+
+		g.It("supports range on float64 column querying", func() {
+			r := fmt.Sprintf("%s", &AuthorBlueprint{ReaderRatingRange: []float64{1, 2}})
+			g.Assert(r).Equal("WHERE authors.rating > ? AND authors.rating < ?")
+		})
+
+		g.It("supports 'IN' on float64 column querying", func() {
+			r := fmt.Sprintf("%s", &AuthorBlueprint{ReaderRating: []float64{1, 2, 3}})
+			g.Assert(r).Equal("WHERE authors.rating IN (?,?,?)")
+		})
+
 		g.It("supports 'IN' on ID column querying", func() {
 			r := fmt.Sprintf("%s", &AuthorBlueprint{ID: []int{1, 2, 3}})
 			g.Assert(r).Equal("WHERE authors.id IN (?,?,?)")
@@ -325,6 +345,70 @@ func Test_Author(t *testing.T) {
 				g.Assert(len(found)).Equal(1)
 				g.Assert(found[0].ID > 0).Equal(true)
 			})
+		})
+
+		g.Describe("uint8 field interactions", func() {
+
+			g.It("allows the consumer to create records w/ uint8 fields", func() {
+				_, e := store.CreateAuthors(Author{
+					Name:        "flaot64 testing",
+					AuthorFlags: 3,
+				})
+				g.Assert(e).Equal(nil)
+
+				_, e = store.DeleteAuthors(&AuthorBlueprint{
+					AuthorFlagsRange: []uint8{1, 4},
+				})
+				g.Assert(e).Equal(nil)
+			})
+
+			g.It("allows users to select uint8 fields", func() {
+				ratings, e := store.SelectAuthorFlags(&AuthorBlueprint{ID: []int{20}})
+				g.Assert(e).Equal(nil)
+				g.Assert(ratings[0]).Equal(uint8(0))
+			})
+
+			g.It("allows users to update uint8 fields", func() {
+				blueprint := &AuthorBlueprint{ID: []int{20}}
+				_, e, _ := store.UpdateAuthorAuthorFlags(5, blueprint)
+				g.Assert(e).Equal(nil)
+				authors, e := store.FindAuthors(blueprint)
+				g.Assert(e).Equal(nil)
+				g.Assert(authors[0].AuthorFlags).Equal(uint8(5))
+			})
+
+		})
+
+		g.Describe("float64 field interactions", func() {
+
+			g.It("allows the consumer to create records w/ float64 fields", func() {
+				_, e := store.CreateAuthors(Author{
+					Name:         "flaot64 testing",
+					ReaderRating: 89.99,
+				})
+				g.Assert(e).Equal(nil)
+
+				_, e = store.DeleteAuthors(&AuthorBlueprint{
+					ReaderRatingRange: []float64{89, 90},
+				})
+				g.Assert(e).Equal(nil)
+			})
+
+			g.It("allows users to select float64 fields", func() {
+				ratings, e := store.SelectReaderRatings(&AuthorBlueprint{ID: []int{20}})
+				g.Assert(e).Equal(nil)
+				g.Assert(ratings[0]).Equal(100.00)
+			})
+
+			g.It("allows users to update float64 fields", func() {
+				blueprint := &AuthorBlueprint{ID: []int{20}}
+				_, e, _ := store.UpdateAuthorReaderRating(50.00, blueprint)
+				g.Assert(e).Equal(nil)
+				authors, e := store.FindAuthors(blueprint)
+				g.Assert(e).Equal(nil)
+				g.Assert(authors[0].ReaderRating).Equal(50.00)
+			})
+
 		})
 
 		g.Describe("DeleteAuthors", func() {
