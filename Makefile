@@ -13,6 +13,8 @@ LINT_FLAGS=-set_exit_status
 EXE=./bin/marlowc
 MAIN=$(wildcard ./marlowc/main.go)
 
+BINDATA=go-bindata
+
 GOVER=gover
 GOVER_REPORT=coverage.txt
 
@@ -34,6 +36,7 @@ LIBRARY_EXAMPLE_EXE=$(LIBRARY_EXAMPLE_DIR)/library
 LIBRARY_EXAMPLE_MAIN=$(wildcard $(LIBRARY_EXAMPLE_DIR)/main.go)
 LIBRARY_EXAMPLE_SRC=$(filter-out %.marlow.go, $(wildcard $(LIBRARY_EXAMPLE_DIR)/**/*.go))
 LIBRARY_EXAMPLE_OBJS=$(patsubst %.go,%.marlow.go,$(LIBRARY_EXAMPLE_SRC))
+LIBRARY_DATA_DIR=$(LIBRARY_EXAMPLE_DIR)/data
 
 VET=$(GO) vet
 VET_FLAGS=
@@ -76,9 +79,11 @@ $(VENDOR_DIR):
 	$(GLIDE) install
 
 example: $(LIBRARY_EXAMPLE_SRC) $(LIBRARY_EXAMPLE_MAIN) $(EXE)
-	$(EXE) -input=$(LIBRARY_EXAMPLE_MODEL_DIR)
 	$(GO) get -v github.com/mattn/go-sqlite3
 	$(GO) install -v -x github.com/mattn/go-sqlite3
+	$(GO) get -u github.com/jteeuwen/go-bindata/...
+	$(EXE) -input=$(LIBRARY_EXAMPLE_MODEL_DIR)
+	$(BINDATA) -o $(LIBRARY_DATA_DIR)/schema.go -pkg data -prefix $(LIBRARY_EXAMPLE_DIR) $(LIBRARY_DATA_DIR)/schema.sql
 	$(COMPILE) $(BUILD_FLAGS) -o $(LIBRARY_EXAMPLE_EXE) $(LIBRARY_EXAMPLE_MAIN)
 
 test-example: example
@@ -97,3 +102,4 @@ clean: clean-example
 	rm -rf $(LINT_RESULT)
 	rm -rf $(VENDOR_DIR)
 	rm -rf $(EXE)
+	rm -rf $(LIBRARY_EXAMPLE_DIR)/data/schema.go
