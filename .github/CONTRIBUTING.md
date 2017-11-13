@@ -11,17 +11,20 @@ surprises when you do open a pull request that could've been mitigated locally.
 
 ### Pull requests
 
-When opening a pull request, be sure to use the `PULL_REQUEST_TEMPLATE.md` file in the `.github` directory (github should automatically fill your PR description with the contents of that file) as a template for your PR's description. The first table (underneath "Notable Changes") should explicitly call out any important line changes, as well as the github issue number and/or general reason for the change.
+When opening a pull request, be sure to use the `PULL_REQUEST_TEMPLATE.md` file in the `.github` directory (github should automatically fill your PR description with the contents of that file) as a template for your PR's description. The first table (underneath "Notable Changes") should explicitly call out any important line changes, as well as the github issue number and/or general reason for the change. Also include a link to the branch on github for convenience.
 
 The second table should be used to identify other developers that should review the code. This includes both the primary reviewer - using a `@mention` next to the :tophat: row - and any other developers that may be interested in the diff next to the :paperclip:. For example:
 
 > | :tophat: | @dadleyy |
 > | :--- | :--- |
 > | :paperclip: | @sizethree/golang |
+> | :evergreen_tree: | [`GH-61/schema-file`][branch.url]
+
 
 would indicate that @dadleyy is primarily responsible for reviewing the code, while the @sizethree/golang team would be interested in it.
 
 
+[branch.url]: https://github.com/dadleyy/marlow/tree/GH-61/schema-file
 [Marlow]: https://github.com/dadleyy/marlow
 [travis]: https://travis-ci.org/dadleyy/marlow
 [goreportcard]: https://goreportcard.com

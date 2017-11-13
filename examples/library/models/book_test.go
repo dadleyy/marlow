@@ -369,7 +369,7 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.Describe("findAuthors", func() {
-			g.It("successully escapes single quote characters during searches on name", func() {
+			g.It("successfully escapes single quote characters during searches on name", func() {
 				name := "mr astley's blueberries"
 				_, e := store.CreateBooks(Book{Title: name})
 				g.Assert(e).Equal(nil)

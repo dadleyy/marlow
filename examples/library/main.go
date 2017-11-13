@@ -1,12 +1,11 @@
 package main
 
 import "os"
-import "io"
 import "log"
 import "fmt"
-import "bytes"
 import _ "github.com/mattn/go-sqlite3"
 import "database/sql"
+import "github.com/dadleyy/marlow/examples/library/data"
 import "github.com/dadleyy/marlow/examples/library/models"
 
 const (
@@ -80,24 +79,16 @@ func main() {
 
 	defer db.Close()
 
-	schemaFile, e := os.Open("./schema.sql")
+	schema, e := data.Asset("data/schema.sql")
 
 	if e != nil {
 		log.Fatal(e)
 	}
 
-	defer schemaFile.Close()
-
-	schemaBuffer := bytes.NewBuffer([]byte{})
-
-	if _, e := io.Copy(schemaBuffer, schemaFile); e != nil {
-		log.Fatal(e)
-	}
-
-	_, e = db.Exec(schemaBuffer.String())
+	_, e = db.Exec(string(schema))
 
 	if e != nil {
-		log.Printf("%q: %s\n", e, schemaBuffer.String())
+		log.Printf("%q: %s\n", e, string(schema))
 		return
 	}
 
