@@ -48,6 +48,10 @@ func (r *marlowRecord) name() string {
 	return r.config.Get(constants.RecordNameConfigOption)
 }
 
+func (r *marlowRecord) dialect() string {
+	return r.config.Get(constants.DialectConfigOption)
+}
+
 func (r *marlowRecord) store() string {
 	storeName := r.external()
 

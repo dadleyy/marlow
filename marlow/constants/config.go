@@ -1,6 +1,9 @@
 package constants
 
 const (
+	// DialectConfigOption determines which dialect to use when building queries via blueprint.
+	DialectConfigOption = "dialect"
+
 	// TableNameConfigOption lets the marlow compiler know which sql table to associate with the current struct.
 	TableNameConfigOption = "tableName"
 

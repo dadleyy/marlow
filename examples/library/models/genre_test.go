@@ -1,5 +1,6 @@
 package models
 
+import "fmt"
 import "testing"
 import _ "github.com/lib/pq"
 import "database/sql"
@@ -24,8 +25,31 @@ func Test_Genre(t *testing.T) {
 			store = NewGenreStore(db)
 		})
 
-		g.It("uses the postgres dialect for blueprint params", func() {
-			_, e := store.CountGenres(nil)
+		g.It("uses the postgres dialect for blueprint string in params", func() {
+			s := fmt.Sprintf("%s", &GenreBlueprint{Name: []string{"horror", "comedy"}})
+			g.Assert(s).Equal("WHERE genres.name IN ($1,$2)")
+		})
+
+		g.It("uses the postgres dialect for blueprint int in params", func() {
+			s := fmt.Sprintf("%s", &GenreBlueprint{ID: []uint{0, 10}})
+			g.Assert(s).Equal("WHERE genres.id IN ($1,$2)")
+		})
+
+		g.It("uses the postgres dialect for blueprint int range params", func() {
+			s := fmt.Sprintf("%s", &GenreBlueprint{IDRange: []uint{0, 10}})
+			g.Assert(s).Equal("WHERE genres.id > $1 AND genres.id < $2")
+		})
+
+		g.It("uses the postgres dialect for blueprint string like params", func() {
+			s := fmt.Sprintf("%s", &GenreBlueprint{NameLike: []string{"danny"}})
+			g.Assert(s).Equal("WHERE genres.name LIKE $1")
+		})
+
+		g.It("allows the consumer to select genres by name like", func() {
+			_, e := store.CountGenres(&GenreBlueprint{
+				Name:    []string{"horror"},
+				IDRange: []uint{0, 10},
+			})
 			g.Assert(e).Equal(nil)
 		})
 	})
