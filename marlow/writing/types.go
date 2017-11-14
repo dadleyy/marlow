@@ -3,6 +3,14 @@ package writing
 import "fmt"
 import "strings"
 
+const (
+	// EmptyString is an empty golang string
+	EmptyString = "\"\""
+
+	// Nil is nil
+	Nil = "nil"
+)
+
 func mapListToWrappedCommaList(list []string, wrapper string) string {
 	copied := make([]string, len(list))
 

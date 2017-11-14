@@ -28,6 +28,7 @@ type GoWriter interface {
 	WithIter(string, Block, ...interface{}) error
 	WithStruct(string, Block) error
 	WithInterface(string, Block) error
-	Println(string, ...interface{})
+	Returns(...string) error
+	Println(string, ...interface{}) error
 	Comment(string, ...interface{})
 }

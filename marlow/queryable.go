@@ -86,7 +86,7 @@ func finder(record marlowRecord) io.Reader {
 		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
 			// Prepare the array that will be returned.
 			gosrc.Println("%s := make(%s, 0)\n", symbols.results, symbols.recordSlice)
-			defer gosrc.Println("return %s, nil", symbols.results)
+			defer gosrc.Returns(symbols.results, writing.Nil)
 
 			// Prepare the sql statement that will be sent to the DB.
 			gosrc.Println(
@@ -98,8 +98,7 @@ func finder(record marlowRecord) io.Reader {
 
 			// Write our where clauses
 			e := gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("fmt.Fprintf(%s, \" %%s\", %s)", symbols.queryString, symbols.blueprint)
-				return nil
+				return gosrc.Println("fmt.Fprintf(%s, \" %%s\", %s)", symbols.queryString, symbols.blueprint)
 			}, symbols.blueprint)
 
 			// Write the limit determining code.
@@ -107,8 +106,7 @@ func finder(record marlowRecord) io.Reader {
 			gosrc.Println("%s := %s", symbols.limit, defaultLimit)
 
 			e = gosrc.WithIf(limitCondition, func(url.Values) error {
-				gosrc.Println("%s = %s.Limit", symbols.limit, symbols.blueprint)
-				return nil
+				return gosrc.Println("%s = %s.Limit", symbols.limit, symbols.blueprint)
 			})
 
 			if e != nil {
@@ -120,8 +118,7 @@ func finder(record marlowRecord) io.Reader {
 			gosrc.Println("%s := 0", symbols.offset)
 
 			e = gosrc.WithIf(offsetCondition, func(url.Values) error {
-				gosrc.Println("%s = %s.Offset", symbols.offset, symbols.blueprint)
-				return nil
+				return gosrc.Println("%s = %s.Offset", symbols.offset, symbols.blueprint)
 			})
 
 			if e != nil {
@@ -147,8 +144,7 @@ func finder(record marlowRecord) io.Reader {
 
 			// Query has been executed, write out error handler
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("return nil, %s", symbols.statementError)
-				return nil
+				return gosrc.Returns(writing.Nil, symbols.statementError)
 			}, symbols.statementError)
 
 			// Write out result close deferred statement.
@@ -164,8 +160,7 @@ func finder(record marlowRecord) io.Reader {
 
 			// Check to see if the two results had an error
 			gosrc.WithIf("%s != nil ", func(url.Values) error {
-				gosrc.Println("return nil, %s", symbols.queryError)
-				return nil
+				return gosrc.Returns(writing.Nil, symbols.queryError)
 			}, symbols.queryError)
 
 			return gosrc.WithIter("%s.Next()", func(url.Values) error {
@@ -258,8 +253,7 @@ func counter(record marlowRecord) io.Reader {
 		e := gosrc.WithMethod(symbols.countMethodName, record.store(), params, returns, func(scope url.Values) error {
 			receiver := scope.Get("receiver")
 			gosrc.WithIf("%s == nil", func(url.Values) error {
-				gosrc.Println("%s = &%s{}", params[0].Symbol, record.blueprint())
-				return nil
+				return gosrc.Println("%s = &%s{}", params[0].Symbol, record.blueprint())
 			}, symbols.BlueprintParamName)
 
 			gosrc.Println(
@@ -278,8 +272,7 @@ func counter(record marlowRecord) io.Reader {
 			)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("return -1, %s", symbols.StatementError)
-				return nil
+				return gosrc.Returns("-1", symbols.StatementError)
 			}, symbols.StatementError)
 
 			gosrc.Println("defer %s.Close()", symbols.StatementResult)
@@ -293,27 +286,23 @@ func counter(record marlowRecord) io.Reader {
 			)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("return -1, %s", symbols.QueryError)
-				return nil
+				return gosrc.Returns("-1", symbols.QueryError)
 			}, symbols.QueryError)
 
 			gosrc.Println("defer %s.Close()", symbols.QueryResult)
 
 			gosrc.WithIf("%s.Next() != true", func(url.Values) error {
-				gosrc.Println("return -1, fmt.Errorf(\"invalid-scan\")")
-				return nil
+				return gosrc.Returns("-1", "fmt.Errorf(\"invalid-scan\")")
 			}, symbols.QueryResult)
 
 			gosrc.Println("var %s int", symbols.ScanResult)
 			gosrc.Println("%s := %s.Scan(&%s)", symbols.ScanError, symbols.QueryResult, symbols.ScanResult)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("return -1, %s", symbols.ScanError)
-				return nil
+				return gosrc.Returns("-1", symbols.ScanError)
 			}, symbols.ScanError)
 
-			gosrc.Println("return %s, nil", symbols.ScanResult)
-			return nil
+			return gosrc.Returns(symbols.ScanResult, writing.Nil)
 		})
 
 		if e == nil {
@@ -391,8 +380,7 @@ func selector(record marlowRecord, fieldName string, fieldConfig url.Values) io.
 
 			// Write our where clauses
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("fmt.Fprintf(%s, \" %%s\", %s)", symbols.QueryString, symbols.BlueprintParam)
-				return nil
+				return gosrc.Println("fmt.Fprintf(%s, \" %%s\", %s)", symbols.QueryString, symbols.BlueprintParam)
 			}, symbols.BlueprintParam)
 
 			// Write the query execution statement.
@@ -405,8 +393,7 @@ func selector(record marlowRecord, fieldName string, fieldConfig url.Values) io.
 			)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("return nil, %s", symbols.StatementError)
-				return nil
+				return gosrc.Returns(writing.Nil, symbols.StatementError)
 			}, symbols.StatementError)
 
 			// Write out result close deferred statement.
@@ -421,8 +408,7 @@ func selector(record marlowRecord, fieldName string, fieldConfig url.Values) io.
 			)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("return nil, %s", symbols.QueryError)
-				return nil
+				return gosrc.Returns(writing.Nil, symbols.QueryError)
 			}, symbols.QueryError)
 
 			// Write out result close deferred statement.
@@ -439,12 +425,10 @@ func selector(record marlowRecord, fieldName string, fieldConfig url.Values) io.
 				)
 
 				gosrc.WithIf(condition, func(url.Values) error {
-					gosrc.Println("return nil, %s", symbols.ScanError)
-					return nil
+					return gosrc.Returns(writing.Nil, symbols.ScanError)
 				})
 
-				gosrc.Println("%s = append(%s, %s)", symbols.ReturnSlice, symbols.ReturnSlice, symbols.RowItem)
-				return nil
+				return gosrc.Println("%s = append(%s, %s)", symbols.ReturnSlice, symbols.ReturnSlice, symbols.RowItem)
 			}, symbols.QueryResult)
 
 			if e != nil {
