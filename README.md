@@ -95,8 +95,8 @@ type UserStore interface {
 }
 ```
 
-With every store that is generated, marlow will create a "blueprint" struct that defines a set of fields to be used for
-querying against the database. For example, the `UserBlueprint` generated for the store above would look like:
+For every store that is generated, marlow will create a "blueprint" struct that defines a set of fields to be used for
+querying against the database. In this example, the `UserBlueprint` generated for the store above would look like:
 
 ```go
 type UserBlueprint struct {
