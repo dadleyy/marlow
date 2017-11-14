@@ -1,27 +1,31 @@
 dist: trusty
 language: go
+services:
+  - postgresql
 go:
-- 1.8
-- 1.9
+  - 1.8
+  - 1.9
+before_script:
+  - psql -c 'create database marlow_test;' -U postgres
 install:
-- go get -v github.com/mattn/go-sqlite3
-- go install -v -x github.com/mattn/go-sqlite3
+  - go get -v github.com/mattn/go-sqlite3
+  - go install -v -x github.com/mattn/go-sqlite3
 script:
-- make
-- make test
-- make test-example
-- go run marlowc/main.go -input examples/library/models -stdout=true
-- make example
-- pushd ./examples/library && ./library && popd
+  - make
+  - make test
+  - make test-example
+  - go run marlowc/main.go -input examples/library/models -stdout=true
+  - make example
+  - pushd ./examples/library && ./library && popd
 after_success:
-- bash <(curl -s https://codecov.io/bash) -f ./coverage.txt
+  - bash <(curl -s https://codecov.io/bash) -f ./coverage.txt
 before_deploy:
-- mkdir -p ./dist/s3-commit/$TRAVIS_COMMIT
-- mkdir -p ./dist/s3-latest/latest
-- cp ./dist/coverage/library.coverage.txt ./dist/s3-commit/$TRAVIS_COMMIT
-- cp ./dist/coverage/library.coverage.html ./dist/s3-commit/$TRAVIS_COMMIT
-- cp ./dist/coverage/library.coverage.txt ./dist/s3-latest/latest
-- cp ./dist/coverage/library.coverage.html ./dist/s3-latest/latest
+  - mkdir -p ./dist/s3-commit/$TRAVIS_COMMIT
+  - mkdir -p ./dist/s3-latest/latest
+  - cp ./dist/coverage/library.coverage.txt ./dist/s3-commit/$TRAVIS_COMMIT
+  - cp ./dist/coverage/library.coverage.html ./dist/s3-commit/$TRAVIS_COMMIT
+  - cp ./dist/coverage/library.coverage.txt ./dist/s3-latest/latest
+  - cp ./dist/coverage/library.coverage.html ./dist/s3-latest/latest
 env:
   global:
   - secure: wJZxvUVrF+CNYQihaZ1ZLloaGN8/7GjZJ7vMUyXQmBwIwMj/bOCxGHBNglX8+o7XqJTVkGSIue0Vk0wic+fy1we8rTtUAfB7RdUyK0EBbOt0GBuziuk03V/cFOW7JodKC/Y3VAiLtOCgpw51KtT2ihg34LjVU3fSRsqIZdg7sskR537rfaZpVlyGVj6ZpD15Tiit4lFbBO9XvjjWi04sS9Q6+z3xMp6kpKfIa5vH1htQOXcsmgwWbT5VcBMsqRW4oDKolt9LbJ1MSrKEmW6/v+mAxCtoyWFPnuqU6/EtQjoTv8S5yu4MAwd6h1N3gS9jvWSW6Vfw8kjzO31fK8ZvMaGqbvERFl9jkHM6WutkklXDEX4YB+vGpxTmP+YjMGXphe2Sw4C9ILBqo49Co7Dz5j16TLK7DX/egpZsKrQcTE1nFZZEzmHHSPSHsn7PXgrcrDNHxtrNsw0sMgAijHRlCBI2w8GMQPIVaw79gpwp1oP21gY6YtIpq0B7SZPcwtTo9N0JxyZ6ZKW0bZIHVqA+R5pB29zvXdjA7JXnKAp4GVOGObxIoclw0csvQmDHxLfd81be0UNB2gTPzBC1CyiGom5lMSqbXIhB7PQF/LcwCP/FUGmnIcXdg3FfMPbdWuYQq9uic1e/s61enJA+cfk7Vxp/ZU2fPH+AKnlliu6wlBw=
