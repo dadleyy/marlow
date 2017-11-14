@@ -121,7 +121,7 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 		}
 
 		out.WithIf("len(%s) == 0", func(url.Values) error {
-			return out.Returns("\"\"")
+			return out.Returns(writing.EmptyString)
 		}, symbols.clauseSlice)
 
 		return out.Returns(fmt.Sprintf("\"WHERE \" + strings.Join(%s, \" AND \")", symbols.clauseSlice))
