@@ -223,7 +223,13 @@ func nullableIntMethods(record marlowRecord, fieldName string, config url.Values
 
 			// Add conditional check for length presence on lookup slice.
 			writer.WithIf("len(%s) == 0", func(url.Values) error {
-				writer.Println("return \"%s NOT NULL\", nil", columnReference)
+				query := "return \"%s NOT NULL\", nil"
+
+				if record.dialect() == "postgres" {
+					query = "return \"%s IS NOT NULL\", nil"
+				}
+
+				writer.Println(query, columnReference)
 				return nil
 			}, fieldReference)
 

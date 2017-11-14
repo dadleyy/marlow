@@ -17,6 +17,7 @@ type updaterSymbols struct {
 	rowCount        string
 	rowError        string
 	valueSlice      string
+	valueCount      string
 }
 
 func updater(record marlowRecord, fieldName string, fieldConfig url.Values) io.Reader {
@@ -40,6 +41,7 @@ func updater(record marlowRecord, fieldName string, fieldConfig url.Values) io.R
 		rowCount:        "_rowCount",
 		rowError:        "_re",
 		valueSlice:      "_values",
+		valueCount:      "_valueCount",
 	}
 
 	params := []writing.FuncParam{
@@ -62,12 +64,20 @@ func updater(record marlowRecord, fieldName string, fieldConfig url.Values) io.R
 		gosrc.Comment("[marlow] updater method for %s", fieldName)
 
 		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
-			gosrc.Println(
-				"%s := bytes.NewBufferString(\"UPDATE %s set %s = ?\")",
-				symbols.queryString,
-				record.table(),
-				columnName,
-			)
+			updateTemplate := fmt.Sprintf("\"UPDATE %s set %s = ?\"", record.table(), columnName)
+			gosrc.Println("%s := 1", symbols.valueCount)
+
+			gosrc.WithIf("%s != nil && len(%s.Values()) > 0", func(url.Values) error {
+				gosrc.Println("%s = len(%s.Values()) + 1", symbols.valueCount, symbols.blueprintParam)
+				return nil
+			}, symbols.blueprintParam, symbols.blueprintParam)
+
+			if record.dialect() == "postgres" {
+				update := "fmt.Sprintf(\"UPDATE %s set %s = $%%d\", %s)"
+				updateTemplate = fmt.Sprintf(update, record.table(), columnName, symbols.valueCount)
+			}
+
+			gosrc.Println("%s := bytes.NewBufferString(%s)", symbols.queryString, updateTemplate)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
 				gosrc.Println("fmt.Fprintf(%s, \" %%s\", %s)", symbols.queryString, symbols.blueprintParam)
@@ -90,8 +100,11 @@ func updater(record marlowRecord, fieldName string, fieldConfig url.Values) io.R
 
 			gosrc.Println("defer %s.Close()", symbols.statementResult)
 
-			gosrc.Println("%s := make([]interface{}, 1)", symbols.valueSlice)
-			gosrc.Println("%s[0] = %s", symbols.valueSlice, symbols.valueParam)
+			gosrc.Println("%s := make([]interface{}, 0, %s)", symbols.valueSlice, symbols.valueCount)
+
+			if record.dialect() != "postgres" {
+				gosrc.Println("%s = append(%s, %s)", symbols.valueSlice, symbols.valueSlice, symbols.valueParam)
+			}
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
 				gosrc.Println(
@@ -102,6 +115,10 @@ func updater(record marlowRecord, fieldName string, fieldConfig url.Values) io.R
 				)
 				return nil
 			}, symbols.blueprintParam)
+
+			if record.dialect() == "postgres" {
+				gosrc.Println("%s = append(%s, %s)", symbols.valueSlice, symbols.valueSlice, symbols.valueParam)
+			}
 
 			gosrc.Println("%s, %s := %s.Exec(%s...)",
 				symbols.queryResult,

@@ -1,6 +1,9 @@
 package constants
 
 const (
+	// PrimaryKeyColumnConfigOption specifies the primary key on the record
+	PrimaryKeyColumnConfigOption = "primaryKey"
+
 	// DialectConfigOption determines which dialect to use when building queries via blueprint.
 	DialectConfigOption = "dialect"
 

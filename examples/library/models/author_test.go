@@ -192,6 +192,14 @@ func Test_Author(t *testing.T) {
 			g.Assert(len(authors)).Equal(2)
 		})
 
+		g.It("allows the consumer to search for authors by ID range", func() {
+			authors, e := store.FindAuthors(&AuthorBlueprint{
+				IDRange: []int{1, 4},
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(len(authors)).Equal(2)
+		})
+
 		g.It("correctly serializes null/not null values into a sql.NullInt64 field", func() {
 			authors, e := store.FindAuthors(&AuthorBlueprint{
 				ID: []int{1337, 1338},
@@ -336,13 +344,29 @@ func Test_Author(t *testing.T) {
 				g.Assert(s).Equal(0)
 			})
 
-			g.It("returns the number of authors created", func() {
-				s, e := store.CreateAuthors(Author{Name: "Danny"}, Author{Name: "Amelia"})
+			g.It("returns the id of the latest author created", func() {
+				s, e := store.CreateAuthors([]Author{
+					{Name: "Danny", ReaderRating: 25.00},
+					{Name: "Amelia", ReaderRating: 99.99},
+				}...)
 				g.Assert(e).Equal(nil)
+
 				found, e := store.FindAuthors(&AuthorBlueprint{ID: []int{int(s)}})
 				g.Assert(e).Equal(nil)
 				g.Assert(len(found)).Equal(1)
 				g.Assert(found[0].Name).Equal("Amelia")
+
+				badReaderCount, e := store.CountAuthors(&AuthorBlueprint{
+					ReaderRating: []float64{25.00},
+				})
+				g.Assert(e).Equal(nil)
+				g.Assert(badReaderCount).Equal(1)
+
+				goodReaderCount, e := store.CountAuthors(&AuthorBlueprint{
+					ReaderRating: []float64{99.99},
+				})
+				g.Assert(e).Equal(nil)
+				g.Assert(goodReaderCount).Equal(1)
 			})
 		})
 
