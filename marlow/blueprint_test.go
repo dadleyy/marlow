@@ -63,7 +63,6 @@ func Test_Blueprint(t *testing.T) {
 		})
 
 		g.Describe("with an invalid field", func() {
-
 			g.BeforeEach(func() {
 				f["Name"] = make(url.Values)
 			})
@@ -121,6 +120,19 @@ func Test_Blueprint(t *testing.T) {
 				g.Assert(e).Equal(nil)
 			})
 
+			g.Describe("with a postgres record dialect", func() {
+				g.BeforeEach(func() {
+					r.Set(constants.DialectConfigOption, "postgres")
+				})
+
+				g.It("produced valid a golang struct", func() {
+					fmt.Fprintln(b, "package marlowt")
+					_, e := io.Copy(b, newBlueprintGenerator(record))
+					g.Assert(e).Equal(nil)
+					_, e = parser.ParseFile(token.NewFileSet(), "", b, parser.AllErrors)
+					g.Assert(e).Equal(nil)
+				})
+			})
 		})
 
 	})

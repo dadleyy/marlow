@@ -111,6 +111,23 @@ func Test_Createable(t *testing.T) {
 				_, e := io.Copy(scaffold.buffer, scaffold.g())
 				g.Assert(e).Equal(nil)
 			})
+
+			g.Describe("with a postgres record dialect", func() {
+				g.BeforeEach(func() {
+					scaffold.record.Set(constants.DialectConfigOption, "postgres")
+				})
+
+				g.It("returns an error without a primaryKey defined", func() {
+					_, e := io.Copy(scaffold.buffer, scaffold.g())
+					g.Assert(e != nil).Equal(true)
+				})
+
+				g.It("compiles successfully with a valid primaryKey defined", func() {
+					scaffold.record.Set(constants.PrimaryKeyColumnConfigOption, "id")
+					_, e := io.Copy(scaffold.buffer, scaffold.g())
+					g.Assert(e).Equal(nil)
+				})
+			})
 		})
 	})
 }

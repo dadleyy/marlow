@@ -56,6 +56,11 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 		"error",
 	}
 
+	if record.dialect() == "postgres" && record.primaryKeyColumn() == "" {
+		pw.CloseWithError(fmt.Errorf("postgres records are required to have a primaryKey defined"))
+		return pr
+	}
+
 	go func() {
 		gosrc := writing.NewGoWriter(pw)
 
