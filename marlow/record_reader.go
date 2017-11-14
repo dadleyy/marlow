@@ -18,6 +18,8 @@ const (
 	DefaultBlueprintLimit = 100
 )
 
+var nameValidationRegex = regexp.MustCompile("^[A-z_]+$")
+
 func newRecordConfig(typeName string) url.Values {
 	config := make(url.Values)
 	config.Set(constants.RecordNameConfigOption, typeName)
@@ -36,6 +38,55 @@ func newRecordConfig(typeName string) url.Values {
 	config.Set(constants.StoreCountMethodPrefixConfigOption, "Count")
 	config.Set(constants.UpdateFieldMethodPrefixConfigOption, "Update")
 	return config
+}
+
+func parseFieldType(config *url.Values, f *ast.Field) error {
+	if f == nil || f.Names == nil || len(f.Names) != 1 {
+		return fmt.Errorf("invalid field: %v", f)
+	}
+
+	name := f.Names[0]
+
+	// Convert our field's type to it's string counterpart.
+	fieldType := fmt.Sprintf("%v", f.Type)
+
+	// Error on slice types
+	if _, ok := f.Type.(*ast.ArrayType); ok == true {
+		return fmt.Errorf("slice types not supported by marlow, field: %s", name)
+	}
+
+	// Check to see if this field is a complex type - one that refers to an exported type from another package.
+	selector, ok := f.Type.(*ast.SelectorExpr)
+
+	// If the field is a complex type, make an note of the import that it is referring to - this will be mapped to the
+	// original import path from the source package by our import processor.
+	if ok {
+		fieldType = fmt.Sprintf("%s.%s", selector.X, selector.Sel)
+		config.Set("import", fmt.Sprintf("%s", selector.X))
+	}
+
+	config.Set("type", fieldType)
+	return nil
+}
+
+func parseField(f *ast.Field) (string, url.Values, bool) {
+	if f == nil || f.Names == nil || f.Tag == nil {
+		return "", nil, false
+	}
+
+	tag := reflect.StructTag(strings.Trim(f.Tag.Value, "`"))
+	config, e := url.ParseQuery(tag.Get("marlow"))
+
+	if e != nil || len(f.Names) == 0 {
+		return "", nil, false
+	}
+
+	if len(f.Names) != 1 {
+		return "", nil, false
+	}
+
+	name := f.Names[0].String()
+	return name, config, true
 }
 
 func parseStruct(d ast.Decl) (*ast.StructType, string, bool) {
@@ -75,18 +126,11 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 	pr, pw := io.Pipe()
 
 	for _, f := range structType.Fields.List {
-		if f.Tag == nil {
+		name, fieldConfig, ok := parseField(f)
+
+		if !ok {
 			continue
 		}
-
-		tag := reflect.StructTag(strings.Trim(f.Tag.Value, "`"))
-		fieldConfig, e := url.ParseQuery(tag.Get("marlow"))
-
-		if e != nil || len(f.Names) == 0 {
-			continue
-		}
-
-		name := f.Names[0].String()
 
 		if name == "table" || name == "_" {
 			for k := range fieldConfig {
@@ -117,30 +161,20 @@ func newRecordReader(root ast.Decl, imports chan<- string) (io.Reader, bool) {
 
 		columnMap[columnName] = name
 
-		// Convert our field's type to it's string counterpart.
-		fieldType := fmt.Sprintf("%v", f.Type)
-
-		// Error on slice types
-		if _, ok := f.Type.(*ast.ArrayType); ok == true {
-			pw.CloseWithError(fmt.Errorf("slice types not supported by marlow, field: %s", name))
+		if nameValidationRegex.MatchString(columnName) != true {
+			pw.CloseWithError(fmt.Errorf("invalid column name for %s: %s", name, columnName))
 			return pr, true
 		}
 
-		// Check to see if this field is a complex type - one that refers to an exported type from another package.
-		selector, ok := f.Type.(*ast.SelectorExpr)
-
-		// If the field is a complex type, make an note of the import that it is referring to - this will be mapped to the
-		// original import path from the source package by our import processor.
-		if ok {
-			fieldType = fmt.Sprintf("%s.%s", selector.X, selector.Sel)
-			fieldConfig.Set("import", fmt.Sprintf("%s", selector.X))
+		if e := parseFieldType(&fieldConfig, f); e != nil {
+			pw.CloseWithError(e)
+			return pr, true
 		}
 
-		fieldConfig.Set("type", fieldType)
 		recordFields[name] = fieldConfig
 	}
 
-	if v := regexp.MustCompile("^[A-z_]+$"); v.MatchString(recordConfig.Get("tableName")) != true {
+	if nameValidationRegex.MatchString(recordConfig.Get(constants.TableNameConfigOption)) != true {
 		pw.CloseWithError(fmt.Errorf("invalid-table"))
 		return pr, true
 	}
@@ -185,7 +219,7 @@ func readRecord(writer io.Writer, record marlowRecord) error {
 
 	if len(readers) == 0 {
 		comment := strings.NewReader(
-			fmt.Sprintf("// [marlow no-features]: %s\n", record.config.Get(constants.RecordNameConfigOption)),
+			fmt.Sprintf("/* [marlow no-features]: %s */\n\n", record.config.Get(constants.RecordNameConfigOption)),
 		)
 
 		_, e := io.Copy(writer, comment)

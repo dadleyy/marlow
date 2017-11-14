@@ -40,12 +40,34 @@ func (r *marlowRecord) registerImports(imports ...string) {
 	}
 }
 
+func (r *marlowRecord) primaryKeyColumn() string {
+	if r == nil {
+		return ""
+	}
+
+	if recordValue := r.config.Get(constants.PrimaryKeyColumnConfigOption); recordValue != "" {
+		return recordValue
+	}
+
+	for _, config := range r.fields {
+		if v := config.Get(constants.PrimaryKeyColumnConfigOption); v == "true" {
+			return config.Get(constants.ColumnConfigOption)
+		}
+	}
+
+	return ""
+}
+
 func (r *marlowRecord) external() string {
 	return r.config.Get(constants.StoreNameConfigOption)
 }
 
 func (r *marlowRecord) name() string {
 	return r.config.Get(constants.RecordNameConfigOption)
+}
+
+func (r *marlowRecord) dialect() string {
+	return r.config.Get(constants.DialectConfigOption)
 }
 
 func (r *marlowRecord) store() string {

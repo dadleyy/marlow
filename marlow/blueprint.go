@@ -99,29 +99,33 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 	wg.Wait()
 
 	symbols := struct {
-		ClauseSlice string
-		ClauseItem  string
-	}{"_clauses", "_item"}
+		clauseSlice string
+		clauseItem  string
+		valueCount  string
+		values      string
+	}{"_clauses", "_item", "_count", "_values"}
 
 	// With all of our fields having generated non-exported clause generation methods on our struct, we can create the
 	// final 'String' method which iterates over all of these, calling them and adding the non-empty string clauses to
 	// a list, which eventually is returned as a joined string.
 	e = out.WithMethod("String", record.blueprint(), nil, []string{"string"}, func(scope url.Values) error {
-		out.Println("%s := make([]string, 0, %d)", symbols.ClauseSlice, len(clauseMethods))
+		out.Println("%s := make([]string, 0, %d)", symbols.clauseSlice, len(clauseMethods))
+		out.Println("%s := 1", symbols.valueCount)
 
 		for _, method := range clauseMethods {
-			out.WithIf("%s, _ := %s.%s(); %s != \"\"", func(url.Values) error {
-				out.Println("%s = append(%s, %s)", symbols.ClauseSlice, symbols.ClauseSlice, symbols.ClauseItem)
+			out.WithIf("%s, %s := %s.%s(%s); %s != \"\"", func(url.Values) error {
+				out.Println("%s = append(%s, %s)", symbols.clauseSlice, symbols.clauseSlice, symbols.clauseItem)
+				out.Println("%s+=len(%s)", symbols.valueCount, symbols.values)
 				return nil
-			}, symbols.ClauseItem, scope.Get("receiver"), method, symbols.ClauseItem)
+			}, symbols.clauseItem, symbols.values, scope.Get("receiver"), method, symbols.valueCount, symbols.clauseItem)
 		}
 
 		out.WithIf("len(%s) == 0", func(url.Values) error {
 			out.Println("return \"\"")
 			return nil
-		}, symbols.ClauseSlice)
+		}, symbols.clauseSlice)
 
-		out.Println("return \"WHERE \" + strings.Join(%s, \" AND \")", symbols.ClauseSlice)
+		out.Println("return \"WHERE \" + strings.Join(%s, \" AND \")", symbols.clauseSlice)
 		return nil
 	})
 
@@ -130,7 +134,7 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 	}
 
 	return out.WithMethod("Values", record.blueprint(), nil, []string{"[]interface{}"}, func(scope url.Values) error {
-		out.Println("%s := make([]interface{}, 0, %d)", symbols.ClauseSlice, len(clauseMethods))
+		out.Println("%s := make([]interface{}, 0, %d)", symbols.clauseSlice, len(clauseMethods))
 
 		out.WithIf("%s == nil", func(url.Values) error {
 			out.Println("return nil")
@@ -138,13 +142,13 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 		}, scope.Get("receiver"))
 
 		for _, method := range clauseMethods {
-			out.WithIf("_, %s := %s.%s(); %s != nil && len(%s) > 0", func(url.Values) error {
-				out.Println("%s = append(%s, %s...)", symbols.ClauseSlice, symbols.ClauseSlice, symbols.ClauseItem)
+			out.WithIf("_, %s := %s.%s(0); %s != nil && len(%s) > 0", func(url.Values) error {
+				out.Println("%s = append(%s, %s...)", symbols.clauseSlice, symbols.clauseSlice, symbols.clauseItem)
 				return nil
-			}, symbols.ClauseItem, scope.Get("receiver"), method, symbols.ClauseItem, symbols.ClauseItem)
+			}, symbols.clauseItem, scope.Get("receiver"), method, symbols.clauseItem, symbols.clauseItem)
 		}
 
-		out.Println("return %s", symbols.ClauseSlice)
+		out.Println("return %s", symbols.clauseSlice)
 		return nil
 
 	})
@@ -185,21 +189,30 @@ func nullableIntMethods(record marlowRecord, fieldName string, config url.Values
 	methodName := fmt.Sprintf("%sInString", columnName)
 
 	symbols := struct {
-		PlaceholderSlice string
-		ValueSlice       string
-		ValueItem        string
-		JoinedValues     string
-	}{"_placeholders", "_values", "_v", "_joined"}
+		placeholders string
+		values       string
+		item         string
+		result       string
+		valueCount   string
+		index        string
+	}{"_placeholders", "_values", "_v", "_joined", "_count", "_"}
 
 	columnReference := fmt.Sprintf("%s.%s", record.table(), columnName)
 
 	returns := []string{"string", "[]interface{}"}
+	params := []writing.FuncParam{
+		{Type: "int", Symbol: symbols.valueCount},
+	}
+
+	if record.dialect() == "postgres" {
+		symbols.index = "_i"
+	}
 
 	write := func() {
 		writer := writing.NewGoWriter(pw)
 		writer.Comment("[marlow] nullable clause gen for \"%s\"", columnReference)
 
-		e := writer.WithMethod(methodName, record.blueprint(), nil, returns, func(scope url.Values) error {
+		e := writer.WithMethod(methodName, record.blueprint(), params, returns, func(scope url.Values) error {
 			fieldReference := fmt.Sprintf("%s.%s", scope.Get("receiver"), fieldName)
 
 			// Add conditional check for length presence on lookup slice.
@@ -210,31 +223,50 @@ func nullableIntMethods(record marlowRecord, fieldName string, config url.Values
 
 			// Add conditional check for length presence on lookup slice.
 			writer.WithIf("len(%s) == 0", func(url.Values) error {
-				writer.Println("return \"%s NOT NULL\", nil", columnReference)
+				query := "return \"%s NOT NULL\", nil"
+
+				if record.dialect() == "postgres" {
+					query = "return \"%s IS NOT NULL\", nil"
+				}
+
+				writer.Println(query, columnReference)
 				return nil
 			}, fieldReference)
 
-			writer.Println("%s := make([]string, 0, len(%s))", symbols.PlaceholderSlice, fieldReference)
-			writer.Println("%s := make([]interface{}, 0, len(%s))", symbols.ValueSlice, fieldReference)
+			writer.Println("%s := make([]string, 0, len(%s))", symbols.placeholders, fieldReference)
+			writer.Println("%s := make([]interface{}, 0, len(%s))", symbols.values, fieldReference)
 
-			writer.WithIter("_, %s := range %s", func(url.Values) error {
+			writer.WithIter("%s, %s := range %s", func(url.Values) error {
 				writer.WithIf("%s.Valid == false", func(url.Values) error {
 					writer.Println("return \"%s IS NULL\", nil", columnReference)
 					return nil
-				}, symbols.ValueItem)
+				}, symbols.item)
 
-				writer.Println("%s = append(%s, \"?\")", symbols.PlaceholderSlice, symbols.PlaceholderSlice)
-				writer.Println("%s = append(%s, %s)", symbols.ValueSlice, symbols.ValueSlice, symbols.ValueItem)
+				// TODO: cleanup dialog placeholder generation...
+				switch record.dialect() {
+				case "postgres":
+					placeholderString := "%s = append(%s, fmt.Sprintf(\"$%%d\", %s+%s))"
+					writer.Println(
+						placeholderString,
+						symbols.placeholders,
+						symbols.placeholders,
+						symbols.index,
+						symbols.valueCount,
+					)
+				default:
+					writer.Println("%s = append(%s, \"?\")", symbols.placeholders, symbols.placeholders)
+				}
+				writer.Println("%s = append(%s, %s)", symbols.values, symbols.values, symbols.item)
 				return nil
-			}, symbols.ValueItem, fieldReference)
+			}, symbols.index, symbols.item, fieldReference)
 
-			writer.Println("%s := strings.Join(%s, \",\")", symbols.JoinedValues, symbols.PlaceholderSlice)
+			writer.Println("%s := strings.Join(%s, \",\")", symbols.result, symbols.placeholders)
 			writer.Println(
 				"return fmt.Sprintf(\"%s.%s IN (%%s)\", %s), %s",
 				record.table(),
 				columnName,
-				symbols.JoinedValues,
-				symbols.ValueSlice,
+				symbols.result,
+				symbols.values,
 			)
 			return nil
 		})
@@ -258,19 +290,29 @@ func simpleTypeIn(record marlowRecord, fieldName string, fieldConfig url.Values,
 	columnReference := fmt.Sprintf("%s.%s", record.table(), columnName)
 
 	symbols := struct {
-		PlaceholderSlice string
-		ValueSlice       string
-		ValueItem        string
-		JoinedValues     string
-	}{"_placeholder", "_values", "_v", "_joined"}
+		placeholders    string
+		values          string
+		item            string
+		result          string
+		counter         string
+		index           string
+		placeholderItem string
+	}{"_placeholder", "_values", "_v", "_joined", "_count", "_i", "_p"}
 
 	returns := []string{"string", "[]interface{}"}
+	params := []writing.FuncParam{
+		{Type: "int", Symbol: symbols.counter},
+	}
+
+	if record.dialect() != "postgres" {
+		symbols.index = "_"
+	}
 
 	write := func() {
 		writer := writing.NewGoWriter(pw)
 		writer.Comment("[marlow] type IN clause for \"%s\"", columnReference)
 
-		e := writer.WithMethod(methodName, record.blueprint(), nil, returns, func(scope url.Values) error {
+		e := writer.WithMethod(methodName, record.blueprint(), params, returns, func(scope url.Values) error {
 			fieldReference := fmt.Sprintf("%s.%s", scope.Get("receiver"), fieldName)
 
 			// Add conditional check for length presence on lookup slice.
@@ -279,21 +321,29 @@ func simpleTypeIn(record marlowRecord, fieldName string, fieldConfig url.Values,
 				return nil
 			}, fieldReference)
 
-			writer.Println("%s := make([]string, 0, len(%s))", symbols.PlaceholderSlice, fieldReference)
-			writer.Println("%s := make([]interface{}, 0, len(%s))", symbols.ValueSlice, fieldReference)
+			writer.Println("%s := make([]string, 0, len(%s))", symbols.placeholders, fieldReference)
+			writer.Println("%s := make([]interface{}, 0, len(%s))", symbols.values, fieldReference)
 
-			writer.WithIter("_, %s := range %s", func(url.Values) error {
-				writer.Println("%s = append(%s, \"?\")", symbols.PlaceholderSlice, symbols.PlaceholderSlice)
-				writer.Println("%s = append(%s, %s)", symbols.ValueSlice, symbols.ValueSlice, symbols.ValueItem)
+			writer.WithIter("%s, %s := range %s", func(url.Values) error {
+				// TODO: cleanup dialog placeholder generation...
+				switch record.dialect() {
+				case "postgres":
+					writer.Println("%s := fmt.Sprintf(\"$%%d\", %s+%s)", symbols.placeholderItem, symbols.index, symbols.counter)
+					writer.Println("%s = append(%s, %s)", symbols.placeholders, symbols.placeholders, symbols.placeholderItem)
+				default:
+					writer.Println("%s = append(%s, \"?\")", symbols.placeholders, symbols.placeholders)
+				}
+
+				writer.Println("%s = append(%s, %s)", symbols.values, symbols.values, symbols.item)
 				return nil
-			}, symbols.ValueItem, fieldReference)
+			}, symbols.index, symbols.item, fieldReference)
 
-			writer.Println("%s := strings.Join(%s, \",\")", symbols.JoinedValues, symbols.PlaceholderSlice)
+			writer.Println("%s := strings.Join(%s, \",\")", symbols.result, symbols.placeholders)
 			writer.Println(
 				"return fmt.Sprintf(\"%s IN (%%s)\", %s), %s",
 				columnReference,
-				symbols.JoinedValues,
-				symbols.ValueSlice,
+				symbols.result,
+				symbols.values,
 			)
 			return nil
 		})
@@ -318,13 +368,22 @@ func stringMethods(record marlowRecord, fieldName string, fieldConfig url.Values
 	columnReference := fmt.Sprintf("%s.%s", record.table(), columnName)
 
 	symbols := struct {
-		PlaceholderSlice string
-		ValueItem        string
-		ValueSlice       string
-		LikeStatement    string
-	}{"_placeholders", "_value", "_values", "_like"}
+		placeholders string
+		item         string
+		values       string
+		statement    string
+		count        string
+		index        string
+	}{"_placeholders", "_value", "_values", "_like", "_count", "_i"}
+
+	if record.dialect() != "postgres" {
+		symbols.index = "_"
+	}
 
 	returns := []string{"string", "[]interface{}"}
+	params := []writing.FuncParam{
+		{Type: "int", Symbol: symbols.count},
+	}
 
 	pr, pw := io.Pipe()
 
@@ -332,7 +391,7 @@ func stringMethods(record marlowRecord, fieldName string, fieldConfig url.Values
 		writer := writing.NewGoWriter(pw)
 		writer.Comment("[marlow] string LIKE clause for \"%s\"", columnReference)
 
-		e := writer.WithMethod(methodName, record.blueprint(), nil, returns, func(scope url.Values) error {
+		e := writer.WithMethod(methodName, record.blueprint(), params, returns, func(scope url.Values) error {
 			likeSlice := fmt.Sprintf("%s.%s", scope.Get("receiver"), likeFieldName)
 
 			writer.WithIf("%s == nil || %s == nil || len(%s) == 0", func(url.Values) error {
@@ -340,18 +399,24 @@ func stringMethods(record marlowRecord, fieldName string, fieldConfig url.Values
 				return nil
 			}, scope.Get("receiver"), likeSlice, likeSlice)
 
-			writer.Println("%s := make([]string, 0, len(%s))", symbols.PlaceholderSlice, likeSlice)
-			writer.Println("%s := make([]interface{}, 0, len(%s))", symbols.ValueSlice, likeSlice)
+			writer.Println("%s := make([]string, 0, len(%s))", symbols.placeholders, likeSlice)
+			writer.Println("%s := make([]interface{}, 0, len(%s))", symbols.values, likeSlice)
 
-			writer.WithIter("_, %s := range %s", func(url.Values) error {
-				likeString := fmt.Sprintf("fmt.Sprintf(\"%s LIKE ?\")", columnReference)
-				writer.Println("%s := %s", symbols.LikeStatement, likeString)
-				writer.Println("%s = append(%s, %s)", symbols.PlaceholderSlice, symbols.PlaceholderSlice, symbols.LikeStatement)
-				writer.Println("%s = append(%s, %s)", symbols.ValueSlice, symbols.ValueSlice, symbols.ValueItem)
+			writer.WithIter("%s, %s := range %s", func(url.Values) error {
+				likeString := fmt.Sprintf("\"%s LIKE ?\"", columnReference)
+
+				if record.dialect() == "postgres" {
+					psqlLike := "fmt.Sprintf(\"%s LIKE $%%d\", %s+%s)"
+					likeString = fmt.Sprintf(psqlLike, columnReference, symbols.count, symbols.index)
+				}
+
+				writer.Println("%s := %s", symbols.statement, likeString)
+				writer.Println("%s = append(%s, %s)", symbols.placeholders, symbols.placeholders, symbols.statement)
+				writer.Println("%s = append(%s, %s)", symbols.values, symbols.values, symbols.item)
 				return nil
-			}, symbols.ValueItem, likeSlice)
+			}, symbols.index, symbols.item, likeSlice)
 
-			writer.Println("return strings.Join(%s, \" AND \"), %s", symbols.PlaceholderSlice, symbols.ValueSlice)
+			writer.Println("return strings.Join(%s, \" AND \"), %s", symbols.placeholders, symbols.values)
 			return nil
 		})
 
@@ -378,14 +443,19 @@ func numericalMethods(record marlowRecord, fieldName string, fieldConfig url.Val
 	returns := []string{"string", "[]interface{}"}
 
 	symbols := struct {
-		ValueSlice string
-	}{"_values"}
+		values string
+		count  string
+	}{"_values", "_count"}
+
+	params := []writing.FuncParam{
+		{Type: "int", Symbol: symbols.count},
+	}
 
 	write := func() {
 		writer := writing.NewGoWriter(pw)
 		writer.Comment("[marlow] range clause methods for %s", columnReference)
 
-		e := writer.WithMethod(rangeMethodName, record.blueprint(), nil, returns, func(scope url.Values) error {
+		e := writer.WithMethod(rangeMethodName, record.blueprint(), params, returns, func(scope url.Values) error {
 			receiver := scope.Get("receiver")
 			rangeArray := fmt.Sprintf("%s.%s", receiver, rangeFieldName)
 
@@ -394,12 +464,25 @@ func numericalMethods(record marlowRecord, fieldName string, fieldConfig url.Val
 				return nil
 			}, rangeArray)
 
-			writer.Println("%s := make([]interface{}, 2)", symbols.ValueSlice)
+			writer.Println("%s := make([]interface{}, 2)", symbols.values)
 
-			writer.Println("%s[0] = %s[0]", symbols.ValueSlice, rangeArray)
-			writer.Println("%s[1] = %s[1]", symbols.ValueSlice, rangeArray)
+			writer.Println("%s[0] = %s[0]", symbols.values, rangeArray)
+			writer.Println("%s[1] = %s[1]", symbols.values, rangeArray)
 
-			writer.Println("return \"%s > ? AND %s < ?\", %s", columnReference, columnReference, symbols.ValueSlice)
+			if record.dialect() == "postgres" {
+				rangeString := fmt.Sprintf(
+					"fmt.Sprintf(\"%s > $%%d AND %s < $%%d\", %s, %s+1)",
+					columnReference,
+					columnReference,
+					symbols.count,
+					symbols.count,
+				)
+
+				writer.Println("return %s, %s", rangeString, symbols.values)
+				return nil
+			}
+
+			writer.Println("return \"%s > ? AND %s < ?\", %s", columnReference, columnReference, symbols.values)
 			return nil
 		})
 

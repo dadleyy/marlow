@@ -10,18 +10,20 @@ import "github.com/dadleyy/marlow/marlow/writing"
 import "github.com/dadleyy/marlow/marlow/constants"
 
 type createableSymbolList struct {
-	RecordParam              string
-	QueryBuffer              string
-	RowValueString           string
-	StatementPlaceholderList string
-	StatementValueList       string
-	Statement                string
-	StatementError           string
-	SingleRecord             string
-	ExecResult               string
-	ExecError                string
-	AffectedResult           string
-	AffectedError            string
+	recordParam              string
+	queryBuffer              string
+	rowValueString           string
+	statementPlaceholderList string
+	statementValueList       string
+	statement                string
+	statementError           string
+	singleRecord             string
+	execResult               string
+	execError                string
+	affectedResult           string
+	affectedError            string
+
+	recordIndex string
 }
 
 // newCreateableGenerator returns a reader that will generate a record store's creation api.
@@ -30,22 +32,23 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 	methodName := fmt.Sprintf("Create%s", inflector.Pluralize(record.name()))
 
 	symbols := createableSymbolList{
-		RecordParam:              "_records",
-		QueryBuffer:              "_query",
-		RowValueString:           "_placeholders",
-		StatementPlaceholderList: "_placeholderList",
-		StatementValueList:       "_valueList",
-		Statement:                "_statement",
-		StatementError:           "_e",
-		SingleRecord:             "_record",
-		ExecResult:               "_result",
-		ExecError:                "_execError",
-		AffectedResult:           "_affectedResult",
-		AffectedError:            "_affectedError",
+		recordParam:              "_records",
+		queryBuffer:              "_query",
+		rowValueString:           "_placeholders",
+		statementPlaceholderList: "_placeholderList",
+		statementValueList:       "_valueList",
+		statement:                "_statement",
+		statementError:           "_e",
+		singleRecord:             "_record",
+		execResult:               "_result",
+		execError:                "_execError",
+		affectedResult:           "_affectedResult",
+		affectedError:            "_affectedError",
+		recordIndex:              "_",
 	}
 
 	params := []writing.FuncParam{
-		{Symbol: symbols.RecordParam, Type: fmt.Sprintf("...%s", record.name())},
+		{Symbol: symbols.recordParam, Type: fmt.Sprintf("...%s", record.name())},
 	}
 
 	returns := []string{
@@ -53,20 +56,30 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 		"error",
 	}
 
+	if record.dialect() == "postgres" && record.primaryKeyColumn() == "" {
+		pw.CloseWithError(fmt.Errorf("postgres records are required to have a primaryKey defined"))
+		return pr
+	}
+
 	go func() {
 		gosrc := writing.NewGoWriter(pw)
 
 		gosrc.Comment("[marlow] createable")
 
+		if record.dialect() == "postgres" {
+			symbols.recordIndex = "_recordIndex"
+		}
+
 		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
 			gosrc.WithIf("len(%s) == 0", func(url.Values) error {
 				gosrc.Println("return 0, nil")
 				return nil
-			}, symbols.RecordParam)
+			}, symbols.recordParam)
 
 			columnList := make([]string, 0, len(record.fields))
 			placeholders := make([]string, 0, len(record.fields))
 			fieldLookup := make(map[string]string, len(record.fields))
+			index := 1
 
 			for field, c := range record.fields {
 				columnName := c.Get(constants.ColumnConfigOption)
@@ -76,86 +89,121 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 				}
 
 				columnList = append(columnList, columnName)
-				placeholders = append(placeholders, "?")
+				placeholder := "?"
+
+				if record.dialect() == "postgres" {
+					fmtStr := "fmt.Sprintf(\"$%%d\", (%s*(%d-1))+%d)"
+					placeholder = fmt.Sprintf(fmtStr, symbols.recordIndex, len(record.fields), index)
+				}
+
+				placeholders = append(placeholders, placeholder)
 				fieldLookup[columnName] = field
+				index++
 			}
 
 			sort.Strings(columnList)
 
-			gosrc.Println("%s := make([]string, 0, len(%s))", symbols.StatementPlaceholderList, symbols.RecordParam)
-			gosrc.Println("%s := make([]interface{}, 0, len(%s))", symbols.StatementValueList, symbols.RecordParam)
+			gosrc.Println("%s := make([]string, 0, len(%s))", symbols.statementPlaceholderList, symbols.recordParam)
+			gosrc.Println("%s := make([]interface{}, 0, len(%s))", symbols.statementValueList, symbols.recordParam)
 
-			gosrc.WithIter("_, %s := range %s", func(url.Values) error {
-				gosrc.Println("%s := \"(%s)\"", symbols.RowValueString, strings.Join(placeholders, ", "))
+			gosrc.WithIter("%s, %s := range %s", func(url.Values) error {
+				if record.dialect() == "postgres" {
+					gosrc.Println("%s := []string{%s}", symbols.rowValueString, strings.Join(placeholders, ", "))
+				} else {
+					gosrc.Println("%s := %s", symbols.rowValueString, writing.StringSliceLiteral(placeholders))
+				}
+
 				fieldReferences := make([]string, 0, len(columnList))
 
 				for _, columnName := range columnList {
 					field := fieldLookup[columnName]
-					fieldReferences = append(fieldReferences, fmt.Sprintf("%s.%s", symbols.SingleRecord, field))
+					fieldReferences = append(fieldReferences, fmt.Sprintf("%s.%s", symbols.singleRecord, field))
 				}
 
 				gosrc.Println(
 					"%s = append(%s, %s)",
-					symbols.StatementValueList,
-					symbols.StatementValueList,
+					symbols.statementValueList,
+					symbols.statementValueList,
 					strings.Join(fieldReferences, ","),
 				)
 
 				gosrc.Println(
-					"%s = append(%s, %s)",
-					symbols.StatementPlaceholderList,
-					symbols.StatementPlaceholderList,
-					symbols.RowValueString,
+					"%s = append(%s, fmt.Sprintf(\"(%%s)\", strings.Join(%s, \",\")))",
+					symbols.statementPlaceholderList,
+					symbols.statementPlaceholderList,
+					symbols.rowValueString,
 				)
 				return nil
-			}, symbols.SingleRecord, symbols.RecordParam)
+			}, symbols.recordIndex, symbols.singleRecord, symbols.recordParam)
 
-			gosrc.Println("%s := new(bytes.Buffer)", symbols.QueryBuffer)
+			gosrc.Println("%s := new(bytes.Buffer)", symbols.queryBuffer)
+
+			insertStatement := fmt.Sprintf("INSERT INTO %s (%s) VALUES %%s;", record.table(), strings.Join(columnList, ","))
+
+			if record.dialect() == "postgres" {
+				template := "INSERT INTO %s (%s) VALUES %%s RETURNING %s;"
+				columns := strings.Join(columnList, ",")
+				primary := record.primaryKeyColumn()
+				insertStatement = fmt.Sprintf(template, record.table(), columns, primary)
+			}
 
 			gosrc.Println(
-				"fmt.Fprintf(%s, \"INSERT INTO %s ( %s ) VALUES %%s;\", strings.Join(%s, \", \"))\n",
-				symbols.QueryBuffer,
-				record.table(),
-				strings.Join(columnList, ", "),
-				symbols.StatementPlaceholderList,
+				"fmt.Fprintf(%s, \"%s\", strings.Join(%s, \", \"))\n",
+				symbols.queryBuffer,
+				insertStatement,
+				symbols.statementPlaceholderList,
 			)
 
 			gosrc.Println(
 				"%s, %s := %s.Prepare(%s.String())",
-				symbols.Statement,
-				symbols.StatementError,
+				symbols.statement,
+				symbols.statementError,
 				scope.Get("receiver"),
-				symbols.QueryBuffer,
+				symbols.queryBuffer,
 			)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("return -1, %s", symbols.StatementError)
+				gosrc.Println("return -1, %s", symbols.statementError)
 				return nil
-			}, symbols.StatementError)
+			}, symbols.statementError)
 
-			gosrc.Println("defer %s.Close()\n", symbols.Statement)
+			gosrc.Println("defer %s.Close()\n", symbols.statement)
 
-			gosrc.Println(
-				"%s, %s := %s.Exec(%s...)",
-				symbols.ExecResult,
-				symbols.ExecError,
-				symbols.Statement,
-				symbols.StatementValueList,
-			)
+			execution := "%s, %s := %s.Exec(%s...)"
+
+			if record.dialect() == "postgres" {
+				execution = "%s, %s := %s.Query(%s...)"
+			}
+
+			gosrc.Println(execution, symbols.execResult, symbols.execError, symbols.statement, symbols.statementValueList)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("return -1, %s", symbols.ExecError)
+				gosrc.Println("return -1, %s", symbols.execError)
 				return nil
-			}, symbols.ExecError)
+			}, symbols.execError)
 
-			gosrc.Println("%s, %s := %s.LastInsertId()", symbols.AffectedResult, symbols.AffectedError, symbols.ExecResult)
-
-			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("return -1, %s", symbols.AffectedError)
+			if record.dialect() != "postgres" {
+				gosrc.Println("%s, %s := %s.LastInsertId()", symbols.affectedResult, symbols.affectedError, symbols.execResult)
+				gosrc.Println("return %s, %s", symbols.affectedResult, symbols.affectedError)
 				return nil
-			}, symbols.AffectedError)
+			}
 
-			gosrc.Println("return %s, nil", symbols.AffectedResult)
+			gosrc.Println("var %s int64", symbols.affectedResult)
+
+			// Close the rows
+			gosrc.Println("defer %s.Close()\n", symbols.execResult)
+
+			// Iterate over rows scanning into result
+			gosrc.WithIter("%s.Next()", func(url.Values) error {
+				gosrc.WithIf("%s := %s.Scan(&%s); %s != nil", func(url.Values) error {
+					gosrc.Println("return -1, %s", symbols.affectedError)
+					return nil
+				}, symbols.affectedError, symbols.execResult, symbols.affectedResult, symbols.affectedError)
+
+				return nil
+			}, symbols.execResult)
+
+			gosrc.Println("return %s, nil", symbols.affectedResult)
 			return nil
 		})
 

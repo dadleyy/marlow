@@ -106,6 +106,17 @@ func Test_Updateable(t *testing.T) {
 				g.Assert(e).Equal(nil)
 			})
 
+			g.Describe("with a postgres record dialect", func() {
+				g.BeforeEach(func() {
+					scaffold.record.Set(constants.DialectConfigOption, "postgres")
+				})
+
+				g.It("generates valid golang", func() {
+					_, e := io.Copy(scaffold.buffer, scaffold.g())
+					g.Assert(e).Equal(nil)
+				})
+			})
+
 		})
 
 	})
