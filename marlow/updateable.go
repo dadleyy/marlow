@@ -136,7 +136,7 @@ func updater(record marlowRecord, fieldName string, fieldConfig url.Values) io.R
 				return gosrc.Returns("-1", symbols.rowError, fmt.Sprintf("%s.String()", symbols.queryString))
 			}, symbols.rowError)
 
-			return gosrc.Returns(symbols.rowCount, "nil", fmt.Sprintf("%s.String()", symbols.queryString))
+			return gosrc.Returns(symbols.rowCount, writing.Nil, fmt.Sprintf("%s.String()", symbols.queryString))
 		})
 
 		if e == nil {

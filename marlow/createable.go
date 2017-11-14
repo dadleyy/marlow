@@ -72,7 +72,7 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 
 		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
 			gosrc.WithIf("len(%s) == 0", func(url.Values) error {
-				return gosrc.Returns("0", "nil")
+				return gosrc.Returns("0", writing.Nil)
 			}, symbols.recordParam)
 
 			columnList := make([]string, 0, len(record.fields))
@@ -197,7 +197,7 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 				return nil
 			}, symbols.execResult)
 
-			return gosrc.Returns(symbols.affectedResult, "nil")
+			return gosrc.Returns(symbols.affectedResult, writing.Nil)
 		})
 
 		if e == nil {

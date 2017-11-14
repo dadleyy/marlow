@@ -135,7 +135,7 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 		out.Println("%s := make([]interface{}, 0, %d)", symbols.clauseSlice, len(clauseMethods))
 
 		out.WithIf("%s == nil", func(url.Values) error {
-			return out.Returns("nil")
+			return out.Returns(writing.Nil)
 		}, scope.Get("receiver"))
 
 		for _, method := range clauseMethods {
@@ -211,7 +211,7 @@ func nullableIntMethods(record marlowRecord, fieldName string, config url.Values
 
 			// Add conditional check for length presence on lookup slice.
 			writer.WithIf("%s == nil", func(url.Values) error {
-				return writer.Returns("\"\"", "nil")
+				return writer.Returns(writing.EmptyString, writing.Nil)
 			}, fieldReference)
 
 			// Add conditional check for length presence on lookup slice.
@@ -222,7 +222,7 @@ func nullableIntMethods(record marlowRecord, fieldName string, config url.Values
 					query = fmt.Sprintf("\"%s IS NOT NULL\"", columnReference)
 				}
 
-				return writer.Returns(query, "nil")
+				return writer.Returns(query, writing.Nil)
 			}, fieldReference)
 
 			writer.Println("%s := make([]string, 0, len(%s))", symbols.placeholders, fieldReference)
@@ -230,7 +230,7 @@ func nullableIntMethods(record marlowRecord, fieldName string, config url.Values
 
 			writer.WithIter("%s, %s := range %s", func(url.Values) error {
 				writer.WithIf("%s.Valid == false", func(url.Values) error {
-					return writer.Returns(fmt.Sprintf("\"%s IS NULL\"", columnReference), "nil")
+					return writer.Returns(fmt.Sprintf("\"%s IS NULL\"", columnReference), writing.Nil)
 				}, symbols.item)
 
 				// TODO: cleanup dialog placeholder generation...
@@ -303,7 +303,7 @@ func simpleTypeIn(record marlowRecord, fieldName string, fieldConfig url.Values,
 
 			// Add conditional check for length presence on lookup slice.
 			writer.WithIf("len(%s) == 0", func(url.Values) error {
-				return writer.Returns("\"\"", "nil")
+				return writer.Returns(writing.EmptyString, writing.Nil)
 			}, fieldReference)
 
 			writer.Println("%s := make([]string, 0, len(%s))", symbols.placeholders, fieldReference)
@@ -375,7 +375,7 @@ func stringMethods(record marlowRecord, fieldName string, fieldConfig url.Values
 			likeSlice := fmt.Sprintf("%s.%s", scope.Get("receiver"), likeFieldName)
 
 			writer.WithIf("%s == nil || %s == nil || len(%s) == 0", func(url.Values) error {
-				return writer.Returns("\"\"", "nil")
+				return writer.Returns(writing.EmptyString, writing.Nil)
 			}, scope.Get("receiver"), likeSlice, likeSlice)
 
 			writer.Println("%s := make([]string, 0, len(%s))", symbols.placeholders, likeSlice)
@@ -438,7 +438,7 @@ func numericalMethods(record marlowRecord, fieldName string, fieldConfig url.Val
 			rangeArray := fmt.Sprintf("%s.%s", receiver, rangeFieldName)
 
 			writer.WithIf("len(%s) != 2", func(url.Values) error {
-				return writer.Returns("\"\"", "nil")
+				return writer.Returns(writing.EmptyString, writing.Nil)
 			}, rangeArray)
 
 			writer.Println("%s := make([]interface{}, 2)", symbols.values)

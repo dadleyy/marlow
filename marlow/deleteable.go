@@ -82,7 +82,7 @@ func newDeleteableGenerator(record marlowRecord) io.Reader {
 				return gosrc.Returns("-1", symbols.e)
 			}, symbols.e)
 
-			return gosrc.Returns(symbols.count, "nil")
+			return gosrc.Returns(symbols.count, writing.Nil)
 		})
 
 		if e == nil {
