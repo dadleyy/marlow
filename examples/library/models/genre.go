@@ -2,6 +2,7 @@ package models
 
 import "database/sql"
 
+// Genre records are used to group and describe a types of books.
 type Genre struct {
 	table    bool          `marlow:"tableName=genres&dialect=postgres&primaryKey=id"`
 	ID       uint          `marlow:"column=id&autoIncrement=true"`

@@ -78,11 +78,11 @@ func Test_Genre(t *testing.T) {
 		})
 
 		g.Describe("having created some genres", func() {
-			var lastId int64
+			var lastID int64
 
 			g.BeforeEach(func() {
 				var e error
-				lastId, e = store.CreateGenres([]Genre{
+				lastID, e = store.CreateGenres([]Genre{
 					{Name: "Romance"},
 					{Name: "Comedy"},
 					{Name: "Literature"},
@@ -93,7 +93,7 @@ func Test_Genre(t *testing.T) {
 
 			g.It("supports selecting parent ids", func() {
 				parents, e := store.SelectParentIDs(&GenreBlueprint{
-					ID: []uint{uint(lastId)},
+					ID: []uint{uint(lastID)},
 				})
 				g.Assert(e).Equal(nil)
 				g.Assert(len(parents)).Equal(1)
