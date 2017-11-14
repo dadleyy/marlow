@@ -17,9 +17,14 @@ type goWriter struct {
 	*log.Logger
 }
 
-func (w *goWriter) Println(msg string, extras ...interface{}) {
+func (w *goWriter) Println(msg string, extras ...interface{}) error {
 	formatted := fmt.Sprintf(msg, extras...)
 	w.Logger.Printf("%s\n", formatted)
+	return nil
+}
+
+func (w *goWriter) Returns(msg ...string) error {
+	return w.Println("return %s", strings.Join(msg, ","))
 }
 
 func (w *goWriter) Comment(msg string, keys ...interface{}) {

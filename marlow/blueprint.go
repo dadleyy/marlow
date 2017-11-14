@@ -121,12 +121,10 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 		}
 
 		out.WithIf("len(%s) == 0", func(url.Values) error {
-			out.Println("return \"\"")
-			return nil
+			return out.Returns("\"\"")
 		}, symbols.clauseSlice)
 
-		out.Println("return \"WHERE \" + strings.Join(%s, \" AND \")", symbols.clauseSlice)
-		return nil
+		return out.Returns(fmt.Sprintf("\"WHERE \" + strings.Join(%s, \" AND \")", symbols.clauseSlice))
 	})
 
 	if e != nil {
@@ -137,20 +135,16 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 		out.Println("%s := make([]interface{}, 0, %d)", symbols.clauseSlice, len(clauseMethods))
 
 		out.WithIf("%s == nil", func(url.Values) error {
-			out.Println("return nil")
-			return nil
+			return out.Returns("nil")
 		}, scope.Get("receiver"))
 
 		for _, method := range clauseMethods {
 			out.WithIf("_, %s := %s.%s(0); %s != nil && len(%s) > 0", func(url.Values) error {
-				out.Println("%s = append(%s, %s...)", symbols.clauseSlice, symbols.clauseSlice, symbols.clauseItem)
-				return nil
+				return out.Println("%s = append(%s, %s...)", symbols.clauseSlice, symbols.clauseSlice, symbols.clauseItem)
 			}, symbols.clauseItem, scope.Get("receiver"), method, symbols.clauseItem, symbols.clauseItem)
 		}
 
-		out.Println("return %s", symbols.clauseSlice)
-		return nil
-
+		return out.Returns(symbols.clauseSlice)
 	})
 }
 
@@ -217,20 +211,18 @@ func nullableIntMethods(record marlowRecord, fieldName string, config url.Values
 
 			// Add conditional check for length presence on lookup slice.
 			writer.WithIf("%s == nil", func(url.Values) error {
-				writer.Println("return \"\", nil")
-				return nil
+				return writer.Returns("\"\"", "nil")
 			}, fieldReference)
 
 			// Add conditional check for length presence on lookup slice.
 			writer.WithIf("len(%s) == 0", func(url.Values) error {
-				query := "return \"%s NOT NULL\", nil"
+				query := fmt.Sprintf("\"%s NOT NULL\"", columnReference)
 
 				if record.dialect() == "postgres" {
-					query = "return \"%s IS NOT NULL\", nil"
+					query = fmt.Sprintf("\"%s IS NOT NULL\"", columnReference)
 				}
 
-				writer.Println(query, columnReference)
-				return nil
+				return writer.Returns(query, "nil")
 			}, fieldReference)
 
 			writer.Println("%s := make([]string, 0, len(%s))", symbols.placeholders, fieldReference)
@@ -238,8 +230,7 @@ func nullableIntMethods(record marlowRecord, fieldName string, config url.Values
 
 			writer.WithIter("%s, %s := range %s", func(url.Values) error {
 				writer.WithIf("%s.Valid == false", func(url.Values) error {
-					writer.Println("return \"%s IS NULL\", nil", columnReference)
-					return nil
+					return writer.Returns(fmt.Sprintf("\"%s IS NULL\"", columnReference), "nil")
 				}, symbols.item)
 
 				// TODO: cleanup dialog placeholder generation...
@@ -261,14 +252,9 @@ func nullableIntMethods(record marlowRecord, fieldName string, config url.Values
 			}, symbols.index, symbols.item, fieldReference)
 
 			writer.Println("%s := strings.Join(%s, \",\")", symbols.result, symbols.placeholders)
-			writer.Println(
-				"return fmt.Sprintf(\"%s.%s IN (%%s)\", %s), %s",
-				record.table(),
-				columnName,
-				symbols.result,
-				symbols.values,
-			)
-			return nil
+
+			clauseString := fmt.Sprintf("fmt.Sprintf(\"%s.%s IN (%%s)\", %s)", record.table(), columnName, symbols.result)
+			return writer.Returns(clauseString, symbols.values)
 		})
 
 		if e == nil {
@@ -317,8 +303,7 @@ func simpleTypeIn(record marlowRecord, fieldName string, fieldConfig url.Values,
 
 			// Add conditional check for length presence on lookup slice.
 			writer.WithIf("len(%s) == 0", func(url.Values) error {
-				writer.Println("return \"\", nil")
-				return nil
+				return writer.Returns("\"\"", "nil")
 			}, fieldReference)
 
 			writer.Println("%s := make([]string, 0, len(%s))", symbols.placeholders, fieldReference)
@@ -339,13 +324,8 @@ func simpleTypeIn(record marlowRecord, fieldName string, fieldConfig url.Values,
 			}, symbols.index, symbols.item, fieldReference)
 
 			writer.Println("%s := strings.Join(%s, \",\")", symbols.result, symbols.placeholders)
-			writer.Println(
-				"return fmt.Sprintf(\"%s IN (%%s)\", %s), %s",
-				columnReference,
-				symbols.result,
-				symbols.values,
-			)
-			return nil
+			clauseString := fmt.Sprintf("fmt.Sprintf(\"%s IN (%%s)\", %s)", columnReference, symbols.result)
+			return writer.Returns(clauseString, symbols.values)
 		})
 
 		if e == nil {
@@ -395,8 +375,7 @@ func stringMethods(record marlowRecord, fieldName string, fieldConfig url.Values
 			likeSlice := fmt.Sprintf("%s.%s", scope.Get("receiver"), likeFieldName)
 
 			writer.WithIf("%s == nil || %s == nil || len(%s) == 0", func(url.Values) error {
-				writer.Println("return \"\", nil")
-				return nil
+				return writer.Returns("\"\"", "nil")
 			}, scope.Get("receiver"), likeSlice, likeSlice)
 
 			writer.Println("%s := make([]string, 0, len(%s))", symbols.placeholders, likeSlice)
@@ -412,12 +391,11 @@ func stringMethods(record marlowRecord, fieldName string, fieldConfig url.Values
 
 				writer.Println("%s := %s", symbols.statement, likeString)
 				writer.Println("%s = append(%s, %s)", symbols.placeholders, symbols.placeholders, symbols.statement)
-				writer.Println("%s = append(%s, %s)", symbols.values, symbols.values, symbols.item)
-				return nil
+				return writer.Println("%s = append(%s, %s)", symbols.values, symbols.values, symbols.item)
 			}, symbols.index, symbols.item, likeSlice)
 
-			writer.Println("return strings.Join(%s, \" AND \"), %s", symbols.placeholders, symbols.values)
-			return nil
+			clauseString := fmt.Sprintf("strings.Join(%s, \" AND \")", symbols.placeholders)
+			return writer.Returns(clauseString, symbols.values)
 		})
 
 		if e == nil {
@@ -460,8 +438,7 @@ func numericalMethods(record marlowRecord, fieldName string, fieldConfig url.Val
 			rangeArray := fmt.Sprintf("%s.%s", receiver, rangeFieldName)
 
 			writer.WithIf("len(%s) != 2", func(url.Values) error {
-				writer.Println("return \"\", nil")
-				return nil
+				return writer.Returns("\"\"", "nil")
 			}, rangeArray)
 
 			writer.Println("%s := make([]interface{}, 2)", symbols.values)
@@ -478,12 +455,10 @@ func numericalMethods(record marlowRecord, fieldName string, fieldConfig url.Val
 					symbols.count,
 				)
 
-				writer.Println("return %s, %s", rangeString, symbols.values)
-				return nil
+				return writer.Returns(rangeString, symbols.values)
 			}
 
-			writer.Println("return \"%s > ? AND %s < ?\", %s", columnReference, columnReference, symbols.values)
-			return nil
+			return writer.Returns(fmt.Sprintf("\"%s > ? AND %s < ?\"", columnReference, columnReference), symbols.values)
 		})
 
 		if e == nil {

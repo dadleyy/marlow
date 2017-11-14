@@ -8,14 +8,13 @@ import "github.com/dadleyy/marlow/marlow/writing"
 import "github.com/dadleyy/marlow/marlow/constants"
 
 type deleteableSymbols struct {
-	Error           string
-	RowCount        string
-	BlueprintParam  string
-	ExecResult      string
-	ExecError       string
-	StatementString string
-	StatementResult string
-	StatementError  string
+	e              string
+	count          string
+	blueprint      string
+	result         string
+	statement      string
+	prepared       string
+	statementError string
 }
 
 // newDeleteableGenerator is responsible for creating a generator that will write out the Delete api methods.
@@ -24,18 +23,17 @@ func newDeleteableGenerator(record marlowRecord) io.Reader {
 	methodName := fmt.Sprintf("Delete%s", inflector.Pluralize(record.name()))
 
 	symbols := deleteableSymbols{
-		Error:           "_e",
-		RowCount:        "_count",
-		BlueprintParam:  "_blueprint",
-		StatementString: "_query",
-		StatementResult: "_statement",
-		StatementError:  "_se",
-		ExecResult:      "_execResult",
-		ExecError:       "_ee",
+		e:              "_e",
+		count:          "_count",
+		blueprint:      "_blueprint",
+		statement:      "_query",
+		prepared:       "_statement",
+		statementError: "_se",
+		result:         "_execResult",
 	}
 
 	params := []writing.FuncParam{
-		{Type: fmt.Sprintf("*%s", record.blueprint()), Symbol: symbols.BlueprintParam},
+		{Type: fmt.Sprintf("*%s", record.blueprint()), Symbol: symbols.blueprint},
 	}
 
 	returns := []string{
@@ -49,58 +47,42 @@ func newDeleteableGenerator(record marlowRecord) io.Reader {
 		gosrc.Comment("[marlow] deleteable")
 
 		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
+			receiver := scope.Get("receiver")
+
 			gosrc.WithIf("%s == nil || %s.String() == \"\"", func(url.Values) error {
-				gosrc.Println("return -1, fmt.Errorf(\"%s\")", constants.InvalidDeletionBlueprint)
-				return nil
-			}, symbols.BlueprintParam, symbols.BlueprintParam)
+				return gosrc.Returns("-1", fmt.Sprintf("fmt.Errorf(\"%s\")", constants.InvalidDeletionBlueprint))
+			}, symbols.blueprint, symbols.blueprint)
 
 			deleteString := fmt.Sprintf("DELETE FROM %s", record.table())
 
-			gosrc.Println(
-				"%s := fmt.Sprintf(\"%s %%s\", %s)",
-				symbols.StatementString,
-				deleteString,
-				symbols.BlueprintParam,
-			)
+			gosrc.Println("%s := fmt.Sprintf(\"%s %%s\", %s)", symbols.statement, deleteString, symbols.blueprint)
+			gosrc.Println("%s, %s := %s.Prepare(%s + \";\")", symbols.prepared, symbols.e, receiver, symbols.statement)
 
-			gosrc.Println(
-				"%s, %s := %s.Prepare(%s + \";\")",
-				symbols.StatementResult,
-				symbols.Error,
-				scope.Get("receiver"),
-				symbols.StatementString,
-			)
+			// Check for preparation error.
+			gosrc.WithIf("%s != nil", func(url.Values) error { return gosrc.Returns("-1", symbols.e) }, symbols.e)
 
-			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("return -1, %s", symbols.Error)
-				return nil
-			}, symbols.Error)
+			// Always close the prepared statement.
+			gosrc.Println("defer %s.Close()", symbols.prepared)
 
-			gosrc.Println("defer %s.Close()", symbols.StatementResult)
-
+			// Executre the prepared statement with the values from the blueprint.
 			gosrc.Println(
 				"%s, %s := %s.Exec(%s.Values()...)",
-				symbols.ExecResult,
-				symbols.ExecError,
-				symbols.StatementResult,
-				symbols.BlueprintParam,
+				symbols.result,
+				symbols.e,
+				symbols.prepared,
+				symbols.blueprint,
 			)
 
-			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("return -1, %s", symbols.ExecError)
-				return nil
-			}, symbols.ExecError)
+			// Check for statement.Exec error
+			gosrc.WithIf("%s != nil", func(url.Values) error { return gosrc.Returns("-1", symbols.e) }, symbols.e)
 
-			gosrc.Println("%s, %s := %s.RowsAffected()", symbols.RowCount, symbols.Error, symbols.ExecResult)
+			gosrc.Println("%s, %s := %s.RowsAffected()", symbols.count, symbols.e, symbols.result)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("return -1, %s", symbols.Error)
-				return nil
-			}, symbols.Error)
+				return gosrc.Returns("-1", symbols.e)
+			}, symbols.e)
 
-			gosrc.Println("return %s, nil", symbols.RowCount)
-
-			return nil
+			return gosrc.Returns(symbols.count, "nil")
 		})
 
 		if e == nil {

@@ -72,8 +72,7 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 
 		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
 			gosrc.WithIf("len(%s) == 0", func(url.Values) error {
-				gosrc.Println("return 0, nil")
-				return nil
+				return gosrc.Returns("0", "nil")
 			}, symbols.recordParam)
 
 			columnList := make([]string, 0, len(record.fields))
@@ -127,13 +126,12 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 					strings.Join(fieldReferences, ","),
 				)
 
-				gosrc.Println(
+				return gosrc.Println(
 					"%s = append(%s, fmt.Sprintf(\"(%%s)\", strings.Join(%s, \",\")))",
 					symbols.statementPlaceholderList,
 					symbols.statementPlaceholderList,
 					symbols.rowValueString,
 				)
-				return nil
 			}, symbols.recordIndex, symbols.singleRecord, symbols.recordParam)
 
 			gosrc.Println("%s := new(bytes.Buffer)", symbols.queryBuffer)
@@ -163,8 +161,7 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 			)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("return -1, %s", symbols.statementError)
-				return nil
+				return gosrc.Returns("-1", symbols.statementError)
 			}, symbols.statementError)
 
 			gosrc.Println("defer %s.Close()\n", symbols.statement)
@@ -178,14 +175,12 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 			gosrc.Println(execution, symbols.execResult, symbols.execError, symbols.statement, symbols.statementValueList)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				gosrc.Println("return -1, %s", symbols.execError)
-				return nil
+				return gosrc.Returns("-1", symbols.execError)
 			}, symbols.execError)
 
 			if record.dialect() != "postgres" {
 				gosrc.Println("%s, %s := %s.LastInsertId()", symbols.affectedResult, symbols.affectedError, symbols.execResult)
-				gosrc.Println("return %s, %s", symbols.affectedResult, symbols.affectedError)
-				return nil
+				return gosrc.Returns(symbols.affectedResult, symbols.affectedError)
 			}
 
 			gosrc.Println("var %s int64", symbols.affectedResult)
@@ -196,15 +191,13 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 			// Iterate over rows scanning into result
 			gosrc.WithIter("%s.Next()", func(url.Values) error {
 				gosrc.WithIf("%s := %s.Scan(&%s); %s != nil", func(url.Values) error {
-					gosrc.Println("return -1, %s", symbols.affectedError)
-					return nil
+					return gosrc.Returns("-1", symbols.affectedError)
 				}, symbols.affectedError, symbols.execResult, symbols.affectedResult, symbols.affectedError)
 
 				return nil
 			}, symbols.execResult)
 
-			gosrc.Println("return %s, nil", symbols.affectedResult)
-			return nil
+			return gosrc.Returns(symbols.affectedResult, "nil")
 		})
 
 		if e == nil {
