@@ -230,6 +230,27 @@ func Test_Author(t *testing.T) {
 			g.Assert(count).Equal(generatedAuthorCount)
 		})
 
+		g.It("allows consumers to select individual university ids with limit", func() {
+			var uniID sql.NullInt64
+			uniID.Scan(10)
+			_, e := store.CreateAuthors([]Author{
+				{Name: "limited author 001"},
+				{Name: "limited author 002", UniversityID: uniID},
+				{Name: "limited author 003"},
+			}...)
+			results, e := store.SelectUniversityIDs(&AuthorBlueprint{
+				NameLike: []string{"%limited%"},
+				Limit:    1,
+				Offset:   1,
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(len(results)).Equal(1)
+			g.Assert(results[0].Int64).Equal(10)
+			store.DeleteAuthors(&AuthorBlueprint{
+				NameLike: []string{"%limited%"},
+			})
+		})
+
 		g.It("allows consumers to select individual university ids (result being null)", func() {
 			results, e := store.SelectUniversityIDs(&AuthorBlueprint{
 				ID: []int{10},
@@ -247,6 +268,26 @@ func Test_Author(t *testing.T) {
 			g.Assert(len(results)).Equal(1)
 			g.Assert(results[0].Valid).Equal(true)
 			g.Assert(results[0].Int64).Equal(10)
+		})
+
+		g.It("allows consumers to select individual author names with limit", func() {
+			_, e := store.CreateAuthors([]Author{
+				{Name: "limited name 001"},
+				{Name: "limited name 002"},
+				{Name: "limited name 003"},
+				{Name: "limited name 004"},
+			}...)
+			results, e := store.SelectNames(&AuthorBlueprint{
+				NameLike: []string{"%limited name%"},
+				Limit:    1,
+				Offset:   1,
+			})
+			g.Assert(e).Equal(nil)
+			g.Assert(len(results)).Equal(1)
+			g.Assert(results[0]).Equal("limited name 002")
+			store.DeleteAuthors(&AuthorBlueprint{
+				NameLike: []string{"%limited name%"},
+			})
 		})
 
 		g.It("allows consumers to select individual author names", func() {
