@@ -1,5 +1,7 @@
 package marlow
 
+import "fmt"
+import "sort"
 import "strings"
 import "net/url"
 import "github.com/dadleyy/marlow/marlow/writing"
@@ -14,6 +16,19 @@ type marlowRecord struct {
 	importRegistry map[string]bool
 
 	storeChannel chan writing.FuncDecl
+}
+
+func (r *marlowRecord) fieldList() fieldList {
+	list := make(fieldList, 0, len(r.fields))
+
+	for name, c := range r.fields {
+		column := fmt.Sprintf("%s.%s", r.table(), c.Get(constants.ColumnConfigOption))
+		list = append(list, field{name: name, column: column})
+	}
+
+	sort.Sort(list)
+
+	return list
 }
 
 func (r *marlowRecord) registerStoreMethod(method writing.FuncDecl) {

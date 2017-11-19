@@ -10,7 +10,7 @@ import "database/sql"
 // Book represents a book in the example application
 type Book struct {
 	table     string        `marlow:"defaultLimit=10"`
-	ID        int           `marlow:"column=id&autoIncrement=true"`
+	ID        int           `marlow:"column=system_id&autoIncrement=true"`
 	Title     string        `marlow:"column=title"`
 	AuthorID  int           `marlow:"column=author&references=Author"`
 	SeriesID  sql.NullInt64 `marlow:"column=series"`

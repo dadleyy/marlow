@@ -12,7 +12,7 @@ import "github.com/dadleyy/marlow/marlow"
 func addAuthorRow(db *sql.DB, values ...[]string) error {
 	for _, rowValues := range values {
 		valueString := strings.Join(rowValues, ",")
-		statement := fmt.Sprintf("insert into authors (id,name) values(%s);", valueString)
+		statement := fmt.Sprintf("insert into authors (system_id,name) values(%s);", valueString)
 		r, e := db.Exec(statement)
 
 		if e != nil {
@@ -78,7 +78,7 @@ func Test_Author(t *testing.T) {
 				IDRange: []int{1, 2},
 			})
 
-			g.Assert(r).Equal("WHERE authors.id > ? AND authors.id < ?")
+			g.Assert(r).Equal("WHERE authors.system_id > ? AND authors.system_id < ?")
 		})
 
 		g.It("supports in on uint column querying", func() {
@@ -103,7 +103,7 @@ func Test_Author(t *testing.T) {
 
 		g.It("supports 'IN' on ID column querying", func() {
 			r := fmt.Sprintf("%s", &AuthorBlueprint{ID: []int{1, 2, 3}})
-			g.Assert(r).Equal("WHERE authors.id IN (?,?,?)")
+			g.Assert(r).Equal("WHERE authors.system_id IN (?,?,?)")
 		})
 
 		g.It("supports a combination of range and 'IN' on ID column querying", func() {
@@ -112,7 +112,7 @@ func Test_Author(t *testing.T) {
 				IDRange: []int{1, 4},
 			})
 
-			g.Assert(r).Equal("WHERE authors.id IN (?,?,?) AND authors.id > ? AND authors.id < ?")
+			g.Assert(r).Equal("WHERE authors.system_id IN (?,?,?) AND authors.system_id > ? AND authors.system_id < ?")
 		})
 
 	})
@@ -133,9 +133,9 @@ func Test_Author(t *testing.T) {
 
 			g.Assert(addAuthorRow(db, authors...)).Equal(nil)
 
-			_, e = db.Exec("insert into authors (id,name,university_id) values(1337,'learned author',10);")
+			_, e = db.Exec("insert into authors (system_id,name,university_id) values(1337,'learned author',10);")
 			g.Assert(e).Equal(nil)
-			_, e = db.Exec("insert into authors (id,name,university_id) values(1338,'other author',null);")
+			_, e = db.Exec("insert into authors (system_id,name,university_id) values(1338,'other author',null);")
 			g.Assert(e).Equal(nil)
 		})
 

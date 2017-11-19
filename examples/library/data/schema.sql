@@ -1,7 +1,7 @@
 drop table if exists authors;
 
 create table authors (
-  id INTEGER PRIMARY KEY,
+  system_id INTEGER PRIMARY KEY,
   name TEXT,
   university_id INTEGER,
   rating REAL NOT NULL DEFAULT '100.00',
@@ -11,7 +11,7 @@ create table authors (
 drop table if exists books;
 
 create table books (
-  id INTEGER PRIMARY KEY,
+  system_id INTEGER PRIMARY KEY,
   title TEXT,
   author INTEGER NOT NULL,
   series INTEGER,
