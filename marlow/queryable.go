@@ -2,7 +2,6 @@ package marlow
 
 import "io"
 import "fmt"
-import "sort"
 import "strings"
 import "net/url"
 import "github.com/gedex/inflector"
@@ -61,19 +60,7 @@ func finder(record marlowRecord) io.Reader {
 
 		returns := []string{symbols.recordSlice, "error"}
 
-		fieldList := make([]string, 0, len(record.fields))
-
-		for name, config := range record.fields {
-			colName := config.Get(constants.ColumnConfigOption)
-
-			if colName == "" {
-				colName = strings.ToLower(name)
-			}
-
-			expanded := fmt.Sprintf("%s.%s", record.table(), colName)
-			fieldList = append(fieldList, expanded)
-		}
-
+		fieldList := record.fieldList()
 		defaultLimit := record.config.Get(constants.DefaultLimitConfigOption)
 
 		if defaultLimit == "" {
@@ -81,18 +68,22 @@ func finder(record marlowRecord) io.Reader {
 			return
 		}
 
-		sort.Strings(fieldList)
-
 		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
 			// Prepare the array that will be returned.
 			gosrc.Println("%s := make(%s, 0)\n", symbols.results, symbols.recordSlice)
 			defer gosrc.Returns(symbols.results, writing.Nil)
 
+			columns := make([]string, len(fieldList))
+
+			for i, n := range fieldList {
+				columns[i] = n.column
+			}
+
 			// Prepare the sql statement that will be sent to the DB.
 			gosrc.Println(
 				"%s := bytes.NewBufferString(\"SELECT %s FROM %s\")",
 				symbols.queryString,
-				strings.Join(fieldList, ","),
+				strings.Join(columns, ","),
 				record.table(),
 			)
 
@@ -167,11 +158,9 @@ func finder(record marlowRecord) io.Reader {
 				gosrc.Println("var %s %s", symbols.rowItem, record.name())
 				references := make([]string, 0, len(record.fields))
 
-				for name := range record.fields {
-					references = append(references, fmt.Sprintf("&%s.%s", symbols.rowItem, name))
+				for _, f := range fieldList {
+					references = append(references, fmt.Sprintf("&%s.%s", symbols.rowItem, f.name))
 				}
-
-				sort.Strings(references)
 
 				scans := strings.Join(references, ",")
 				condition := fmt.Sprintf("e := %s.Scan(%s); e != nil", symbols.queryResult, scans)
