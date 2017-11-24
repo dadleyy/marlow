@@ -78,7 +78,7 @@ func Test_Author(t *testing.T) {
 				IDRange: []int{1, 2},
 			})
 
-			g.Assert(r).Equal("WHERE authors.system_id > ? AND authors.system_id < ?")
+			g.Assert(r).Equal("WHERE (authors.system_id > ? AND authors.system_id < ?)")
 		})
 
 		g.It("supports in on uint column querying", func() {
@@ -88,12 +88,12 @@ func Test_Author(t *testing.T) {
 
 		g.It("supports range on uint column querying", func() {
 			r := fmt.Sprintf("%s", &AuthorBlueprint{AuthorFlagsRange: []uint8{1, 2}})
-			g.Assert(r).Equal("WHERE authors.flags > ? AND authors.flags < ?")
+			g.Assert(r).Equal("WHERE (authors.flags > ? AND authors.flags < ?)")
 		})
 
 		g.It("supports range on float64 column querying", func() {
 			r := fmt.Sprintf("%s", &AuthorBlueprint{ReaderRatingRange: []float64{1, 2}})
-			g.Assert(r).Equal("WHERE authors.rating > ? AND authors.rating < ?")
+			g.Assert(r).Equal("WHERE (authors.rating > ? AND authors.rating < ?)")
 		})
 
 		g.It("supports 'IN' on float64 column querying", func() {
@@ -112,9 +112,18 @@ func Test_Author(t *testing.T) {
 				IDRange: []int{1, 4},
 			})
 
-			g.Assert(r).Equal("WHERE authors.system_id IN (?,?,?) AND authors.system_id > ? AND authors.system_id < ?")
+			g.Assert(r).Equal("WHERE authors.system_id IN (?,?,?) AND (authors.system_id > ? AND authors.system_id < ?)")
 		})
 
+		g.It("supports making a blueprint inclusive", func() {
+			r := fmt.Sprintf("%s", &AuthorBlueprint{
+				NameLike:  []string{"%rodger%"},
+				IDRange:   []int{1, 4},
+				Inclusive: true,
+			})
+
+			g.Assert(r).Equal("WHERE (authors.system_id > ? AND authors.system_id < ?) OR authors.name LIKE ?")
+		})
 	})
 
 	g.Describe("Author model & generated store test suite", func() {

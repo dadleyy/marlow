@@ -40,24 +40,31 @@ func Test_Genre(t *testing.T) {
 			store = NewGenreStore(db)
 		})
 
-		g.It("uses the postgres dialect for blueprint string in params", func() {
-			s := fmt.Sprintf("%s", &GenreBlueprint{Name: []string{"horror", "comedy"}})
-			g.Assert(s).Equal("WHERE genres.name IN ($1,$2)")
-		})
+		g.Describe("genre blueprint test suite", func() {
+			g.It("supports ors between string like clauses when inclusive", func() {
+				a := fmt.Sprintf("%s", &GenreBlueprint{NameLike: []string{"hi", "bye"}, Inclusive: true})
+				g.Assert(a).Equal("WHERE genres.name LIKE $1 OR genres.name LIKE $2")
+			})
 
-		g.It("uses the postgres dialect for blueprint int in params", func() {
-			s := fmt.Sprintf("%s", &GenreBlueprint{ID: []uint{0, 10}})
-			g.Assert(s).Equal("WHERE genres.id IN ($1,$2)")
-		})
+			g.It("uses the postgres dialect for blueprint string in params", func() {
+				s := fmt.Sprintf("%s", &GenreBlueprint{Name: []string{"horror", "comedy"}})
+				g.Assert(s).Equal("WHERE genres.name IN ($1,$2)")
+			})
 
-		g.It("uses the postgres dialect for blueprint int range params", func() {
-			s := fmt.Sprintf("%s", &GenreBlueprint{IDRange: []uint{0, 10}})
-			g.Assert(s).Equal("WHERE genres.id > $1 AND genres.id < $2")
-		})
+			g.It("uses the postgres dialect for blueprint int in params", func() {
+				s := fmt.Sprintf("%s", &GenreBlueprint{ID: []uint{0, 10}})
+				g.Assert(s).Equal("WHERE genres.id IN ($1,$2)")
+			})
 
-		g.It("uses the postgres dialect for blueprint string like params", func() {
-			s := fmt.Sprintf("%s", &GenreBlueprint{NameLike: []string{"danny"}})
-			g.Assert(s).Equal("WHERE genres.name LIKE $1")
+			g.It("uses the postgres dialect for blueprint int range params", func() {
+				s := fmt.Sprintf("%s", &GenreBlueprint{IDRange: []uint{0, 10}})
+				g.Assert(s).Equal("WHERE (genres.id > $1 AND genres.id < $2)")
+			})
+
+			g.It("uses the postgres dialect for blueprint string like params", func() {
+				s := fmt.Sprintf("%s", &GenreBlueprint{NameLike: []string{"danny"}})
+				g.Assert(s).Equal("WHERE genres.name LIKE $1")
+			})
 		})
 
 		g.It("allows user to create genres", func() {
@@ -87,8 +94,22 @@ func Test_Genre(t *testing.T) {
 					{Name: "Comedy"},
 					{Name: "Literature"},
 					{Name: "Science Fiction", ParentID: sql.NullInt64{Valid: true, Int64: 10}},
+					{Name: "History", ParentID: sql.NullInt64{Valid: true, Int64: 10}},
+					{Name: "Western European History", ParentID: sql.NullInt64{Valid: true, Int64: 10}},
+					{Name: "Eastern European History", ParentID: sql.NullInt64{Valid: true, Int64: 10}},
+					{Name: "South American History", ParentID: sql.NullInt64{Valid: true, Int64: 10}},
+					{Name: "North American History", ParentID: sql.NullInt64{Valid: true, Int64: 10}},
 				}...)
 				g.Assert(e).Equal(nil)
+			})
+
+			g.It("supports or-ing clauses when blueprint set to be inclusive", func() {
+				genres, e := store.FindGenres(&GenreBlueprint{
+					NameLike:  []string{"%European%", "%American%"},
+					Inclusive: true,
+				})
+				g.Assert(e).Equal(nil)
+				g.Assert(len(genres)).Equal(4)
 			})
 
 			g.It("supports selecting parent ids", func() {
@@ -106,7 +127,7 @@ func Test_Genre(t *testing.T) {
 					ParentID: []sql.NullInt64{},
 				})
 				g.Assert(e).Equal(nil)
-				g.Assert(c).Equal(1)
+				g.Assert(c).Equal(6)
 			})
 
 			g.It("allows counting w/ valid NullInt64 blueprint", func() {
@@ -116,7 +137,7 @@ func Test_Genre(t *testing.T) {
 					ParentID: []sql.NullInt64{p},
 				})
 				g.Assert(e).Equal(nil)
-				g.Assert(children).Equal(1)
+				g.Assert(children).Equal(6)
 			})
 
 			g.It("allows counting w/ nil NullInt64 blueprint", func() {
@@ -153,7 +174,7 @@ func Test_Genre(t *testing.T) {
 					IDRange: []uint{0, 10},
 				})
 				g.Assert(e).Equal(nil)
-				g.Assert(len(genres)).Equal(4)
+				g.Assert(len(genres)).Equal(9)
 			})
 
 			g.It("allows updating the genre name", func() {
