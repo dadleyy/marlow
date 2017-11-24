@@ -54,6 +54,7 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 			out.Println("%s []%s", name, fieldType)
 		}
 
+		out.Println("Inclusive bool")
 		out.Println("Limit int")
 		out.Println("Offset int")
 		out.Println("OrderBy string")
@@ -81,7 +82,8 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 		wg.Done()
 	}()
 
-	for name, config := range record.fields {
+	for _, f := range record.fieldList() {
+		name, config := f.name, record.fields[f.name]
 		fieldGenerators := fieldMethods(record, name, config, methodReceiver)
 
 		if len(fieldGenerators) == 0 {
@@ -99,11 +101,12 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 	wg.Wait()
 
 	symbols := struct {
+		clauseMap   string
 		clauseSlice string
 		clauseItem  string
 		valueCount  string
 		values      string
-	}{"_clauses", "_item", "_count", "_values"}
+	}{"_map", "_clauses", "_item", "_count", "_values"}
 
 	// With all of our fields having generated non-exported clause generation methods on our struct, we can create the
 	// final 'String' method which iterates over all of these, calling them and adding the non-empty string clauses to
@@ -124,7 +127,13 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 			return out.Returns(writing.EmptyString)
 		}, symbols.clauseSlice)
 
-		return out.Returns(fmt.Sprintf("\"WHERE \" + strings.Join(%s, \" AND \")", symbols.clauseSlice))
+		out.Println("%s := \" AND \"", symbols.clauseMap)
+
+		out.WithIf("%s.Inclusive == true", func(url.Values) error {
+			return out.Println("%s = \" OR \"", symbols.clauseMap)
+		}, scope.Get("receiver"))
+
+		return out.Returns(fmt.Sprintf("\"WHERE \" + strings.Join(%s, %s)", symbols.clauseSlice, symbols.clauseMap))
 	})
 
 	if e != nil {
@@ -348,13 +357,14 @@ func stringMethods(record marlowRecord, fieldName string, fieldConfig url.Values
 	columnReference := fmt.Sprintf("%s.%s", record.table(), columnName)
 
 	symbols := struct {
+		conjunction  string
 		placeholders string
 		item         string
 		values       string
 		statement    string
 		count        string
 		index        string
-	}{"_placeholders", "_value", "_values", "_like", "_count", "_i"}
+	}{"_conjunc", "_placeholders", "_value", "_values", "_like", "_count", "_i"}
 
 	if record.dialect() != "postgres" {
 		symbols.index = "_"
@@ -394,7 +404,13 @@ func stringMethods(record marlowRecord, fieldName string, fieldConfig url.Values
 				return writer.Println("%s = append(%s, %s)", symbols.values, symbols.values, symbols.item)
 			}, symbols.index, symbols.item, likeSlice)
 
-			clauseString := fmt.Sprintf("strings.Join(%s, \" AND \")", symbols.placeholders)
+			writer.Println("%s := \" AND \"", symbols.conjunction)
+
+			writer.WithIf("%s.Inclusive == true", func(url.Values) error {
+				return writer.Println("%s = \" OR \"", symbols.conjunction)
+			}, scope.Get("receiver"))
+
+			clauseString := fmt.Sprintf("strings.Join(%s, %s)", symbols.placeholders, symbols.conjunction)
 			return writer.Returns(clauseString, symbols.values)
 		})
 
@@ -448,7 +464,7 @@ func numericalMethods(record marlowRecord, fieldName string, fieldConfig url.Val
 
 			if record.dialect() == "postgres" {
 				rangeString := fmt.Sprintf(
-					"fmt.Sprintf(\"%s > $%%d AND %s < $%%d\", %s, %s+1)",
+					"fmt.Sprintf(\"(%s > $%%d AND %s < $%%d)\", %s, %s+1)",
 					columnReference,
 					columnReference,
 					symbols.count,
@@ -458,7 +474,7 @@ func numericalMethods(record marlowRecord, fieldName string, fieldConfig url.Val
 				return writer.Returns(rangeString, symbols.values)
 			}
 
-			return writer.Returns(fmt.Sprintf("\"%s > ? AND %s < ?\"", columnReference, columnReference), symbols.values)
+			return writer.Returns(fmt.Sprintf("\"(%s > ? AND %s < ?)\"", columnReference, columnReference), symbols.values)
 		})
 
 		if e == nil {

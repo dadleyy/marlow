@@ -46,6 +46,16 @@ func Test_Book(t *testing.T) {
 			str := fmt.Sprintf("%s", &BookBlueprint{TitleLike: []string{"b"}})
 			g.Assert(str).Equal("WHERE books.title LIKE ?")
 		})
+
+		g.It("allows inclusive (OR) blueprints", func() {
+			str := fmt.Sprintf("%s", &BookBlueprint{
+				TitleLike: []string{"b", "c"},
+				IDRange:   []int{1, 2},
+				Inclusive: true,
+			})
+			expected := "WHERE (books.system_id > ? AND books.system_id < ?) OR books.title LIKE ? OR books.title LIKE ?"
+			g.Assert(str).Equal(expected)
+		})
 	})
 
 	g.Describe("Book model & generated store", func() {
