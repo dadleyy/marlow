@@ -52,6 +52,8 @@ LIBRARY_EXAMPLE_COVERAGE_REPORT=$(LIBRARY_COVERAGE_OUTPUT_DIR)/library.coverage.
 LIBRARY_EXAMPLE_COVERAGE_DISTRIBUTABLE=$(LIBRARY_COVERAGE_OUTPUT_DIR)/library.coverage.html
 LIBRARY_EXAMPLE_TEST_FLAGS=-covermode=atomic $(TEST_VERBOSITY) -coverprofile=$(LIBRARY_EXAMPLE_COVERAGE_REPORT)
 
+.PHONY: all lint test test-example clean clean-example
+
 all: $(EXE)
 
 $(EXE): $(VENDOR_DIR) $(GO_SRC) $(LIB_SRC)
@@ -78,7 +80,9 @@ $(VENDOR_DIR):
 	$(GO) get -v -u github.com/golang/lint/golint
 	$(GLIDE) install
 
-example: $(LIBRARY_EXAMPLE_SRC) $(LIBRARY_EXAMPLE_MAIN) $(EXE)
+example: $(LIBRARY_EXAMPLE_EXE)
+
+$(LIBRARY_EXAMPLE_EXE): $(LIBRARY_EXAMPLE_SRC) $(LIBRARY_EXAMPLE_MAIN) $(EXE)
 	$(GO) get -v github.com/lib/pq
 	$(GO) get -v github.com/mattn/go-sqlite3
 	$(GO) install -v -x github.com/mattn/go-sqlite3
