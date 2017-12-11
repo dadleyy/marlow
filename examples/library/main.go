@@ -3,6 +3,7 @@ package main
 import "os"
 import "log"
 import "fmt"
+import "bytes"
 import _ "github.com/mattn/go-sqlite3"
 import "database/sql"
 import "github.com/dadleyy/marlow/examples/library/data"
@@ -110,7 +111,9 @@ func main() {
 		NameLike: []string{"danny"},
 	})
 
-	authorStore := models.NewAuthorStore(db)
+	queryLog := new(bytes.Buffer)
+
+	authorStore := models.NewAuthorStore(db, queryLog)
 
 	a, e := authorStore.FindAuthors(&models.AuthorBlueprint{
 		ID: []int{1, 2, 3},
@@ -124,7 +127,16 @@ func main() {
 		log.Printf("found author name[%s]", author.Name)
 	}
 
-	bookStore := models.NewBookStore(db)
+	queryLog.Reset()
+
+	bookStore := models.NewBookStore(db, queryLog)
+
+	if _, e := bookStore.CreateBooks(models.Book{Title: "AwesomeBook"}); e != nil {
+		log.Fatalf("unable to create book: %v", e)
+	}
+
+	log.Printf("%v", queryLog.String())
+
 	b, e := bookStore.FindBooks(&models.BookBlueprint{
 		ID: []int{1, 2},
 	})

@@ -18,11 +18,16 @@ type marlowRecord struct {
 	storeChannel chan writing.FuncDecl
 }
 
-func (r *marlowRecord) fieldList() fieldList {
+func (r *marlowRecord) fieldList(filter func(url.Values) bool) fieldList {
 	list := make(fieldList, 0, len(r.fields))
 
 	for name, c := range r.fields {
 		column := fmt.Sprintf("%s.%s", r.table(), c.Get(constants.ColumnConfigOption))
+
+		if filter != nil && filter(c) != true {
+			continue
+		}
+
 		list = append(list, field{name: name, column: column})
 	}
 

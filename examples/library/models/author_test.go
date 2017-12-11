@@ -1,7 +1,9 @@
 package models
 
 import "os"
+import "io"
 import "fmt"
+import "bytes"
 import "strings"
 import "testing"
 import _ "github.com/mattn/go-sqlite3"
@@ -37,6 +39,7 @@ func Test_Author(t *testing.T) {
 	g := goblin.Goblin(t)
 	var db *sql.DB
 	var store AuthorStore
+	var queryLog io.Writer
 
 	dbFile := "author-testing.db"
 	generatedAuthorCount := 150
@@ -149,7 +152,8 @@ func Test_Author(t *testing.T) {
 		})
 
 		g.BeforeEach(func() {
-			store = NewAuthorStore(db)
+			queryLog = new(bytes.Buffer)
+			store = NewAuthorStore(db, queryLog)
 		})
 
 		g.After(func() {

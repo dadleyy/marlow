@@ -14,7 +14,6 @@ script:
   - make
   - make test
   - make test-example
-  - go run marlowc/main.go -input examples/library/models -stdout=true
   - make example
   - pushd ./examples/library && ./library && popd
 after_success:

@@ -60,7 +60,7 @@ func finder(record marlowRecord) io.Reader {
 
 		returns := []string{symbols.recordSlice, "error"}
 
-		fieldList := record.fieldList()
+		fieldList := record.fieldList(nil)
 		defaultLimit := record.config.Get(constants.DefaultLimitConfigOption)
 
 		if defaultLimit == "" {

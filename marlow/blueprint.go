@@ -82,7 +82,7 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 		wg.Done()
 	}()
 
-	for _, f := range record.fieldList() {
+	for _, f := range record.fieldList(nil) {
 		name, config := f.name, record.fields[f.name]
 		fieldGenerators := fieldMethods(record, name, config, methodReceiver)
 

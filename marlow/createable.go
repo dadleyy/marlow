@@ -2,7 +2,6 @@ package marlow
 
 import "io"
 import "fmt"
-import "sort"
 import "net/url"
 import "strings"
 import "github.com/gedex/inflector"
@@ -75,32 +74,26 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 				return gosrc.Returns("0", writing.Nil)
 			}, symbols.recordParam)
 
-			columnList := make([]string, 0, len(record.fields))
+			columns := make([]string, 0, len(record.fields))
 			placeholders := make([]string, 0, len(record.fields))
-			fieldLookup := make(map[string]string, len(record.fields))
 			index := 1
 
-			for field, c := range record.fields {
-				columnName := c.Get(constants.ColumnConfigOption)
+			fields := record.fieldList(func(config url.Values) bool {
+				return config.Get(constants.ColumnAutoIncrementFlag) == ""
+			})
 
-				if c.Get(constants.ColumnAutoIncrementFlag) != "" {
-					continue
-				}
-
-				columnList = append(columnList, columnName)
+			for _, field := range fields {
 				placeholder := "?"
 
 				if record.dialect() == "postgres" {
-					fmtStr := "fmt.Sprintf(\"$%%d\", (%s*(%d-1))+%d)"
-					placeholder = fmt.Sprintf(fmtStr, symbols.recordIndex, len(record.fields), index)
+					fmtStr := "fmt.Sprintf(\"$%%d\", (%s*%d)+%d)"
+					placeholder = fmt.Sprintf(fmtStr, symbols.recordIndex, len(fields), index)
 				}
 
+				columns = append(columns, strings.Split(field.column, ".")[1])
 				placeholders = append(placeholders, placeholder)
-				fieldLookup[columnName] = field
 				index++
 			}
-
-			sort.Strings(columnList)
 
 			gosrc.Println("%s := make([]string, 0, len(%s))", symbols.statementPlaceholderList, symbols.recordParam)
 			gosrc.Println("%s := make([]interface{}, 0, len(%s))", symbols.statementValueList, symbols.recordParam)
@@ -112,11 +105,16 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 					gosrc.Println("%s := %s", symbols.rowValueString, writing.StringSliceLiteral(placeholders))
 				}
 
-				fieldReferences := make([]string, 0, len(columnList))
+				fieldReferences := make([]string, 0, len(placeholders))
 
-				for _, columnName := range columnList {
-					field := fieldLookup[columnName]
-					fieldReferences = append(fieldReferences, fmt.Sprintf("%s.%s", symbols.singleRecord, field))
+				for _, field := range fields {
+					config := record.fields[field.name]
+
+					if config.Get(constants.ColumnAutoIncrementFlag) != "" {
+						continue
+					}
+
+					fieldReferences = append(fieldReferences, fmt.Sprintf("%s.%s", symbols.singleRecord, field.name))
 				}
 
 				gosrc.Println(
@@ -136,13 +134,12 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 
 			gosrc.Println("%s := new(bytes.Buffer)", symbols.queryBuffer)
 
-			insertStatement := fmt.Sprintf("INSERT INTO %s (%s) VALUES %%s;", record.table(), strings.Join(columnList, ","))
+			insertStatement := fmt.Sprintf("INSERT INTO %s (%s) VALUES %%s;", record.table(), strings.Join(columns, ","))
 
 			if record.dialect() == "postgres" {
 				template := "INSERT INTO %s (%s) VALUES %%s RETURNING %s;"
-				columns := strings.Join(columnList, ",")
 				primary := record.primaryKeyColumn()
-				insertStatement = fmt.Sprintf(template, record.table(), columns, primary)
+				insertStatement = fmt.Sprintf(template, record.table(), strings.Join(columns, ","), primary)
 			}
 
 			gosrc.Println(
@@ -150,6 +147,14 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 				symbols.queryBuffer,
 				insertStatement,
 				symbols.statementPlaceholderList,
+			)
+
+			gosrc.Println(
+				"fmt.Fprintf(%s.%s, \"%%s | values(%%v)\", %s.String(), %s)",
+				scope.Get("receiver"),
+				constants.StoreLoggerField,
+				symbols.queryBuffer,
+				symbols.statementValueList,
 			)
 
 			gosrc.Println(
