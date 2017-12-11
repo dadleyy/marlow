@@ -1,6 +1,9 @@
 package constants
 
 const (
+	// StoreLoggerField is the internal field on stores for the io.Writer log stream
+	StoreLoggerField = "logger"
+
 	// PrimaryKeyColumnConfigOption specifies the primary key on the record
 	PrimaryKeyColumnConfigOption = "primaryKey"
 

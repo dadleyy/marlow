@@ -96,8 +96,10 @@ func Test_StoreGenerator(t *testing.T) {
 			g.It("injects fmt and sql packages into import stream", func() {
 				io.Copy(scaffold.output, scaffold.g())
 				scaffold.close()
-				g.Assert(len(scaffold.received)).Equal(1)
 				g.Assert(scaffold.received["database/sql"]).Equal(true)
+				g.Assert(scaffold.received["io"]).Equal(true)
+				g.Assert(scaffold.received["os"]).Equal(true)
+				g.Assert(len(scaffold.received)).Equal(3)
 			})
 
 			g.It("writes valid golang code if store name is present", func() {

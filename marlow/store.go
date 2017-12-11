@@ -5,12 +5,14 @@ import "fmt"
 import "strings"
 import "net/url"
 import "github.com/dadleyy/marlow/marlow/writing"
+import "github.com/dadleyy/marlow/marlow/constants"
 
 func writeStore(destination io.Writer, record marlowRecord, storeMethods map[string]writing.FuncDecl) error {
 	out := writing.NewGoWriter(destination)
 
 	e := out.WithStruct(record.store(), func(url.Values) error {
 		out.Println("*sql.DB")
+		out.Println("%s io.Writer", constants.StoreLoggerField)
 		return nil
 	})
 
@@ -19,18 +21,29 @@ func writeStore(destination io.Writer, record marlowRecord, storeMethods map[str
 	}
 
 	symbols := struct {
-		dbParam string
-	}{"_db"}
+		dbParam     string
+		queryLogger string
+	}{"_db", "_logger"}
 
 	params := []writing.FuncParam{
 		{Type: "*sql.DB", Symbol: symbols.dbParam},
+		{Type: "io.Writer", Symbol: symbols.queryLogger},
 	}
 
 	returns := []string{record.external()}
 
 	e = out.WithFunc(fmt.Sprintf("New%s", record.external()), params, returns, func(url.Values) error {
-		out.Println("return &%s{%s}", record.store(), symbols.dbParam)
-		return nil
+		out.WithIf("%s == nil", func(url.Values) error {
+			return out.Println("%s, _ = os.Open(os.DevNull)", symbols.queryLogger)
+		}, symbols.queryLogger)
+
+		return out.Println(
+			"return &%s{DB: %s, %s: %s}",
+			record.store(),
+			symbols.dbParam,
+			constants.StoreLoggerField,
+			symbols.queryLogger,
+		)
 	})
 
 	if e != nil {
@@ -56,7 +69,7 @@ func writeStore(destination io.Writer, record marlowRecord, storeMethods map[str
 		return nil
 	})
 
-	record.registerImports("database/sql")
+	record.registerImports("database/sql", "io", "os")
 	return e
 }
 

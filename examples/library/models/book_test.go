@@ -1,7 +1,9 @@
 package models
 
 import "os"
+import "io"
 import "fmt"
+import "bytes"
 import "strings"
 import "testing"
 import _ "github.com/mattn/go-sqlite3"
@@ -35,6 +37,7 @@ func addBookRow(db *sql.DB, values ...[]string) error {
 func Test_Book(t *testing.T) {
 	var db *sql.DB
 	var store BookStore
+	var queryLog io.Writer
 
 	g := goblin.Goblin(t)
 	testBookCount := 150
@@ -77,7 +80,8 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.BeforeEach(func() {
-			store = NewBookStore(db)
+			queryLog = new(bytes.Buffer)
+			store = NewBookStore(db, queryLog)
 		})
 
 		g.After(func() {
