@@ -10,7 +10,9 @@ VENDOR_DIR=vendor
 LINT=golint
 LINT_FLAGS=-set_exit_status
 
-EXE=./bin/marlowc
+DIST_DIR=./dist
+
+EXE=$(DIST_DIR)/marlow/bin/marlowc
 MAIN=$(wildcard ./marlowc/main.go)
 
 BINDATA=go-bindata
@@ -47,7 +49,7 @@ TEST_VERBOSITY=-v
 TEST_FLAGS=-covermode=atomic $(TEST_VERBOSITY) -coverprofile={{.Dir}}/.coverprofile
 TEST_LIST_FMT='{{if len .TestGoFiles}}"go test {{.ImportPath}} $(TEST_FLAGS)"{{end}}'
 
-LIBRARY_COVERAGE_OUTPUT_DIR=./dist/coverage
+LIBRARY_COVERAGE_OUTPUT_DIR=$(DIST_DIR)/coverage
 LIBRARY_EXAMPLE_COVERAGE_REPORT=$(LIBRARY_COVERAGE_OUTPUT_DIR)/library.coverage.txt
 LIBRARY_EXAMPLE_COVERAGE_DISTRIBUTABLE=$(LIBRARY_COVERAGE_OUTPUT_DIR)/library.coverage.html
 LIBRARY_EXAMPLE_TEST_FLAGS=-covermode=atomic $(TEST_VERBOSITY) -coverprofile=$(LIBRARY_EXAMPLE_COVERAGE_REPORT)
@@ -107,5 +109,6 @@ clean: clean-example
 	rm -rf $(LINT_RESULT)
 	rm -rf $(VENDOR_DIR)
 	rm -rf $(EXE)
+	rm -rf $(DIST_DIR)
 	rm -rf $(LIBRARY_DATA_DIR)/schema.go
 	rm -rf $(LIBRARY_DATA_DIR)/genres.go

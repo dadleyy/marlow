@@ -8,3 +8,4 @@ import:
 - package: github.com/gedex/inflector
 - package: github.com/franela/goblin
   version: ^0.0.1
+- package: github.com/dustin/go-humanize
