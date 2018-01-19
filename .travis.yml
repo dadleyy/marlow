@@ -1,4 +1,6 @@
 dist: trusty
+addons:
+  postgresql: "9.6"
 language: go
 services:
   - postgresql
