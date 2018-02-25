@@ -2,7 +2,7 @@ GO=go
 
 COMPILE=$(GO) build
 LDFLAGS="-s -w"
-BUILD_FLAGS=-x -v -ldflags $(LDFLAGS)
+BUILD_FLAGS=-x -v -ldflags $(LDFLAGS) -a
 
 GLIDE=glide
 VENDOR_DIR=vendor

@@ -1,5 +1,5 @@
 hash: f01968c098f896b4e9b97fa4b38e8ee3e13ad8c8aa1daab736d872f22463a571
-updated: 2017-12-13T10:50:23.621023589-05:00
+updated: 2018-02-25T11:55:29.759498125-05:00
 imports:
 - name: github.com/dustin/go-humanize
   version: bb3d318650d48840a39aa21a027c6630e198e626
@@ -12,7 +12,7 @@ imports:
 - name: github.com/mattn/go-sqlite3
   version: ca5e3819723d8eeaf170ad510e7da1d6d2e94a08
 - name: github.com/vbauerster/mpb
-  version: c3f4de968cf14bbfac144e59e2835094e2dbd6b3
+  version: dac08dfacedfef1da943f0491a430e4a8edf5bb0
   subpackages:
   - cwriter
   - decor
