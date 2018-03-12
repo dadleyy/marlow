@@ -46,8 +46,8 @@ VET_FLAGS=
 MAX_TEST_CONCURRENCY=1
 
 TEST_VERBOSITY=-v
-TEST_FLAGS=-covermode=atomic $(TEST_VERBOSITY) -coverprofile={{.Dir}}/.coverprofile
-TEST_LIST_FMT='{{if len .TestGoFiles}}"go test {{.ImportPath}} $(TEST_FLAGS)"{{end}}'
+TEST_FLAGS=-covermode=atomic $(TEST_VERBOSITY) -coverprofile=$(TEST_COVERAGE_REPORT)
+TEST_COVERAGE_REPORT=./.coverprofile
 
 LIBRARY_COVERAGE_OUTPUT_DIR=$(DIST_DIR)/coverage
 LIBRARY_EXAMPLE_COVERAGE_REPORT=$(LIBRARY_COVERAGE_OUTPUT_DIR)/library.coverage.txt
@@ -71,7 +71,7 @@ test: $(GO_SRC) $(VENDOR_DIR) $(INTERCHANGE_OBJ) lint
 	$(VET) $(VET_FLAGS) $(MAIN)
 	$(CYCLO) $(CYCLO_FLAGS) $(LIB_SRC)
 	$(MISSPELL) -error $(LIB_SRC) $(MAIN)
-	$(GO) list -f $(TEST_LIST_FMT) $(LIB_DIR)/... | xargs -L 1 sh -c
+	$(GO) test $(TEST_FLAGS) $(LIB_DIR)/...
 	$(GOVER) $(LIB_DIR) $(GOVER_REPORT)
 
 $(VENDOR_DIR):
@@ -105,10 +105,9 @@ clean-example:
 	rm -rf $(LIBRARY_COVERAGE_OUTPUT_DIR)
 
 clean: clean-example
-	rm -rf $(COVERAGE_REPORT)
-	rm -rf $(LINT_RESULT)
 	rm -rf $(VENDOR_DIR)
 	rm -rf $(EXE)
 	rm -rf $(DIST_DIR)
 	rm -rf $(LIBRARY_DATA_DIR)/schema.go
 	rm -rf $(LIBRARY_DATA_DIR)/genres.go
+	rm -rf $(TEST_COVERAGE_REPORT)

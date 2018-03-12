@@ -3,8 +3,6 @@ language: go
 services:
   - postgresql
 go:
-  - "1.8"
-  - "1.9"
   - "1.10"
 before_script:
   - psql -c 'create database marlow_test;' -U postgres
