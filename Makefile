@@ -46,8 +46,8 @@ VET_FLAGS=
 MAX_TEST_CONCURRENCY=1
 
 TEST_VERBOSITY=-v
-TEST_FLAGS=-covermode=atomic $(TEST_VERBOSITY) -coverprofile=$(TEST_COVERAGE_REPORT)
 TEST_COVERAGE_REPORT=./.coverprofile
+TEST_FLAGS=-covermode=atomic $(TEST_VERBOSITY) -coverprofile=$(TEST_COVERAGE_REPORT)
 
 LIBRARY_COVERAGE_OUTPUT_DIR=$(DIST_DIR)/coverage
 LIBRARY_EXAMPLE_COVERAGE_REPORT=$(LIBRARY_COVERAGE_OUTPUT_DIR)/library.coverage.txt
@@ -72,7 +72,7 @@ test: $(GO_SRC) $(VENDOR_DIR) $(INTERCHANGE_OBJ) lint
 	$(CYCLO) $(CYCLO_FLAGS) $(LIB_SRC)
 	$(MISSPELL) -error $(LIB_SRC) $(MAIN)
 	$(GO) test $(TEST_FLAGS) $(LIB_DIR)/...
-	$(GOVER) $(LIB_DIR) $(GOVER_REPORT)
+	$(GOVER) $(TEST_COVERAGE_REPORT) $(GOVER_REPORT)
 
 $(VENDOR_DIR):
 	$(GO) get -v -u github.com/modocache/gover
@@ -106,8 +106,6 @@ clean-example:
 
 clean: clean-example
 	rm -rf $(VENDOR_DIR)
-	rm -rf $(EXE)
-	rm -rf $(DIST_DIR)
-	rm -rf $(LIBRARY_DATA_DIR)/schema.go
-	rm -rf $(LIBRARY_DATA_DIR)/genres.go
-	rm -rf $(TEST_COVERAGE_REPORT)
+	rm -rf $(EXE) $(DIST_DIR)
+	rm -rf $(LIBRARY_DATA_DIR)/schema.go $(LIBRARY_DATA_DIR)/genres.go
+	rm -rf $(TEST_COVERAGE_REPORT) $(GOVER_REPORT)
