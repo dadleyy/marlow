@@ -84,7 +84,6 @@ func Test_Blueprint(t *testing.T) {
 		})
 
 		g.Describe("with some valid fields", func() {
-
 			g.BeforeEach(func() {
 				f["Name"] = url.Values{
 					"type":   []string{"string"},
@@ -99,6 +98,11 @@ func Test_Blueprint(t *testing.T) {
 				f["CompanyID"] = url.Values{
 					"type":   []string{"sql.NullInt64"},
 					"column": []string{"company_id"},
+				}
+
+				f["Birthday"] = url.Values{
+					"type":   []string{"time.Time"},
+					"column": []string{"birthday"},
 				}
 
 				r.Set(constants.BlueprintNameConfigOption, "SomeBlueprint")

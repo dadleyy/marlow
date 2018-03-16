@@ -56,7 +56,6 @@ func updater(record marlowRecord, fieldName string, fieldConfig url.Values) io.R
 	returns := []string{
 		"int64",
 		"error",
-		"string",
 	}
 
 	go func() {
@@ -92,7 +91,7 @@ func updater(record marlowRecord, fieldName string, fieldConfig url.Values) io.R
 			)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				return gosrc.Returns("-1", symbols.statementError, fmt.Sprintf("%s.String()", symbols.queryString))
+				return gosrc.Returns("-1", symbols.statementError)
 			}, symbols.statementError)
 
 			gosrc.Println("defer %s.Close()", symbols.statementResult)
@@ -127,16 +126,16 @@ func updater(record marlowRecord, fieldName string, fieldConfig url.Values) io.R
 			)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				return gosrc.Returns("-1", symbols.queryError, fmt.Sprintf("%s.String()", symbols.queryString))
+				return gosrc.Returns("-1", symbols.queryError)
 			}, symbols.queryError)
 
 			gosrc.Println("%s, %s := %s.RowsAffected()", symbols.rowCount, symbols.rowError, symbols.queryResult)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				return gosrc.Returns("-1", symbols.rowError, fmt.Sprintf("%s.String()", symbols.queryString))
+				return gosrc.Returns("-1", symbols.rowError)
 			}, symbols.rowError)
 
-			return gosrc.Returns(symbols.rowCount, writing.Nil, fmt.Sprintf("%s.String()", symbols.queryString))
+			return gosrc.Returns(symbols.rowCount, writing.Nil)
 		})
 
 		if e == nil {
