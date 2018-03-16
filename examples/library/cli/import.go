@@ -29,6 +29,7 @@ type importJSONSource struct {
 	Imports importModelList `json:"imports"`
 }
 
+// Import is the used by the example app that uses a json file and the generate store interfaces to populate records.
 func Import(stores *models.Stores, args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("must provide a filename")

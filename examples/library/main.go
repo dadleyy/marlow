@@ -4,6 +4,8 @@ import "os"
 import "fmt"
 import "flag"
 import "bytes"
+import _ "github.com/lib/pq"
+import _ "github.com/mattn/go-sqlite3"
 import "github.com/dadleyy/marlow/examples/library/cli"
 import "github.com/dadleyy/marlow/examples/library/models"
 
