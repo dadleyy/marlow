@@ -70,6 +70,8 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 		}
 
 		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
+			logwriter := logWriter{output: gosrc, receiver: scope.Get("receiver")}
+
 			gosrc.WithIf("len(%s) == 0", func(url.Values) error {
 				return gosrc.Returns("0", writing.Nil)
 			}, symbols.recordParam)
@@ -150,13 +152,7 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 				symbols.statementPlaceholderList,
 			)
 
-			gosrc.Println(
-				"fmt.Fprintf(%s.%s, \"%%s | values(%%v)\\n\", %s.String(), %s)",
-				scope.Get("receiver"),
-				constants.StoreLoggerField,
-				symbols.queryBuffer,
-				symbols.statementValueList,
-			)
+			logwriter.AddLog(symbols.queryBuffer, symbols.statementValueList)
 
 			gosrc.Println(
 				"%s, %s := %s.Prepare(%s.String())",

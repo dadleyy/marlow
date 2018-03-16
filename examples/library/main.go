@@ -3,6 +3,7 @@ package main
 import "os"
 import "fmt"
 import "flag"
+import "bytes"
 import "github.com/dadleyy/marlow/examples/library/cli"
 import "github.com/dadleyy/marlow/examples/library/models"
 
@@ -42,12 +43,13 @@ func main() {
 		cmd = cli.Browse
 	}
 
-	stores := connections.Stores(os.Stdout)
+	logdump := new(bytes.Buffer)
+	stores := connections.Stores(logdump)
 
 	if e := cmd(stores, flag.Args()[1:]); e != nil {
 		fmt.Printf("error: %s\n", e.Error())
 		os.Exit(2)
 	}
 
-	fmt.Println("done.")
+	fmt.Printf("done, queries:\n%s\n", logdump.String())
 }

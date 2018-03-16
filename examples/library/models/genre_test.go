@@ -97,7 +97,7 @@ func Test_Genre(t *testing.T) {
 				g.Assert(e).Equal(nil)
 				g.Assert(queryLog.Len() > 0).Equal(true)
 
-				results, e := store.SelectNames(&GenreBlueprint{
+				results, e := store.SelectGenreNames(&GenreBlueprint{
 					ID: []uint{uint(id)},
 				})
 
@@ -135,7 +135,7 @@ func Test_Genre(t *testing.T) {
 				})
 
 				g.It("supports selecting parent ids", func() {
-					parents, e := store.SelectParentIDs(&GenreBlueprint{
+					parents, e := store.SelectGenreParentIDs(&GenreBlueprint{
 						ID: []uint{uint(lastID)},
 					})
 					g.Assert(e).Equal(nil)
@@ -173,7 +173,7 @@ func Test_Genre(t *testing.T) {
 				})
 
 				g.It("allows selecting by genre name like", func() {
-					ids, e := store.SelectIDs(&GenreBlueprint{
+					ids, e := store.SelectGenreIDs(&GenreBlueprint{
 						NameLike: []string{"%%Fiction%%"},
 					})
 					g.Assert(e).Equal(nil)
@@ -204,7 +204,7 @@ func Test_Genre(t *testing.T) {
 					_, e := store.UpdateGenreName("Politics", bp)
 					g.Assert(e).Equal(nil)
 
-					names, e := store.SelectNames(bp)
+					names, e := store.SelectGenreNames(bp)
 					g.Assert(e).Equal(nil)
 					g.Assert(len(names)).Equal(1)
 					g.Assert(names[0]).Equal("Politics")
@@ -236,7 +236,7 @@ func Test_Genre(t *testing.T) {
 					_, e := store.UpdateGenreParentID(&p, bp)
 					g.Assert(e).Equal(nil)
 
-					ids, e := store.SelectParentIDs(bp)
+					ids, e := store.SelectGenreParentIDs(bp)
 
 					g.Assert(e).Equal(nil)
 					g.Assert(len(ids)).Equal(1)
@@ -247,7 +247,7 @@ func Test_Genre(t *testing.T) {
 					_, e = store.UpdateGenreParentID(&p, bp)
 					g.Assert(e).Equal(nil)
 
-					ids, e = store.SelectParentIDs(bp)
+					ids, e = store.SelectGenreParentIDs(bp)
 					g.Assert(e).Equal(nil)
 					g.Assert(len(ids)).Equal(1)
 					g.Assert(ids[0].Valid).Equal(false)
@@ -258,7 +258,7 @@ func Test_Genre(t *testing.T) {
 					_, e := store.UpdateGenreID(1337, bp)
 					g.Assert(e).Equal(nil)
 
-					ids, e := store.SelectIDs(bp)
+					ids, e := store.SelectGenreIDs(bp)
 					g.Assert(e).Equal(nil)
 					g.Assert(len(ids)).Equal(1)
 					g.Assert(ids[0]).Equal(uint(1337))

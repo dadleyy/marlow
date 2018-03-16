@@ -22,6 +22,7 @@ type Block func(url.Values) error
 type GoWriter interface {
 	WritePackage(string)
 	WriteImport(string)
+	WriteCall(...string) error
 	WithFunc(string, []FuncParam, []string, Block) error
 	WithMethod(string, string, []FuncParam, []string, Block) error
 	WithIf(string, Block, ...interface{}) error

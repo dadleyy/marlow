@@ -132,17 +132,17 @@ func Test_MultiAuto(t *testing.T) {
 			})
 
 			g.It("allows the consumer to select names", func() {
-				_, e := store.SelectNames(&MultiAutoBlueprint{Limit: 1})
+				_, e := store.SelectMultiAutoNames(&MultiAutoBlueprint{Limit: 1})
 				g.Assert(e).Equal(nil)
 			})
 
 			g.It("allows the consumer to select statuses", func() {
-				_, e := store.SelectStatuses(&MultiAutoBlueprint{Limit: 1})
+				_, e := store.SelectMultiAutoStatuses(&MultiAutoBlueprint{Limit: 1})
 				g.Assert(e).Equal(nil)
 			})
 
 			g.It("allows the consumer to select ids", func() {
-				_, e := store.SelectIDs(&MultiAutoBlueprint{Limit: 1})
+				_, e := store.SelectMultiAutoIDs(&MultiAutoBlueprint{Limit: 1})
 				g.Assert(e).Equal(nil)
 			})
 		})

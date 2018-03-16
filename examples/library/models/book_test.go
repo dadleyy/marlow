@@ -122,7 +122,7 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.It("allows the consumer to select series id", func() {
-			ids, e := store.SelectSeriesIDs(&BookBlueprint{ID: []int{1}})
+			ids, e := store.SelectBookSeriesIDs(&BookBlueprint{ID: []int{1}})
 			g.Assert(e).Equal(nil)
 			g.Assert(ids[0].Valid).Equal(false)
 		})
@@ -220,7 +220,7 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.It("allows the consumer to select explicit book ids", func() {
-			results, e := store.SelectIDs(&BookBlueprint{
+			results, e := store.SelectBookIDs(&BookBlueprint{
 				ID: []int{1, 2},
 			})
 			g.Assert(e).Equal(nil)
@@ -238,7 +238,7 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.It("allows the consumer to select explicit book titles", func() {
-			results, e := store.SelectTitles(&BookBlueprint{
+			results, e := store.SelectBookTitles(&BookBlueprint{
 				ID: []int{1, 2},
 			})
 			g.Assert(e).Equal(nil)
@@ -247,7 +247,7 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.It("allows the consumer to select explicit author ids", func() {
-			results, e := store.SelectAuthorIDs(&BookBlueprint{
+			results, e := store.SelectBookAuthorIDs(&BookBlueprint{
 				ID: []int{1, 2},
 			})
 			g.Assert(e).Equal(nil)
@@ -317,7 +317,7 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.It("allows the consumer to select explicit year published", func() {
-			results, e := store.SelectYearPublisheds(&BookBlueprint{
+			results, e := store.SelectBookYearPublisheds(&BookBlueprint{
 				ID: []int{1, 2},
 			})
 			g.Assert(e).Equal(nil)

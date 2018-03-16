@@ -83,7 +83,7 @@ func Import(stores *models.Stores, args []string) error {
 			continue
 		}
 
-		aid, e := stores.Authors.SelectIDs(&models.AuthorBlueprint{
+		aid, e := stores.Authors.SelectAuthorIDs(&models.AuthorBlueprint{
 			Name: []string{authorName},
 		})
 

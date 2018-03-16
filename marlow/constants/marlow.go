@@ -6,6 +6,9 @@ const (
 
 	// IgnoreSourceDirective is the text that, if found, will prevent marlow from compiling the source.
 	IgnoreSourceDirective = "marlow:ignore"
+
+	// LoggerStatementPrefix is prepended to every line logged during queries.
+	LoggerStatementPrefix = "[marlow] "
 )
 
 var (

@@ -37,6 +37,7 @@ func newRecordConfig(typeName string) url.Values {
 	config.Set(constants.StoreFindMethodPrefixConfigOption, "Find")
 	config.Set(constants.StoreCountMethodPrefixConfigOption, "Count")
 	config.Set(constants.UpdateFieldMethodPrefixConfigOption, "Update")
+	config.Set(constants.StoreSelectMethodPrefixConfigOption, "Select")
 	return config
 }
 

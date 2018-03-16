@@ -17,6 +17,21 @@ type goWriter struct {
 	*log.Logger
 }
 
+func (w *goWriter) WriteCall(parts ...string) error {
+	if len(parts) == 0 {
+		return nil
+	}
+
+	formatted := fmt.Sprintf("%s()", parts[0])
+
+	if len(parts) > 1 {
+		formatted = fmt.Sprintf("%s(%s)", parts[0], strings.Join(parts[1:], ","))
+	}
+
+	w.Logger.Printf("%s\n", formatted)
+	return nil
+}
+
 func (w *goWriter) Println(msg string, extras ...interface{}) error {
 	formatted := fmt.Sprintf(msg, extras...)
 	w.Logger.Printf("%s\n", formatted)

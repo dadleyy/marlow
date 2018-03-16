@@ -22,12 +22,15 @@ type finderSymbols struct {
 	offset          string
 }
 
+// finter builds a generator that is responsible for creating the FindRecord methods for a given record store.
 func finder(record marlowRecord) io.Reader {
+	pr, pw := io.Pipe()
+
+	// Build the method name.
 	methodName := fmt.Sprintf("%s%s",
 		record.config.Get(constants.StoreFindMethodPrefixConfigOption),
 		inflector.Pluralize(record.name()),
 	)
-	pr, pw := io.Pipe()
 
 	if len(record.fields) == 0 {
 		pw.CloseWithError(nil)
@@ -69,6 +72,8 @@ func finder(record marlowRecord) io.Reader {
 		}
 
 		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
+			logwriter := logWriter{output: gosrc, receiver: scope.Get("receiver")}
+
 			// Prepare the array that will be returned.
 			gosrc.Println("%s := make(%s, 0)\n", symbols.results, symbols.recordSlice)
 			defer gosrc.Returns(symbols.results, writing.Nil)
@@ -124,13 +129,7 @@ func finder(record marlowRecord) io.Reader {
 				symbols.offset,
 			)
 
-			// Log out the query.
-			gosrc.Println(
-				"fmt.Fprintf(%s.%s, \"%%s\\n\", %s)",
-				scope.Get("receiver"),
-				constants.StoreLoggerField,
-				symbols.queryString,
-			)
+			logwriter.AddLog(symbols.queryString, fmt.Sprintf("%s.Values()", symbols.blueprint))
 
 			// Write the query execution statement.
 			gosrc.Println(
@@ -162,6 +161,7 @@ func finder(record marlowRecord) io.Reader {
 				return gosrc.Returns(writing.Nil, symbols.queryError)
 			}, symbols.queryError)
 
+			// Build the iteration that will loop over the row results, scanning them into real records.
 			return gosrc.WithIter("%s.Next()", func(url.Values) error {
 				gosrc.Println("var %s %s", symbols.rowItem, record.name())
 				references := make([]string, 0, len(record.fields))
@@ -171,8 +171,9 @@ func finder(record marlowRecord) io.Reader {
 				}
 
 				scans := strings.Join(references, ",")
-				condition := fmt.Sprintf("e := %s.Scan(%s); e != nil", symbols.queryResult, scans)
 
+				// Write the scan attempt and check for errors.
+				condition := fmt.Sprintf("e := %s.Scan(%s); e != nil", symbols.queryResult, scans)
 				gosrc.WithIf(condition, func(url.Values) error {
 					gosrc.Println("return nil, e")
 					return nil
@@ -202,17 +203,18 @@ func finder(record marlowRecord) io.Reader {
 }
 
 type counterSymbols struct {
-	countMethodName    string
-	blueprintParamName string
-	StatementQuery     string
-	statementResult    string
-	statementError     string
-	queryResult        string
-	queryError         string
-	ScanResult         string
-	scanError          string
+	countMethodName string
+	blueprint       string
+	StatementQuery  string
+	statementResult string
+	statementError  string
+	queryResult     string
+	queryError      string
+	ScanResult      string
+	scanError       string
 }
 
+// counter generates the CountRecords methods for a given record store.
 func counter(record marlowRecord) io.Reader {
 	pr, pw := io.Pipe()
 	methodPrefix := record.config.Get(constants.StoreCountMethodPrefixConfigOption)
@@ -223,15 +225,15 @@ func counter(record marlowRecord) io.Reader {
 	}
 
 	symbols := counterSymbols{
-		countMethodName:    fmt.Sprintf("%s%s", methodPrefix, inflector.Pluralize(record.name())),
-		blueprintParamName: "_blueprint",
-		StatementQuery:     "_raw",
-		statementError:     "_statementError",
-		statementResult:    "_statement",
-		queryResult:        "_queryResult",
-		queryError:         "_queryError",
-		ScanResult:         "_scanResult",
-		scanError:          "_scanError",
+		countMethodName: fmt.Sprintf("%s%s", methodPrefix, inflector.Pluralize(record.name())),
+		blueprint:       "_blueprint",
+		StatementQuery:  "_raw",
+		statementError:  "_statementError",
+		statementResult: "_statement",
+		queryResult:     "_queryResult",
+		queryError:      "_queryError",
+		ScanResult:      "_scanResult",
+		scanError:       "_scanError",
 	}
 
 	go func() {
@@ -239,7 +241,7 @@ func counter(record marlowRecord) io.Reader {
 		gosrc.Comment("[marlow feature]: counter on table[%s]", record.table())
 
 		params := []writing.FuncParam{
-			{Symbol: symbols.blueprintParamName, Type: fmt.Sprintf("*%s", record.blueprint())},
+			{Symbol: symbols.blueprint, Type: fmt.Sprintf("*%s", record.blueprint())},
 		}
 
 		returns := []string{
@@ -249,16 +251,20 @@ func counter(record marlowRecord) io.Reader {
 
 		e := gosrc.WithMethod(symbols.countMethodName, record.store(), params, returns, func(scope url.Values) error {
 			receiver := scope.Get("receiver")
+			logwriter := logWriter{output: gosrc, receiver: receiver}
+
 			gosrc.WithIf("%s == nil", func(url.Values) error {
 				return gosrc.Println("%s = &%s{}", params[0].Symbol, record.blueprint())
-			}, symbols.blueprintParamName)
+			}, symbols.blueprint)
 
 			gosrc.Println(
 				"%s := fmt.Sprintf(\"SELECT COUNT(*) FROM %s %%s;\", %s)",
 				symbols.StatementQuery,
 				record.table(),
-				symbols.blueprintParamName,
+				symbols.blueprint,
 			)
+
+			logwriter.AddLog(symbols.StatementQuery, fmt.Sprintf("%s.Values()", symbols.blueprint))
 
 			gosrc.Println(
 				"%s, %s := %s.Prepare(%s)",
@@ -274,12 +280,13 @@ func counter(record marlowRecord) io.Reader {
 
 			gosrc.Println("defer %s.Close()", symbols.statementResult)
 
+			// Write the query execution, using the blueprint Values().
 			gosrc.Println(
 				"%s, %s := %s.Query(%s.Values()...)",
 				symbols.queryResult,
 				symbols.queryError,
 				symbols.statementResult,
-				symbols.blueprintParamName,
+				symbols.blueprint,
 			)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
@@ -292,6 +299,7 @@ func counter(record marlowRecord) io.Reader {
 				return gosrc.Returns("-1", "fmt.Errorf(\"invalid-scan\")")
 			}, symbols.queryResult)
 
+			// Scan the result into it's integer form.
 			gosrc.Println("var %s int", symbols.ScanResult)
 			gosrc.Println("%s := %s.Scan(&%s)", symbols.scanError, symbols.queryResult, symbols.ScanResult)
 
@@ -324,16 +332,25 @@ type selectorSymbols struct {
 	queryString     string
 	statementResult string
 	statementError  string
-	blueprintParam  string
+	blueprint       string
 	rowItem         string
 	scanError       string
 	limit           string
 	offset          string
 }
 
+// selector will return a generator that will product a single field selection method for a given record store.
 func selector(record marlowRecord, fieldName string, fieldConfig url.Values) io.Reader {
 	pr, pw := io.Pipe()
-	methodName := fmt.Sprintf("Select%s", inflector.Pluralize(fieldName))
+
+	// Build this field's select method name - will take the form "SelectAuthorIDs", "SelectAuthorNames".
+	methodName := fmt.Sprintf(
+		"%s%s%s",
+		record.config.Get(constants.StoreSelectMethodPrefixConfigOption),
+		record.name(),
+		inflector.Pluralize(fieldName),
+	)
+
 	columnName := fieldConfig.Get(constants.ColumnConfigOption)
 
 	returnItemType := fieldConfig.Get("type")
@@ -352,14 +369,14 @@ func selector(record marlowRecord, fieldName string, fieldConfig url.Values) io.
 		statementResult: "_statement",
 		statementError:  "_se",
 		scanError:       "_re",
-		blueprintParam:  "_blueprint",
+		blueprint:       "_blueprint",
 		rowItem:         "_row",
 		limit:           "_limit",
 		offset:          "_offset",
 	}
 
 	params := []writing.FuncParam{
-		{Type: fmt.Sprintf("*%s", record.blueprint()), Symbol: symbols.blueprintParam},
+		{Type: fmt.Sprintf("*%s", record.blueprint()), Symbol: symbols.blueprint},
 	}
 
 	columnReference := fmt.Sprintf("%s.%s", record.table(), columnName)
@@ -370,6 +387,7 @@ func selector(record marlowRecord, fieldName string, fieldConfig url.Values) io.
 		gosrc.Comment("[marlow] field selector for %s (%s) [print: %s]", fieldName, methodName, record.blueprint())
 
 		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
+			logwriter := logWriter{output: gosrc, receiver: scope.Get("receiver")}
 			gosrc.Println("%s := make(%s, 0)", symbols.returnSlice, returnArrayType)
 
 			gosrc.Println(
@@ -381,32 +399,26 @@ func selector(record marlowRecord, fieldName string, fieldConfig url.Values) io.
 
 			// Write our where clauses
 			gosrc.WithIf("%s != nil", func(url.Values) error {
-				return gosrc.Println("fmt.Fprintf(%s, \" %%s\", %s)", symbols.queryString, symbols.blueprintParam)
-			}, symbols.blueprintParam)
+				return gosrc.Println("fmt.Fprintf(%s, \" %%s\", %s)", symbols.queryString, symbols.blueprint)
+			}, symbols.blueprint)
+
+			// Apply the limits and offsets to the query
 
 			defaultLimit := record.config.Get(constants.DefaultLimitConfigOption)
-
 			gosrc.Println("%s, %s := %s, 0", symbols.limit, symbols.offset, defaultLimit)
 
 			gosrc.WithIf("%s != nil && %s.Offset > 0", func(url.Values) error {
-				return gosrc.Println("%s = %s.Offset", symbols.offset, symbols.blueprintParam)
-			}, symbols.blueprintParam, symbols.blueprintParam)
+				return gosrc.Println("%s = %s.Offset", symbols.offset, symbols.blueprint)
+			}, symbols.blueprint, symbols.blueprint)
 
 			gosrc.WithIf("%s != nil && %s.Limit > 0", func(url.Values) error {
-				return gosrc.Println("%s = %s.Limit", symbols.limit, symbols.blueprintParam)
-			}, symbols.blueprintParam, symbols.blueprintParam)
+				return gosrc.Println("%s = %s.Limit", symbols.limit, symbols.blueprint)
+			}, symbols.blueprint, symbols.blueprint)
 
 			rangeString := "\" LIMIT %d OFFSET %d\""
-			gosrc.Println("fmt.Fprintf(%s, %s, %s, %s)", symbols.queryString, rangeString, symbols.limit, symbols.offset)
 
-			// Log out the query.
-			gosrc.Println(
-				"fmt.Fprintf(%s.%s, \"%%s %%s\\n\", %s, %s.Values())",
-				scope.Get("receiver"),
-				constants.StoreLoggerField,
-				symbols.queryString,
-				symbols.blueprintParam,
-			)
+			// Write the write statement for adding limit and offset into the query string.
+			gosrc.Println("fmt.Fprintf(%s, %s, %s, %s)", symbols.queryString, rangeString, symbols.limit, symbols.offset)
 
 			// Write the query execution statement.
 			gosrc.Println(
@@ -417,6 +429,8 @@ func selector(record marlowRecord, fieldName string, fieldConfig url.Values) io.
 				symbols.queryString,
 			)
 
+			logwriter.AddLog(symbols.queryString, fmt.Sprintf("%s.Values()", symbols.blueprint))
+
 			gosrc.WithIf("%s != nil", func(url.Values) error {
 				return gosrc.Returns(writing.Nil, symbols.statementError)
 			}, symbols.statementError)
@@ -424,12 +438,13 @@ func selector(record marlowRecord, fieldName string, fieldConfig url.Values) io.
 			// Write out result close deferred statement.
 			gosrc.Println("defer %s.Close()", symbols.statementResult)
 
+			// Write the execution statement using the bluepring values.
 			gosrc.Println(
 				"%s, %s := %s.Query(%s.Values()...)",
 				symbols.queryResult,
 				symbols.queryError,
 				symbols.statementResult,
-				symbols.blueprintParam,
+				symbols.blueprint,
 			)
 
 			gosrc.WithIf("%s != nil", func(url.Values) error {
