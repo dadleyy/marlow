@@ -48,6 +48,7 @@ func newDeleteableGenerator(record marlowRecord) io.Reader {
 
 		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
 			receiver := scope.Get("receiver")
+			logwriter := logWriter{receiver: receiver, output: gosrc}
 
 			gosrc.WithIf("%s == nil || %s.String() == \"\"", func(url.Values) error {
 				return gosrc.Returns("-1", fmt.Sprintf("fmt.Errorf(\"%s\")", constants.InvalidDeletionBlueprint))
@@ -63,6 +64,8 @@ func newDeleteableGenerator(record marlowRecord) io.Reader {
 
 			// Always close the prepared statement.
 			gosrc.Println("defer %s.Close()", symbols.prepared)
+
+			logwriter.AddLog(symbols.statement, fmt.Sprintf("%s.Values()", symbols.blueprint))
 
 			// Executre the prepared statement with the values from the blueprint.
 			gosrc.Println(

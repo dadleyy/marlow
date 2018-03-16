@@ -1,4 +1,9 @@
 {
+  "deletions": {
+    "books": [{
+      "title": "__testing"
+    }]
+  },
   "imports": {
     "books": [{
       "title": "Crime and Punishment",

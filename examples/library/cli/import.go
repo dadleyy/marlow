@@ -6,6 +6,12 @@ import "sync"
 import "encoding/json"
 import "github.com/dadleyy/marlow/examples/library/models"
 
+type deleteModelList struct {
+	Books []struct {
+		Title string `json:"title"`
+	} `json:"books"`
+}
+
 type importModelList struct {
 	Books       []*models.Book   `json:"books"`
 	Authors     []*models.Author `json:"authors"`
@@ -26,7 +32,8 @@ type genreImportChild struct {
 }
 
 type importJSONSource struct {
-	Imports importModelList `json:"imports"`
+	Imports   importModelList `json:"imports"`
+	Deletions deleteModelList `json:"deletions"`
 }
 
 // Import is the used by the example app that uses a json file and the generate store interfaces to populate records.
@@ -52,6 +59,10 @@ func Import(stores *models.Stores, args []string) error {
 	decoder := json.NewDecoder(file)
 	var source importJSONSource
 
+	createdRecordIds := struct {
+		authors []int
+	}{make([]int, 0, len(source.Imports.Authors))}
+
 	if e := decoder.Decode(&source); e != nil {
 		return fmt.Errorf("unable to decode json (e %v)", e)
 	}
@@ -65,8 +76,19 @@ func Import(stores *models.Stores, args []string) error {
 			return fmt.Errorf("failed import on %s (e %v)", a, e)
 		}
 
+		createdRecordIds.authors = append(createdRecordIds.authors, int(id))
 		fmt.Printf(" %d\n", id)
 	}
+
+	fmt.Printf("updating %d authors w/ imported flag... ")
+	authorbp := &models.AuthorBlueprint{ID: createdRecordIds.authors}
+
+	if _, e := stores.Authors.UpdateAuthorAuthorFlags(models.AuthorImported, authorbp); e != nil {
+		fmt.Printf("failed\n")
+		return fmt.Errorf("unable to update authors (e %v)", e)
+	}
+
+	fmt.Printf("success\n")
 
 	children := make(chan genreImportChild)
 	wg := &sync.WaitGroup{}
@@ -171,6 +193,15 @@ func Import(stores *models.Stores, args []string) error {
 		}
 
 		fmt.Printf("%d\n", id)
+	}
+
+	for _, b := range source.Deletions.Books {
+		blueprint := &models.BookBlueprint{Title: []string{b.Title}}
+		_, e := stores.Books.DeleteBooks(blueprint)
+
+		if e != nil {
+			return fmt.Errorf("unable to delete requested books (e %s)", e.Error())
+		}
 	}
 
 	counts := struct {

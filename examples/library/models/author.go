@@ -8,6 +8,14 @@ import "database/sql"
 
 // Example file for testing.
 
+const (
+	// AuthorImported indicates the author was imported from an external source.
+	AuthorImported = 1 << iota
+
+	// AuthorHasMultipleTitles is a convenience value indicating the author has multiple titles.
+	AuthorHasMultipleTitles
+)
+
 // Author represents an author of a book.
 type Author struct {
 	table        bool          `marlow:"tableName=authors"`
