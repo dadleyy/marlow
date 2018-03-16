@@ -23,7 +23,7 @@ type Author struct {
 	Name         string        `marlow:"column=name"`
 	UniversityID sql.NullInt64 `marlow:"column=university_id"`
 	ReaderRating float64       `marlow:"column=rating"`
-	AuthorFlags  uint8         `marlow:"column=flags"`
+	AuthorFlags  uint8         `marlow:"column=flags&bitmask"`
 	Birthday     time.Time     `marlow:"column=birthday"`
 }
 
