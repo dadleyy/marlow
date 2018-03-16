@@ -201,7 +201,7 @@ func Test_Genre(t *testing.T) {
 
 				g.It("allows updating the genre name", func() {
 					bp := &GenreBlueprint{ID: []uint{1}}
-					_, e, _ := store.UpdateGenreName("Politics", bp)
+					_, e := store.UpdateGenreName("Politics", bp)
 					g.Assert(e).Equal(nil)
 
 					names, e := store.SelectNames(bp)
@@ -233,7 +233,7 @@ func Test_Genre(t *testing.T) {
 					p.Scan(100)
 
 					bp := &GenreBlueprint{ID: []uint{1}}
-					_, e, _ := store.UpdateGenreParentID(&p, bp)
+					_, e := store.UpdateGenreParentID(&p, bp)
 					g.Assert(e).Equal(nil)
 
 					ids, e := store.SelectParentIDs(bp)
@@ -244,7 +244,7 @@ func Test_Genre(t *testing.T) {
 					g.Assert(ids[0].Int64).Equal(100)
 
 					p.Scan(nil)
-					_, e, _ = store.UpdateGenreParentID(&p, bp)
+					_, e = store.UpdateGenreParentID(&p, bp)
 					g.Assert(e).Equal(nil)
 
 					ids, e = store.SelectParentIDs(bp)
@@ -255,7 +255,7 @@ func Test_Genre(t *testing.T) {
 
 				g.It("allows updating the genre id", func() {
 					bp := &GenreBlueprint{Name: []string{"Science Fiction"}}
-					_, e, _ := store.UpdateGenreID(1337, bp)
+					_, e := store.UpdateGenreID(1337, bp)
 					g.Assert(e).Equal(nil)
 
 					ids, e := store.SelectIDs(bp)

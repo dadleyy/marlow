@@ -1,0 +1,31 @@
+{
+  "imports": {
+    "books": [{
+      "name": "Crime and Punishment",
+      "year_published": 1866
+    }],
+    "book_authors": [{
+      "author": "Fyodor Dostoevsky",
+      "book": "Crime and Punishment"
+    }],
+    "authors": [{
+      "name": "John Grisham",
+      "birthday": "1955-02-08T00:00:00Z"
+    }, {
+      "name": "J.K Rowling",
+      "birthday": "1965-07-31T00:00:00Z"
+    }, {
+      "name": "Fyodor Dostoevsky",
+      "birthday": "1821-11-11T00:00:00Z"
+    }],
+    "genres": [{
+      "name": "Literature"
+    }, {
+      "name": "Fiction"
+    }, {
+      "name": "Drama"
+    }, {
+      "name": "Crime"
+    }]
+  }
+}

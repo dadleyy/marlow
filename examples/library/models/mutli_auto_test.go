@@ -58,17 +58,17 @@ func Test_MultiAuto(t *testing.T) {
 			})
 
 			g.It("allows consumer to update status", func() {
-				_, e, _ := store.UpdateMultiAutoStatus("updated", updateBlueprint)
+				_, e := store.UpdateMultiAutoStatus("updated", updateBlueprint)
 				g.Assert(e).Equal(nil)
 			})
 
 			g.It("allows consumer to update name", func() {
-				_, e, _ := store.UpdateMultiAutoName("updated", updateBlueprint)
+				_, e := store.UpdateMultiAutoName("updated", updateBlueprint)
 				g.Assert(e).Equal(nil)
 			})
 
 			g.It("allows consumer to update id", func() {
-				_, e, _ := store.UpdateMultiAutoID(2000, updateBlueprint)
+				_, e := store.UpdateMultiAutoID(2000, updateBlueprint)
 				g.Assert(e).Equal(nil)
 			})
 		})

@@ -1,5 +1,7 @@
 package models
 
+import "fmt"
+import "time"
 import "database/sql"
 
 //go:generate marlowc -input author.go
@@ -14,4 +16,9 @@ type Author struct {
 	UniversityID sql.NullInt64 `marlow:"column=university_id"`
 	ReaderRating float64       `marlow:"column=rating"`
 	AuthorFlags  uint8         `marlow:"column=flags"`
+	Birthday     time.Time     `marlow:"column=birthday"`
+}
+
+func (a *Author) String() string {
+	return fmt.Sprintf("%v (born %v)", a.Name, a.Birthday.Format(time.RFC1123))
 }
