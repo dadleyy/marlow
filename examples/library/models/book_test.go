@@ -234,7 +234,7 @@ func Test_Book(t *testing.T) {
 			})
 			g.Assert(e).Equal(nil)
 			title := fmt.Sprintf("%s", results[0])
-			g.Assert(title).Equal("book-1 (2001)")
+			g.Assert(title).Equal("book-1 (published in 2001)")
 		})
 
 		g.It("allows the consumer to select explicit book titles", func() {

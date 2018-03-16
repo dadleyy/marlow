@@ -14,10 +14,10 @@ type Book struct {
 	Title         string        `marlow:"column=title"`
 	AuthorID      int           `marlow:"column=author&references=Author"`
 	SeriesID      sql.NullInt64 `marlow:"column=series"`
-	YearPublished int           `marlow:"column=year_published"`
+	YearPublished int           `marlow:"column=year_published" json:"year_published"`
 }
 
 // String returns the book with good info.
 func (b *Book) String() string {
-	return fmt.Sprintf("%s (%d)", b.Title, b.YearPublished)
+	return fmt.Sprintf("%s (published in %d)", b.Title, b.YearPublished)
 }

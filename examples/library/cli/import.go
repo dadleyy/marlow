@@ -2,6 +2,7 @@ package cli
 
 import "os"
 import "fmt"
+import "sync"
 import "encoding/json"
 import "github.com/dadleyy/marlow/examples/library/models"
 
@@ -9,10 +10,19 @@ type importModelList struct {
 	Books       []*models.Book   `json:"books"`
 	Authors     []*models.Author `json:"authors"`
 	Genres      []*models.Genre  `json:"genres"`
-	BookAuthors []*struct {
+	BookAuthors []struct {
 		Author string
 		Book   string
 	} `json:"book_authors"`
+	GenreTaxonomy []struct {
+		Child  string `json:"name"`
+		Parent string `json:"parent"`
+	} `json:"genre_taxonomy"`
+}
+
+type genreImportChild struct {
+	child  models.Genre
+	parent string
 }
 
 type importJSONSource struct {
@@ -57,8 +67,62 @@ func Import(stores *models.Stores, args []string) error {
 		fmt.Printf(" %d\n", id)
 	}
 
+	children := make(chan genreImportChild)
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		pending := make([]genreImportChild, 0, len(source.Imports.Genres))
+
+		for g := range children {
+			pending = append(pending, g)
+		}
+
+		for _, g := range pending {
+			matches, e := stores.Genres.SelectGenreIDs(&models.GenreBlueprint{Name: []string{g.parent}})
+
+			if e != nil || len(matches) != 1 {
+				fmt.Printf("unable to create genre %s, cant find parent %s (e %v)", g.child.Name, g.parent, e)
+				continue
+			}
+
+			if e := g.child.ParentID.Scan(matches[0]); e != nil {
+				fmt.Printf("unable to create genre %s (e %v)", g.child.Name, e)
+				continue
+			}
+
+			fmt.Printf("importing %s... ", g.child.Name)
+			id, e := stores.Genres.CreateGenres(g.child)
+
+			if e != nil {
+				fmt.Printf("unable to create genre %s (e %v)\n", g.child.Name, e)
+				continue
+			}
+
+			fmt.Printf("%d\n", id)
+		}
+
+		wg.Done()
+	}()
+
 	for _, g := range source.Imports.Genres {
+		parent := ""
 		fmt.Printf("importing %s...", g)
+
+		for _, t := range source.Imports.GenreTaxonomy {
+			if t.Child != g.Name {
+				continue
+			}
+
+			parent = t.Parent
+			children <- genreImportChild{child: *g, parent: parent}
+			break
+		}
+
+		if parent != "" {
+			fmt.Printf("%s was child of %s, delaying creation\n", g.Name, parent)
+			continue
+		}
 
 		id, e := stores.Genres.CreateGenres(*g)
 
@@ -68,6 +132,9 @@ func Import(stores *models.Stores, args []string) error {
 
 		fmt.Printf(" %d\n", id)
 	}
+
+	close(children)
+	wg.Wait()
 
 	for _, b := range source.Imports.Books {
 		var authorName string
@@ -91,7 +158,7 @@ func Import(stores *models.Stores, args []string) error {
 			return fmt.Errorf("failed import on book author lookup - found %d (e %v)", len(aid), e)
 		}
 
-		fmt.Printf("creating book %s...", b)
+		fmt.Printf("creating book %s... ", b)
 
 		b.AuthorID = aid[0]
 
