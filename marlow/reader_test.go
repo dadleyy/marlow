@@ -37,6 +37,19 @@ func Test_Reader(t *testing.T) {
 			g.Assert(e == nil).Equal(false)
 		})
 
+		g.It("skips the source if the ignore directive comment is seen", func() {
+			source := strings.NewReader(`
+			package marlowt
+			// marlow:ignore
+			type User struct {
+				Name string
+			}
+			`)
+			e := Compile(output, source)
+			g.Assert(e).Equal(nil)
+			g.Assert(output.Len()).Equal(0)
+		})
+
 		g.It("succeeds if the provided input is valid golang source", func() {
 			source := strings.NewReader(`
 			package marlowt

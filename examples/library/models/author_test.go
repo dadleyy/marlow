@@ -3,6 +3,7 @@ package models
 import "os"
 import "io"
 import "fmt"
+import "time"
 import "bytes"
 import "strings"
 import "testing"
@@ -14,7 +15,7 @@ import "github.com/dadleyy/marlow/marlow"
 func addAuthorRow(db *sql.DB, values ...[]string) error {
 	for _, rowValues := range values {
 		valueString := strings.Join(rowValues, ",")
-		statement := fmt.Sprintf("insert into authors (system_id,name) values(%s);", valueString)
+		statement := fmt.Sprintf("insert into authors (system_id,name,birthday) values(%s);", valueString)
 		r, e := db.Exec(statement)
 
 		if e != nil {
@@ -140,14 +141,19 @@ func Test_Author(t *testing.T) {
 
 			for i := 1; i < generatedAuthorCount; i++ {
 				id, name := fmt.Sprintf("%d", i), fmt.Sprintf("'author-%d'", (i*10)+1)
-				authors = append(authors, []string{id, name})
+				authors = append(authors, []string{id, name, "date()"})
 			}
 
 			g.Assert(addAuthorRow(db, authors...)).Equal(nil)
 
-			_, e = db.Exec("insert into authors (system_id,name,university_id) values(1337,'learned author',10);")
+			_, e = db.Exec(
+				"insert into authors (system_id,name,university_id,birthday) values(1337,'learned author',10,date());",
+			)
 			g.Assert(e).Equal(nil)
-			_, e = db.Exec("insert into authors (system_id,name,university_id) values(1338,'other author',null);")
+
+			_, e = db.Exec(
+				"insert into authors (system_id,name,university_id,birthday) values(1338,'other author',null,date());",
+			)
 			g.Assert(e).Equal(nil)
 		})
 
@@ -251,7 +257,7 @@ func Test_Author(t *testing.T) {
 				{Name: "limited author 002", UniversityID: uniID},
 				{Name: "limited author 003"},
 			}...)
-			results, e := store.SelectUniversityIDs(&AuthorBlueprint{
+			results, e := store.SelectAuthorUniversityIDs(&AuthorBlueprint{
 				NameLike: []string{"%limited%"},
 				Limit:    1,
 				Offset:   1,
@@ -265,7 +271,7 @@ func Test_Author(t *testing.T) {
 		})
 
 		g.It("allows consumers to select individual university ids (result being null)", func() {
-			results, e := store.SelectUniversityIDs(&AuthorBlueprint{
+			results, e := store.SelectAuthorUniversityIDs(&AuthorBlueprint{
 				ID: []int{10},
 			})
 			g.Assert(e).Equal(nil)
@@ -274,7 +280,7 @@ func Test_Author(t *testing.T) {
 		})
 
 		g.It("allows consumers to select individual university ids (result being valid)", func() {
-			results, e := store.SelectUniversityIDs(&AuthorBlueprint{
+			results, e := store.SelectAuthorUniversityIDs(&AuthorBlueprint{
 				ID: []int{1337},
 			})
 			g.Assert(e).Equal(nil)
@@ -290,7 +296,7 @@ func Test_Author(t *testing.T) {
 				{Name: "limited name 003"},
 				{Name: "limited name 004"},
 			}...)
-			results, e := store.SelectNames(&AuthorBlueprint{
+			results, e := store.SelectAuthorNames(&AuthorBlueprint{
 				NameLike: []string{"%limited name%"},
 				Limit:    1,
 				Offset:   1,
@@ -304,7 +310,7 @@ func Test_Author(t *testing.T) {
 		})
 
 		g.It("allows consumers to select individual author names", func() {
-			results, e := store.SelectNames(&AuthorBlueprint{
+			results, e := store.SelectAuthorNames(&AuthorBlueprint{
 				ID: []int{10},
 			})
 			g.Assert(e).Equal(nil)
@@ -313,7 +319,7 @@ func Test_Author(t *testing.T) {
 		})
 
 		g.It("allows consumers to select individual author ids", func() {
-			ids, e := store.SelectIDs(&AuthorBlueprint{
+			ids, e := store.SelectAuthorIDs(&AuthorBlueprint{
 				ID: []int{10},
 			})
 			g.Assert(e).Equal(nil)
@@ -339,25 +345,25 @@ func Test_Author(t *testing.T) {
 		})
 
 		g.It("allows the consumer to update the author id", func() {
-			c, e, _ := store.UpdateAuthorID(1991, &AuthorBlueprint{ID: []int{8}})
+			c, e := store.UpdateAuthorID(1991, &AuthorBlueprint{ID: []int{8}})
 			g.Assert(e).Equal(nil)
 			g.Assert(c).Equal(1)
 		})
 
 		g.It("allows the consumer to update the author university id using nil", func() {
-			c, e, _ := store.UpdateAuthorUniversityID(nil, &AuthorBlueprint{ID: []int{1}})
+			c, e := store.UpdateAuthorUniversityID(nil, &AuthorBlueprint{ID: []int{1}})
 			g.Assert(e).Equal(nil)
 			g.Assert(c).Equal(1)
 		})
 
 		g.It("allows the consumer to update the author university id using valid: false", func() {
-			c, e, _ := store.UpdateAuthorUniversityID(&sql.NullInt64{Valid: false}, &AuthorBlueprint{ID: []int{2}})
+			c, e := store.UpdateAuthorUniversityID(&sql.NullInt64{Valid: false}, &AuthorBlueprint{ID: []int{2}})
 			g.Assert(e).Equal(nil)
 			g.Assert(c).Equal(1)
 		})
 
 		g.It("allows the consumer to update the author university id using valid: true", func() {
-			c, e, _ := store.UpdateAuthorUniversityID(&sql.NullInt64{
+			c, e := store.UpdateAuthorUniversityID(&sql.NullInt64{
 				Valid: true,
 				Int64: 101,
 			}, &AuthorBlueprint{ID: []int{2}})
@@ -371,10 +377,7 @@ func Test_Author(t *testing.T) {
 			g.Assert(e).Equal(nil)
 			g.Assert(c).Equal(0)
 
-			updatedCount, e, q := store.UpdateAuthorName("danny", &AuthorBlueprint{ID: []int{1}})
-			if e != nil {
-				t.Logf("%s", q)
-			}
+			updatedCount, e := store.UpdateAuthorName("danny", &AuthorBlueprint{ID: []int{1}})
 			g.Assert(e).Equal(nil)
 			g.Assert(updatedCount).Equal(1)
 
@@ -440,20 +443,76 @@ func Test_Author(t *testing.T) {
 			})
 
 			g.It("allows users to select uint8 fields", func() {
-				ratings, e := store.SelectAuthorFlags(&AuthorBlueprint{ID: []int{20}})
+				ratings, e := store.SelectAuthorAuthorFlags(&AuthorBlueprint{ID: []int{20}})
 				g.Assert(e).Equal(nil)
 				g.Assert(ratings[0]).Equal(uint8(0))
 			})
 
 			g.It("allows users to update uint8 fields", func() {
 				blueprint := &AuthorBlueprint{ID: []int{20}}
-				_, e, _ := store.UpdateAuthorAuthorFlags(5, blueprint)
+				_, e := store.UpdateAuthorAuthorFlags(5, blueprint)
 				g.Assert(e).Equal(nil)
 				authors, e := store.FindAuthors(blueprint)
 				g.Assert(e).Equal(nil)
 				g.Assert(authors[0].AuthorFlags).Equal(uint8(5))
 			})
 
+		})
+
+		g.Describe("time.Time field interactions", func() {
+			fyodor := "fyodor dostoevsky"
+
+			g.Before(func() {
+				var uni sql.NullInt64
+				uni.Scan(100)
+
+				birthday, e := time.Parse(time.RFC3339, "1821-11-11T15:04:05Z")
+				g.Assert(e).Equal(nil)
+
+				store.CreateAuthors(Author{
+					Name:         fyodor,
+					UniversityID: uni,
+					ReaderRating: 100.00,
+					Birthday:     birthday,
+				})
+			})
+
+			g.It("allows users to select birthdays", func() {
+				b, e := store.SelectAuthorBirthdays(&AuthorBlueprint{Name: []string{fyodor}})
+				g.Assert(e).Equal(nil)
+				g.Assert(len(b)).Equal(1)
+				g.Assert(b[0].Year()).Equal(1821)
+			})
+
+			g.It("allows users to update birthdays", func() {
+				birthday, e := time.Parse(time.RFC3339, "1991-05-26T00:00:00Z")
+				g.Assert(e).Equal(nil)
+				_, e = store.UpdateAuthorBirthday(birthday, &AuthorBlueprint{
+					ID: []int{1},
+				})
+				g.Assert(e).Equal(nil)
+				a, e := store.SelectAuthorBirthdays(&AuthorBlueprint{ID: []int{1}})
+				g.Assert(e).Equal(nil)
+				g.Assert(len(a)).Equal(1)
+				g.Assert(a[0].Year()).Equal(1991)
+			})
+
+			g.It("allows users to search by birthday range", func() {
+				start, e := time.Parse(time.RFC3339, "1821-01-01T15:04:05Z")
+				g.Assert(e).Equal(nil)
+				end, e := time.Parse(time.RFC3339, "1850-01-01T15:04:05Z")
+				a, e := store.CountAuthors(&AuthorBlueprint{BirthdayRange: []time.Time{start, end}})
+				g.Assert(e).Equal(nil)
+				g.Assert(a).Equal(1)
+			})
+
+			g.It("allows users to search by birthday", func() {
+				birthday, e := time.Parse(time.RFC3339, "1821-11-11T15:04:05Z")
+				g.Assert(e).Equal(nil)
+				b, e := store.FindAuthors(&AuthorBlueprint{Birthday: []time.Time{birthday}})
+				g.Assert(e).Equal(nil)
+				g.Assert(len(b)).Equal(1)
+			})
 		})
 
 		g.Describe("float64 field interactions", func() {
@@ -472,14 +531,14 @@ func Test_Author(t *testing.T) {
 			})
 
 			g.It("allows users to select float64 fields", func() {
-				ratings, e := store.SelectReaderRatings(&AuthorBlueprint{ID: []int{20}})
+				ratings, e := store.SelectAuthorReaderRatings(&AuthorBlueprint{ID: []int{20}})
 				g.Assert(e).Equal(nil)
 				g.Assert(ratings[0]).Equal(100.00)
 			})
 
 			g.It("allows users to update float64 fields", func() {
 				blueprint := &AuthorBlueprint{ID: []int{20}}
-				_, e, _ := store.UpdateAuthorReaderRating(50.00, blueprint)
+				_, e := store.UpdateAuthorReaderRating(50.00, blueprint)
 				g.Assert(e).Equal(nil)
 				authors, e := store.FindAuthors(blueprint)
 				g.Assert(e).Equal(nil)

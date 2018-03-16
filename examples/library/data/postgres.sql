@@ -3,7 +3,8 @@ drop table if exists genres;
 create table genres (
   id SERIAL,
   name TEXT,
-  parent_id INTEGER
+  parent_id INTEGER,
+  genre_references jsonb
 );
 
 drop table if exists multi_auto;

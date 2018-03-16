@@ -42,6 +42,9 @@ const (
 	// StoreCountMethodPrefixConfigOption determines the prefix used when adding the main count method to the store.
 	StoreCountMethodPrefixConfigOption = "storeCountMethodPrefix"
 
+	// StoreSelectMethodPrefixConfigOption determines the prefix used when adding the single field select methods.
+	StoreSelectMethodPrefixConfigOption = "storeSelectMethodPrefix"
+
 	// ColumnAutoIncrementFlag used to determine if primary key should be inserted during creation.
 	ColumnAutoIncrementFlag = "autoIncrement"
 

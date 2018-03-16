@@ -17,10 +17,19 @@ import "github.com/dadleyy/marlow/marlow/constants"
 // Compile is responsible for reading from a source and writing the generated marlow code into a destination.
 func Compile(destination io.Writer, reader io.Reader) error {
 	fs := token.NewFileSet()
-	packageAst, e := parser.ParseFile(fs, "", reader, parser.AllErrors)
+	packageAst, e := parser.ParseFile(fs, "", reader, parser.AllErrors|parser.ParseComments)
 
 	if e != nil {
 		return e
+	}
+
+	// Check to see if we are ignoring this source via the comments.
+	for _, c := range packageAst.Comments {
+		ignored := strings.Contains(c.Text(), constants.IgnoreSourceDirective)
+
+		if ignored {
+			return nil
+		}
 	}
 
 	buffered, packageName := new(bytes.Buffer), packageAst.Name.String()

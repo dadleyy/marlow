@@ -11,7 +11,7 @@ func loadDB(dbFile string) (*sql.DB, error) {
 		return nil, e
 	}
 
-	buffer, e := data.Asset("data/schema.sql")
+	buffer, e := data.Asset("data/sqlite.sql")
 
 	if e != nil {
 		return nil, e

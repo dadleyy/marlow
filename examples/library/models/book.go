@@ -9,15 +9,15 @@ import "database/sql"
 
 // Book represents a book in the example application
 type Book struct {
-	table     string        `marlow:"defaultLimit=10"`
-	ID        int           `marlow:"column=system_id&autoIncrement=true"`
-	Title     string        `marlow:"column=title"`
-	AuthorID  int           `marlow:"column=author&references=Author"`
-	SeriesID  sql.NullInt64 `marlow:"column=series"`
-	PageCount int           `marlow:"column=page_count"`
+	table         string        `marlow:"defaultLimit=10"`
+	ID            int           `marlow:"column=system_id&autoIncrement=true"`
+	Title         string        `marlow:"column=title"`
+	AuthorID      int           `marlow:"column=author&references=Author"`
+	SeriesID      sql.NullInt64 `marlow:"column=series"`
+	YearPublished int           `marlow:"column=year_published" json:"year_published"`
 }
 
-// GetPageContents is a dummy no-op function
+// String returns the book with good info.
 func (b *Book) String() string {
-	return fmt.Sprintf("%s (%d pages)", b.Title, b.PageCount)
+	return fmt.Sprintf("%s (published in %d)", b.Title, b.YearPublished)
 }

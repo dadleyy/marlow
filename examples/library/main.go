@@ -1,171 +1,57 @@
 package main
 
 import "os"
-import "log"
 import "fmt"
+import "flag"
 import "bytes"
+import _ "github.com/lib/pq"
 import _ "github.com/mattn/go-sqlite3"
-import "database/sql"
-import "github.com/dadleyy/marlow/examples/library/data"
+import "github.com/dadleyy/marlow/examples/library/cli"
 import "github.com/dadleyy/marlow/examples/library/models"
 
-const (
-	dbFile = "./library.db"
-)
-
-func withTx(db *sql.DB, block func(*sql.Tx) error) error {
-	tx, e := db.Begin()
-
-	if e != nil {
-		return e
-	}
-
-	if e := block(tx); e != nil {
-		return e
-	}
-
-	tx.Commit()
-	return nil
-}
-
-func addBooks(tx *sql.Tx) error {
-	stmt, e := tx.Prepare("insert into books(system_id, title, author, page_count) values(?, ?, ?, ?)")
-
-	if e != nil {
-		log.Fatal(e)
-	}
-
-	defer stmt.Close()
-
-	for i := 0; i < 50; i++ {
-		_, e = stmt.Exec(i, fmt.Sprintf("book-%03d", i), i, i)
-
-		if e != nil {
-			return e
-		}
-	}
-
-	return nil
-}
-
-func addAuthors(tx *sql.Tx) error {
-	stmt, e := tx.Prepare("insert into authors(system_id, name) values(?, ?)")
-
-	if e != nil {
-		log.Fatal(e)
-	}
-
-	defer stmt.Close()
-
-	for i := 0; i < 50; i++ {
-		_, e = stmt.Exec(i, fmt.Sprintf("author-%03d", i))
-
-		if e != nil {
-			return e
-		}
-	}
-
-	return nil
-}
-
 func main() {
-	os.Remove(dbFile)
-	defer os.Remove(dbFile)
+	config := models.DatabaseConfig{}
 
-	db, e := sql.Open("sqlite3", dbFile)
+	flag.StringVar(&config.SQLite.Filename, "sqlite-filename", "library.db", "the sqlite filename")
+	flag.StringVar(&config.Postgres.Database, "postgres-database", "marlow_test", "the postgres database name")
+	flag.StringVar(&config.Postgres.Username, "postgres-username", "postgres", "the postgres username")
+	flag.StringVar(&config.Postgres.Hostname, "postgres-hostname", "0.0.0.0", "the postgres host")
+	flag.StringVar(&config.Postgres.Port, "postgres-port", "5432", "the postgres port")
+	flag.StringVar(&config.Postgres.Password, "postgres-password", "", "the postgres password")
+	flag.Parse()
 
-	if e != nil {
-		log.Fatal(e)
+	connections := &models.DatabaseConnections{
+		Config: &config,
 	}
 
-	defer db.Close()
-
-	schema, e := data.Asset("data/schema.sql")
-
-	if e != nil {
-		log.Fatal(e)
+	if e := connections.Initialize(); e != nil {
+		fmt.Printf("unable to initialize databases: %s\n", e.Error())
+		os.Exit(2)
 	}
 
-	_, e = db.Exec(string(schema))
+	defer connections.Close()
 
-	if e != nil {
-		log.Printf("%q: %s\n", e, string(schema))
-		return
+	if len(flag.Args()) < 1 {
+		fmt.Printf("must provide additional command\n")
+		os.Exit(2)
 	}
 
-	if e := withTx(db, addAuthors); e != nil {
-		log.Fatalf("unable to add authors: %s", e.Error())
+	var cmd cli.Command
+
+	switch flag.Args()[0] {
+	case "import":
+		cmd = cli.Import
+	case "browse":
+		cmd = cli.Browse
 	}
 
-	if e := withTx(db, addBooks); e != nil {
-		log.Fatalf("unable to add books: %s", e.Error())
+	logdump := new(bytes.Buffer)
+	stores := connections.Stores(logdump)
+
+	if e := cmd(stores, flag.Args()[1:]); e != nil {
+		fmt.Printf("error: %s\n", e.Error())
+		os.Exit(2)
 	}
 
-	log.Printf("author query w/o values: %v", &models.AuthorBlueprint{})
-
-	log.Printf("author query w ID exact matches: %v", &models.AuthorBlueprint{
-		ID: []int{123, 456},
-	})
-
-	log.Printf("author query w NameLike: %v", &models.AuthorBlueprint{
-		NameLike: []string{"danny"},
-	})
-
-	queryLog := new(bytes.Buffer)
-
-	authorStore := models.NewAuthorStore(db, queryLog)
-
-	a, e := authorStore.FindAuthors(&models.AuthorBlueprint{
-		ID: []int{1, 2, 3},
-	})
-
-	if e != nil {
-		log.Fatalf("error file finding authors: %s", e.Error())
-	}
-
-	for _, author := range a {
-		log.Printf("found author name[%s]", author.Name)
-	}
-
-	queryLog.Reset()
-
-	bookStore := models.NewBookStore(db, queryLog)
-
-	if _, e := bookStore.CreateBooks(models.Book{Title: "AwesomeBook"}); e != nil {
-		log.Fatalf("unable to create book: %v", e)
-	}
-
-	log.Printf("%v", queryLog.String())
-
-	b, e := bookStore.FindBooks(&models.BookBlueprint{
-		ID: []int{1, 2},
-	})
-
-	if e != nil {
-		log.Fatalf("error file finding authors: %s", e.Error())
-	}
-
-	for _, book := range b {
-		log.Printf("found book: %s", book.Title)
-	}
-
-	q := &models.BookBlueprint{
-		IDRange: []int{1, 20},
-	}
-
-	b, e = bookStore.FindBooks(q)
-
-	if e != nil {
-		log.Fatalf("error file finding authors: %s", e.Error())
-	}
-
-	if len(b) == 0 {
-		log.Printf("found no books w/ query: %s", q)
-	}
-
-	for _, book := range b {
-		log.Printf("found book: %s", book.Title)
-	}
-
-	log.Println("done")
+	fmt.Printf("done, queries:\n%s\n", logdump.String())
 }

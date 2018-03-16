@@ -2,7 +2,7 @@ GO=go
 
 COMPILE=$(GO) build
 LDFLAGS="-s -w"
-BUILD_FLAGS=-x -v -ldflags $(LDFLAGS) -a
+BUILD_FLAGS=-x -v -ldflags $(LDFLAGS)
 
 GLIDE=glide
 VENDOR_DIR=vendor
@@ -18,7 +18,7 @@ MAIN=$(wildcard ./marlowc/main.go)
 BINDATA=go-bindata
 
 GOVER=gover
-GOVER_REPORT=coverage.txt
+COVERAGE_REPORT=coverage.txt
 
 LIB_DIR=./marlow
 SRC_DIR=./marlowc
@@ -72,7 +72,7 @@ test: $(GO_SRC) $(VENDOR_DIR) $(INTERCHANGE_OBJ) lint
 	$(CYCLO) $(CYCLO_FLAGS) $(LIB_SRC)
 	$(MISSPELL) -error $(LIB_SRC) $(MAIN)
 	$(GO) list -f $(TEST_LIST_FMT) $(LIB_DIR)/... | xargs -L 1 sh -c
-	$(GOVER) $(LIB_DIR) $(GOVER_REPORT)
+	$(GOVER) $(LIB_DIR) $(COVERAGE_REPORT)
 
 $(VENDOR_DIR):
 	$(GO) get -v -u github.com/modocache/gover
@@ -106,7 +106,6 @@ clean-example:
 
 clean: clean-example
 	rm -rf $(COVERAGE_REPORT)
-	rm -rf $(LINT_RESULT)
 	rm -rf $(VENDOR_DIR)
 	rm -rf $(EXE)
 	rm -rf $(DIST_DIR)

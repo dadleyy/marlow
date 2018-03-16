@@ -5,7 +5,8 @@ create table authors (
   name TEXT,
   university_id INTEGER,
   rating REAL NOT NULL DEFAULT '100.00',
-  flags INTEGER NOT NULL DEFAULT 0
+  flags INTEGER NOT NULL DEFAULT 0,
+  birthday Date NOT NULL
 );
 
 drop table if exists books;
@@ -15,5 +16,5 @@ create table books (
   title TEXT,
   author INTEGER NOT NULL,
   series INTEGER,
-  page_count INTEGER NOT NULL
+  year_published INTEGER NOT NULL
 );

@@ -1,4 +1,6 @@
 dist: trusty
+addons:
+  postgresql: "9.6"
 language: go
 services:
   - postgresql
@@ -16,7 +18,7 @@ script:
   - make test
   - make test-example
   - make example
-  - pushd ./examples/library && ./library && popd
+  - pushd ./examples/library && ./library import ./data/demo-import.json && popd
 after_success:
   - bash <(curl -s https://codecov.io/bash) -f ./coverage.txt
 before_deploy:

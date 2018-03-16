@@ -13,7 +13,7 @@ import "github.com/franela/goblin"
 func addBookRow(db *sql.DB, values ...[]string) error {
 	for _, rowValues := range values {
 		valueString := strings.Join(rowValues, ",")
-		statement := fmt.Sprintf("insert into books (page_count,author,title) values(%s);", valueString)
+		statement := fmt.Sprintf("insert into books (year_published,author,title) values(%s);", valueString)
 		r, e := db.Exec(statement)
 
 		if e != nil {
@@ -71,9 +71,9 @@ func Test_Book(t *testing.T) {
 			bookFixtures := [][]string{}
 
 			for i := 1; i < testBookCount+1; i++ {
-				pageCount, author := fmt.Sprintf("%d", i*10), fmt.Sprintf("%d", (i*10)+1)
+				yearPublished, author := fmt.Sprintf("200%d", i), fmt.Sprintf("%d", (i*10)+1)
 				title := fmt.Sprintf("'book-%d'", i)
-				bookFixtures = append(bookFixtures, []string{pageCount, author, title})
+				bookFixtures = append(bookFixtures, []string{yearPublished, author, title})
 			}
 
 			g.Assert(addBookRow(db, bookFixtures...)).Equal(nil)
@@ -122,7 +122,7 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.It("allows the consumer to select series id", func() {
-			ids, e := store.SelectSeriesIDs(&BookBlueprint{ID: []int{1}})
+			ids, e := store.SelectBookSeriesIDs(&BookBlueprint{ID: []int{1}})
 			g.Assert(e).Equal(nil)
 			g.Assert(ids[0].Valid).Equal(false)
 		})
@@ -143,14 +143,8 @@ func Test_Book(t *testing.T) {
 			g.Assert(len(books)).Equal(0)
 		})
 
-		g.It("allows the consumer to search for books w/ an exact match on the page count", func() {
-			books, e := store.FindBooks(&BookBlueprint{PageCount: []int{10, 20}})
-			g.Assert(e).Equal(nil)
-			g.Assert(len(books)).Equal(2)
-		})
-
-		g.It("allows the consumer to search for books w/ an exact match on the page count", func() {
-			books, e := store.FindBooks(&BookBlueprint{PageCount: []int{10, 20}})
+		g.It("allows the consumer to search for books w/ an exact match on the year published", func() {
+			books, e := store.FindBooks(&BookBlueprint{YearPublished: []int{2001, 2002}})
 			g.Assert(e).Equal(nil)
 			g.Assert(len(books)).Equal(2)
 		})
@@ -183,8 +177,8 @@ func Test_Book(t *testing.T) {
 			g.Assert(len(books)).Equal(1)
 		})
 
-		g.It("allows the consumer to search for books w/ a page count range", func() {
-			q := &BookBlueprint{PageCountRange: []int{0, 20}}
+		g.It("allows the consumer to search for books w/ a year published range", func() {
+			q := &BookBlueprint{YearPublishedRange: []int{2000, 2002}}
 			books, e := store.FindBooks(q)
 			g.Assert(e).Equal(nil)
 			g.Assert(len(books)).Equal(1)
@@ -199,8 +193,8 @@ func Test_Book(t *testing.T) {
 
 		g.It("allows the consumer to search for books w/ multiple fields", func() {
 			books, e := store.FindBooks(&BookBlueprint{
-				ID:             []int{1},
-				PageCountRange: []int{0, 20},
+				ID:                 []int{1},
+				YearPublishedRange: []int{2000, 2003},
 			})
 
 			g.Assert(e).Equal(nil)
@@ -226,7 +220,7 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.It("allows the consumer to select explicit book ids", func() {
-			results, e := store.SelectIDs(&BookBlueprint{
+			results, e := store.SelectBookIDs(&BookBlueprint{
 				ID: []int{1, 2},
 			})
 			g.Assert(e).Equal(nil)
@@ -240,11 +234,11 @@ func Test_Book(t *testing.T) {
 			})
 			g.Assert(e).Equal(nil)
 			title := fmt.Sprintf("%s", results[0])
-			g.Assert(title).Equal("book-1 (10 pages)")
+			g.Assert(title).Equal("book-1 (published in 2001)")
 		})
 
 		g.It("allows the consumer to select explicit book titles", func() {
-			results, e := store.SelectTitles(&BookBlueprint{
+			results, e := store.SelectBookTitles(&BookBlueprint{
 				ID: []int{1, 2},
 			})
 			g.Assert(e).Equal(nil)
@@ -253,7 +247,7 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.It("allows the consumer to select explicit author ids", func() {
-			results, e := store.SelectAuthorIDs(&BookBlueprint{
+			results, e := store.SelectBookAuthorIDs(&BookBlueprint{
 				ID: []int{1, 2},
 			})
 			g.Assert(e).Equal(nil)
@@ -262,7 +256,7 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.It("allows the consumer to update the book title", func() {
-			results, e, _ := store.UpdateBookTitle("Marlow the puppy", &BookBlueprint{
+			results, e := store.UpdateBookTitle("Marlow the puppy", &BookBlueprint{
 				ID: []int{1},
 			})
 			g.Assert(e).Equal(nil)
@@ -270,15 +264,15 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.It("allows the consumer to update the author id", func() {
-			results, e, _ := store.UpdateBookAuthorID(2001, &BookBlueprint{
+			results, e := store.UpdateBookAuthorID(2001, &BookBlueprint{
 				ID: []int{1},
 			})
 			g.Assert(e).Equal(nil)
 			g.Assert(results).Equal(1)
 		})
 
-		g.It("allows the consumer to update the book page count", func() {
-			results, e, _ := store.UpdateBookPageCount(10, &BookBlueprint{
+		g.It("allows the consumer to update the book year published", func() {
+			results, e := store.UpdateBookYearPublished(10, &BookBlueprint{
 				ID: []int{10},
 			})
 			g.Assert(e).Equal(nil)
@@ -286,7 +280,7 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.It("allows the consumer to update the book series id (valid: false)", func() {
-			results, e, _ := store.UpdateBookSeriesID(&sql.NullInt64{
+			results, e := store.UpdateBookSeriesID(&sql.NullInt64{
 				Valid: false,
 			}, &BookBlueprint{
 				ID: []int{10},
@@ -296,7 +290,7 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.It("allows the consumer to update the book series id (non-nil)", func() {
-			results, e, _ := store.UpdateBookSeriesID(&sql.NullInt64{
+			results, e := store.UpdateBookSeriesID(&sql.NullInt64{
 				Valid: true,
 				Int64: 10,
 			}, &BookBlueprint{
@@ -307,7 +301,7 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.It("allows the consumer to update the book series id (nil)", func() {
-			results, e, _ := store.UpdateBookSeriesID(nil, &BookBlueprint{
+			results, e := store.UpdateBookSeriesID(nil, &BookBlueprint{
 				ID: []int{10},
 			})
 			g.Assert(e).Equal(nil)
@@ -315,20 +309,20 @@ func Test_Book(t *testing.T) {
 		})
 
 		g.It("allows the consumer to update the book id", func() {
-			results, e, _ := store.UpdateBookID(2001, &BookBlueprint{
+			results, e := store.UpdateBookID(2001, &BookBlueprint{
 				ID: []int{10},
 			})
 			g.Assert(e).Equal(nil)
 			g.Assert(results).Equal(1)
 		})
 
-		g.It("allows the consumer to select explicit page counts", func() {
-			results, e := store.SelectPageCounts(&BookBlueprint{
+		g.It("allows the consumer to select explicit year published", func() {
+			results, e := store.SelectBookYearPublisheds(&BookBlueprint{
 				ID: []int{1, 2},
 			})
 			g.Assert(e).Equal(nil)
-			g.Assert(results[0]).Equal(10)
-			g.Assert(results[1]).Equal(20)
+			g.Assert(results[0]).Equal(2001)
+			g.Assert(results[1]).Equal(2002)
 		})
 
 		g.Describe("DeleteBooks", func() {
@@ -370,8 +364,8 @@ func Test_Book(t *testing.T) {
 
 			g.It("returns the number of authors created", func() {
 				s, e := store.CreateBooks([]Book{
-					{Title: "Lord of the Rings", PageCount: 100, AuthorID: 1},
-					{Title: "Harry Potter", PageCount: 100, AuthorID: 2},
+					{Title: "Lord of the Rings", YearPublished: 2018, AuthorID: 1},
+					{Title: "Harry Potter", YearPublished: 2010, AuthorID: 2},
 				}...)
 				g.Assert(e).Equal(nil)
 

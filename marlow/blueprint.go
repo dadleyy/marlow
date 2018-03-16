@@ -12,6 +12,12 @@ import "github.com/dadleyy/marlow/marlow/constants"
 func getTypeInfo(fieldType string) types.BasicInfo {
 	var typeInfo types.BasicInfo
 
+	for _, t := range constants.NumericCustomTypes {
+		if t == fieldType {
+			return types.IsNumeric
+		}
+	}
+
 	for _, t := range types.Typ {
 		n := t.Name()
 
@@ -21,6 +27,7 @@ func getTypeInfo(fieldType string) types.BasicInfo {
 
 		typeInfo = t.Info()
 	}
+
 	return typeInfo
 }
 
@@ -75,6 +82,7 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 
+	// Capture all generated string methods that are used to create a clause for specific fields.
 	go func() {
 		for name := range methodReceiver {
 			clauseMethods = append(clauseMethods, name)
@@ -82,6 +90,7 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 		wg.Done()
 	}()
 
+	// Loop over every field, creating the generators that will be used to create their string-producing clause methods.
 	for _, f := range record.fieldList(nil) {
 		name, config := f.name, record.fields[f.name]
 		fieldGenerators := fieldMethods(record, name, config, methodReceiver)

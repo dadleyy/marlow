@@ -1,0 +1,54 @@
+{
+  "deletions": {
+    "books": [{
+      "title": "__testing"
+    }]
+  },
+  "imports": {
+    "books": [{
+      "title": "Crime and Punishment",
+      "year_published": 1866
+    }, {
+      "title": "Harry Potter and the Philosopher's Stone",
+      "year_published": 1998
+    }, {
+      "title": "A Time to Kill",
+      "year_published": 1988
+    }, {
+      "title": "The Fountainhead",
+      "year_published": 1943
+    }],
+    "book_authors": [{
+      "author": "Fyodor Dostoevsky",
+      "book": "Crime and Punishment"
+    }],
+    "authors": [{
+      "name": "Fyodor Dostoevsky",
+      "birthday": "1821-11-11T00:00:00Z"
+    }, {
+      "name": "John Grisham",
+      "birthday": "1955-02-08T00:00:00Z"
+    }, {
+      "name": "J.K Rowling",
+      "birthday": "1965-07-31T00:00:00Z"
+    }, {
+      "name": "Ayn Rand",
+      "birthday": "1905-02-02T00:00:00Z"
+    }],
+    "genre_taxonomy": [{
+      "name": "Science Fiction",
+      "parent": "Fiction"
+    }],
+    "genres": [{
+      "name": "Literature"
+    }, {
+      "name": "Fiction"
+    }, {
+      "name": "Science Fiction"
+    }, {
+      "name": "Drama"
+    }, {
+      "name": "Crime"
+    }]
+  }
+}
