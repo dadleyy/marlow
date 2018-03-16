@@ -42,7 +42,7 @@ func main() {
 		cmd = cli.Browse
 	}
 
-	stores := connections.Stores(nil)
+	stores := connections.Stores(os.Stdout)
 
 	if e := cmd(stores, flag.Args()[1:]); e != nil {
 		fmt.Printf("error: %s\n", e.Error())

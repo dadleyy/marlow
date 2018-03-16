@@ -124,6 +124,14 @@ func finder(record marlowRecord) io.Reader {
 				symbols.offset,
 			)
 
+			// Log out the query.
+			gosrc.Println(
+				"fmt.Fprintf(%s.%s, \"%%s\\n\", %s)",
+				scope.Get("receiver"),
+				constants.StoreLoggerField,
+				symbols.queryString,
+			)
+
 			// Write the query execution statement.
 			gosrc.Println(
 				"%s, %s := %s.Prepare(%s.String())",
@@ -390,6 +398,15 @@ func selector(record marlowRecord, fieldName string, fieldConfig url.Values) io.
 
 			rangeString := "\" LIMIT %d OFFSET %d\""
 			gosrc.Println("fmt.Fprintf(%s, %s, %s, %s)", symbols.queryString, rangeString, symbols.limit, symbols.offset)
+
+			// Log out the query.
+			gosrc.Println(
+				"fmt.Fprintf(%s.%s, \"%%s %%s\\n\", %s, %s.Values())",
+				scope.Get("receiver"),
+				constants.StoreLoggerField,
+				symbols.queryString,
+				symbols.blueprintParam,
+			)
 
 			// Write the query execution statement.
 			gosrc.Println(

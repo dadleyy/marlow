@@ -78,6 +78,7 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 			placeholders := make([]string, 0, len(record.fields))
 			index := 1
 
+			// Skip fields that have the `autoIncrement` directive.
 			fields := record.fieldList(func(config url.Values) bool {
 				return config.Get(constants.ColumnAutoIncrementFlag) == ""
 			})
@@ -150,7 +151,7 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 			)
 
 			gosrc.Println(
-				"fmt.Fprintf(%s.%s, \"%%s | values(%%v)\", %s.String(), %s)",
+				"fmt.Fprintf(%s.%s, \"%%s | values(%%v)\\n\", %s.String(), %s)",
 				scope.Get("receiver"),
 				constants.StoreLoggerField,
 				symbols.queryBuffer,

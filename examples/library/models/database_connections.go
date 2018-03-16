@@ -70,9 +70,9 @@ func (db *DatabaseConnections) Initialize() error {
 
 func (db *DatabaseConnections) Stores(logger io.Writer) *Stores {
 	return &Stores{
-		Books:   NewBookStore(db.sqlite, nil),
-		Authors: NewAuthorStore(db.sqlite, nil),
-		Genres:  NewGenreStore(db.postgres, nil),
+		Books:   NewBookStore(db.sqlite, logger),
+		Authors: NewAuthorStore(db.sqlite, logger),
+		Genres:  NewGenreStore(db.postgres, logger),
 	}
 }
 

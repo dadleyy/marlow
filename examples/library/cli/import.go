@@ -6,9 +6,13 @@ import "encoding/json"
 import "github.com/dadleyy/marlow/examples/library/models"
 
 type importModelList struct {
-	Books   []*models.Book   `json:"books"`
-	Authors []*models.Author `json:"authors"`
-	Genres  []*models.Genre  `json:"genres"`
+	Books       []*models.Book   `json:"books"`
+	Authors     []*models.Author `json:"authors"`
+	Genres      []*models.Genre  `json:"genres"`
+	BookAuthors []*struct {
+		Author string
+		Book   string
+	} `json:"book_authors"`
 }
 
 type importJSONSource struct {
@@ -63,6 +67,42 @@ func Import(stores *models.Stores, args []string) error {
 		}
 
 		fmt.Printf(" %d\n", id)
+	}
+
+	for _, b := range source.Imports.Books {
+		var authorName string
+
+		for _, ba := range source.Imports.BookAuthors {
+			if ba.Book == b.Title {
+				authorName = ba.Author
+			}
+		}
+
+		if authorName == "" {
+			fmt.Printf("skipping book: \"%s\", no author found\n", b.Title)
+			continue
+		}
+
+		aid, e := stores.Authors.SelectIDs(&models.AuthorBlueprint{
+			Name: []string{authorName},
+		})
+
+		if e != nil || len(aid) != 1 {
+			return fmt.Errorf("failed import on book author lookup - found %d (e %v)", len(aid), e)
+		}
+
+		fmt.Printf("creating book %s...", b)
+
+		b.AuthorID = aid[0]
+
+		id, e := stores.Books.CreateBooks(*b)
+
+		if e != nil {
+			fmt.Println()
+			return fmt.Errorf("failed import on book create (e %v)", e)
+		}
+
+		fmt.Printf("%d\n", id)
 	}
 
 	counts := struct {
