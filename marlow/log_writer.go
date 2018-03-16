@@ -11,6 +11,10 @@ type logWriter struct {
 }
 
 func (w *logWriter) AddLog(values ...string) {
+	if w.output == nil || w.receiver == "" || len(values) == 0 {
+		return
+	}
+
 	receiver := fmt.Sprintf("%s.%s", w.receiver, constants.StoreLoggerField)
 	format := make([]string, len(values))
 
