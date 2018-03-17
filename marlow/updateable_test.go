@@ -99,6 +99,11 @@ func Test_Updateable(t *testing.T) {
 				scaffold.fields["UniversityID"] = url.Values{
 					"type": []string{"sql.NullInt64"},
 				}
+
+				scaffold.fields["Flag"] = url.Values{
+					"type":    []string{"uint8"},
+					"bitmask": []string{"true"},
+				}
 			})
 
 			g.It("generates valid golang", func() {
