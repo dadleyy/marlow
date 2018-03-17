@@ -14,7 +14,7 @@ func Test_MultiAuto(t *testing.T) {
 	var db *sql.DB
 	var store MultiAutoStore
 
-	g.Describe("Model with mutliple auto increment columns", func() {
+	g.Describe("Model with multiple auto increment columns", func() {
 		g.Before(func() {
 			var e error
 			config := struct {
@@ -73,7 +73,7 @@ func Test_MultiAuto(t *testing.T) {
 			})
 		})
 
-		g.It("allows consumer to delete mutli auto records", func() {
+		g.It("allows consumer to delete multi auto records", func() {
 			id, e := store.CreateMultiAutos(MultiAuto{Name: "to-delete"})
 			g.Assert(e).Equal(nil)
 			_, e = store.DeleteMultiAutos(&MultiAutoBlueprint{ID: []uint{uint(id)}})
@@ -125,7 +125,7 @@ func Test_MultiAuto(t *testing.T) {
 				g.Assert(e).Equal(nil)
 			})
 
-			g.It("allows the consumer to count mutli autos", func() {
+			g.It("allows the consumer to count multi autos", func() {
 				a, e := store.CountMultiAutos(&MultiAutoBlueprint{Limit: 1})
 				g.Assert(e).Equal(nil)
 				g.Assert(a > 0).Equal(true)
