@@ -18,7 +18,7 @@ type DatabaseConnections struct {
 	sqlite   *sql.DB
 }
 
-// Initialize opens the various datbase connection types and seeds their database tables.
+// Initialize opens the various database connection types and seeds their database tables.
 func (db *DatabaseConnections) Initialize() error {
 	sqlite, e := sql.Open("sqlite3", db.Config.SQLite.Filename)
 

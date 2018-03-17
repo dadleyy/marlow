@@ -16,10 +16,10 @@ import "github.com/dadleyy/marlow/marlow"
 import "github.com/dadleyy/marlow/marlow/constants"
 
 func main() {
-	cwd, err := os.Getwd()
+	cwd, e := os.Getwd()
 
-	if err != nil {
-		exit("unable to get current directory", err)
+	if e != nil {
+		exit("unable to get current directory", e)
 	}
 
 	options := cliOptions{ext: constants.DefaultMarlowFileExtension}
@@ -31,15 +31,10 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
-	// Check to ensure the input exists on the filesystem.
-	if _, e := os.Stat(options.input); e != nil {
-		exit("must provide a valid input for compilation", nil)
-	}
+	sourceFiles, e := loadFileNames(options.input)
 
-	sourceFiles, err := loadFileNames(options.input)
-
-	if err != nil {
-		exit("unable to load package from input", err)
+	if e != nil {
+		exit("unable to load package from input", e)
 	}
 
 	var progressOut io.Writer = new(bytes.Buffer)
@@ -120,13 +115,8 @@ func main() {
 	progress.Stop()
 	<-done
 
-	// If no files were the target of compilation,
-	if len(results) == 0 {
-		return
-	}
-
-	// If silent, finish here.
-	if options.silent == true {
+	// If no files were the target of compilation, or the silent flag was used, do nothing.
+	if len(results) == 0 || options.silent == true {
 		return
 	}
 
