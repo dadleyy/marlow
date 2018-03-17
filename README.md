@@ -71,10 +71,11 @@ and value are separated by an equal sign (`=`). For example, a user record may l
 package models
 
 type User struct {
-  table string `marlow:"tableName=users"`
-  ID    uint   `marlow:"column=id"`
-  Name  string `marlow:"column=name"`
-  Email string `marlow:"column=email"`
+	table        string `marlow:"tableName=users"`
+	ID           uint   `marlow:"column=id"`
+	Name         string `marlow:"column=name"`
+	Email        string `marlow:"column=email"`
+	SettingsMask uint8  `marlow:"column=settings&bitmask"`
 }
 ```
 
@@ -82,16 +83,20 @@ In this example, marlow would create the following `UserStore` interface in the 
 
 ```go
 type UserStore interface {
-	UpdateUserName(string, *UserBlueprint) (int64, error, string)
+	UpdateUserID(uint, *UserBlueprint) (int64, error)
 	FindUsers(*UserBlueprint) ([]*User, error)
-	CountUsers(*UserBlueprint) (int, error)
-	SelectIDs(*UserBlueprint) ([]uint, error)
-	SelectEmails(*UserBlueprint) ([]string, error)
+	SelectUserEmails(*UserBlueprint) ([]string, error)
 	CreateUsers(...User) (int64, error)
-	UpdateUserEmail(string, *UserBlueprint) (int64, error, string)
-	UpdateUserID(uint, *UserBlueprint) (int64, error, string)
+	UpdateUserEmail(string, *UserBlueprint) (int64, error)
+	DropUserSettingsMask(uint8, *UserBlueprint) (int64, error)
+	UpdateUserName(string, *UserBlueprint) (int64, error)
+	SelectUserNames(*UserBlueprint) ([]string, error)
+	AddUserSettingsMask(uint8, *UserBlueprint) (int64, error)
+	CountUsers(*UserBlueprint) (int, error)
+	SelectUserIDs(*UserBlueprint) ([]uint, error)
+	UpdateUserSettingsMask(uint8, *UserBlueprint) (int64, error)
 	DeleteUsers(*UserBlueprint) (int64, error)
-	SelectNames(*UserBlueprint) ([]string, error)
+	SelectUserSettingsMasks(*UserBlueprint) ([]uint8, error)
 }
 ```
 
@@ -100,16 +105,19 @@ querying against the database. In this example, the `UserBlueprint` generated fo
 
 ```go
 type UserBlueprint struct {
-	IDRange        []uint
-	ID             []uint
-	NameLike       []string
-	Name           []string
-	EmailLike      []string
-	Email          []string
-	Limit          int
-	Offset         int
-	OrderBy        string
-	OrderDirection string
+	IDRange           []uint
+	ID                []uint
+	NameLike          []string
+	Name              []string
+	EmailLike         []string
+	Email             []string
+	SettingsMaskRange []uint8
+	SettingsMask      []uint8
+	Inclusive         bool
+	Limit             int
+	Offset            int
+	OrderBy           string
+	OrderDirection    string
 }
 ```
 
@@ -137,6 +145,7 @@ For every other field found on the source `struct`, marlow will use the followin
 | :--- | :--- |
 | `column` | This is the column that any raw sql generated will target when scanning/selecting/querying this field. |
 | `autoIncrement` | If `true`, this flag will prevent marlow from generating sql during creation that would attempt to insert the value of the field for the column. |
+| `bitmask` | If present, the compiler will generate `AddRecordFieldMask` and `DropRecordFieldMask` methods which will perform native bitwise operations as `UPDATE` queries to the datbase. |
 
 #### Generated Coverage & Documentation
 

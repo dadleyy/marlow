@@ -547,6 +547,54 @@ func Test_Author(t *testing.T) {
 
 		})
 
+		g.Describe("bitwise operations on bitmask", func() {
+			var blueprint *AuthorBlueprint
+
+			g.BeforeEach(func() {
+				birthday, e := time.Parse(time.RFC3339, "1821-11-11T15:04:05Z")
+				g.Assert(e).Equal(nil)
+				created, e := store.CreateAuthors(Author{
+					Name:     "Bit Author",
+					Birthday: birthday,
+				})
+				g.Assert(e).Equal(nil)
+				blueprint = &AuthorBlueprint{
+					ID: []int{int(created)},
+				}
+			})
+
+			g.AfterEach(func() {
+				_, e := store.DeleteAuthors(blueprint)
+				g.Assert(e).Equal(nil)
+			})
+
+			g.It("allows the user to add to the bitmask", func() {
+				_, e := store.UpdateAuthorAuthorFlags(1, blueprint)
+				g.Assert(e).Equal(nil)
+				flags, e := store.SelectAuthorAuthorFlags(blueprint)
+				g.Assert(e).Equal(nil)
+				g.Assert(len(flags)).Equal(1)
+				g.Assert(fmt.Sprintf("%b", flags[0])).Equal("1")
+				_, e = store.AddAuthorAuthorFlags(2, blueprint)
+				g.Assert(e).Equal(nil)
+				flags, e = store.SelectAuthorAuthorFlags(blueprint)
+				g.Assert(e).Equal(nil)
+				g.Assert(len(flags)).Equal(1)
+				g.Assert(fmt.Sprintf("%b", flags[0])).Equal("11")
+			})
+
+			g.It("allows the user to remove from the bitmask", func() {
+				_, e := store.UpdateAuthorAuthorFlags(7, blueprint)
+				g.Assert(e).Equal(nil)
+				_, e = store.DropAuthorAuthorFlags(2, blueprint)
+				g.Assert(e).Equal(nil)
+				flags, e := store.SelectAuthorAuthorFlags(blueprint)
+				g.Assert(e).Equal(nil)
+				g.Assert(len(flags)).Equal(1)
+				g.Assert(fmt.Sprintf("%b", flags[0])).Equal("101")
+			})
+		})
+
 		g.Describe("DeleteAuthors", func() {
 
 			g.It("returns an error and a negative number with an empty blueprint", func() {

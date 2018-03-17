@@ -99,11 +99,27 @@ func Test_Updateable(t *testing.T) {
 				scaffold.fields["UniversityID"] = url.Values{
 					"type": []string{"sql.NullInt64"},
 				}
+
+				scaffold.fields["Flag"] = url.Values{
+					"type":    []string{"uint8"},
+					"bitmask": []string{"true"},
+				}
 			})
 
 			g.It("generates valid golang", func() {
 				_, e := io.Copy(scaffold.buffer, scaffold.g())
 				g.Assert(e).Equal(nil)
+			})
+
+			g.Describe("with an invalid bitmask field type", func() {
+				g.BeforeEach(func() {
+					scaffold.fields["Flag"]["type"] = []string{"string"}
+				})
+
+				g.It("raises an error", func() {
+					_, e := io.Copy(scaffold.buffer, scaffold.g())
+					g.Assert(e != nil).Equal(true)
+				})
 			})
 
 			g.Describe("with a postgres record dialect", func() {

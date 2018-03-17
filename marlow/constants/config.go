@@ -54,6 +54,9 @@ const (
 	// ColumnConfigOption is the key of the value used on individual fields that represents which column marlow queries.
 	ColumnConfigOption = "column"
 
+	// ColumnBitmaskOption is used to indicate a field is a bitmask & can be used to generate bitwise ops.
+	ColumnBitmaskOption = "bitmask"
+
 	// QueryableConfigOption boolean value, true/false based on fields ability to be updated.
 	QueryableConfigOption = "queryable"
 
