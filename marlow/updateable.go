@@ -3,6 +3,7 @@ package marlow
 import "io"
 import "fmt"
 import "net/url"
+import "go/types"
 import "github.com/dadleyy/marlow/marlow/writing"
 import "github.com/dadleyy/marlow/marlow/constants"
 
@@ -179,8 +180,18 @@ func newUpdateableGenerator(record marlowRecord) io.Reader {
 		column := config.Get(constants.ColumnConfigOption)
 		method := fmt.Sprintf("%s%s%s", prefix, record.name(), name)
 		up := updater(record, config, method, "")
+		fieldType := getTypeInfo(config.Get("type"))
 
 		if _, bit := config[constants.ColumnBitmaskOption]; bit {
+			valid := (fieldType & (types.IsUnsigned | types.IsInteger)) == fieldType
+
+			if !valid {
+				e := fmt.Errorf("bitmask columns must be unsigned integers, %s has type \"%s\"", column, config.Get("type"))
+				pr, pw := io.Pipe()
+				pw.CloseWithError(e)
+				return pr
+			}
+
 			bitwise := []io.Reader{
 				updater(record, config, fmt.Sprintf("Add%s%s", record.name(), name), fmt.Sprintf("%s | %%s", column)),
 				updater(record, config, fmt.Sprintf("Drop%s%s", record.name(), name), fmt.Sprintf("%s & ~%%s", column)),

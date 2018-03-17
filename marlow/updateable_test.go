@@ -111,6 +111,17 @@ func Test_Updateable(t *testing.T) {
 				g.Assert(e).Equal(nil)
 			})
 
+			g.Describe("with an invalid bitmask field type", func() {
+				g.BeforeEach(func() {
+					scaffold.fields["Flag"]["type"] = []string{"string"}
+				})
+
+				g.It("raises an error", func() {
+					_, e := io.Copy(scaffold.buffer, scaffold.g())
+					g.Assert(e != nil).Equal(true)
+				})
+			})
+
 			g.Describe("with a postgres record dialect", func() {
 				g.BeforeEach(func() {
 					scaffold.record.Set(constants.DialectConfigOption, "postgres")
