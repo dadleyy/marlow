@@ -12,5 +12,7 @@ drop table if exists multi_auto;
 create table multi_auto (
   id SERIAL,
   status TEXT DEFAULT 'pending' NOT NULL,
-  name TEXT
+  name TEXT,
+  created_at DATE,
+  deleted_at DATE
 );

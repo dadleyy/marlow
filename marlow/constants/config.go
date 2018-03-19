@@ -16,6 +16,9 @@ const (
 	// DefaultLimitConfigOption is the 'table' field config key used to determine the default limit used in lookups.
 	DefaultLimitConfigOption = "defaultLimit"
 
+	// RecordSoftDeleteConfigOption is the config option that points to the field responsible for storing deleted-ness.
+	RecordSoftDeleteConfigOption = "softDelete"
+
 	// RecordNameConfigOption is the key used on the special table field to determine the return value of everything.
 	RecordNameConfigOption = "recordName"
 

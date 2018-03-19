@@ -2,6 +2,7 @@ package marlow
 
 import "io"
 import "fmt"
+import "strings"
 import "net/url"
 import "go/types"
 import "github.com/dadleyy/marlow/marlow/writing"
@@ -50,6 +51,17 @@ func updater(record marlowRecord, fieldConfig url.Values, methodName, op string)
 		params[0].Type = fmt.Sprintf("*%s", fieldConfig.Get("type"))
 	}
 
+	// Check to see if we have an operation, and if the operation requires a value (hacky). If no value is required then
+	// we no longer need the first user-provided argument to the deletion method.
+	valueless := false
+	if op != "" && strings.Contains(op, "%s") != true {
+		params = []writing.FuncParam{
+			{Type: fmt.Sprintf("*%s", record.config.Get(constants.BlueprintNameConfigOption)), Symbol: symbols.blueprint},
+		}
+
+		valueless = true
+	}
+
 	returns := []string{
 		"int64",
 		"error",
@@ -70,22 +82,32 @@ func updater(record marlowRecord, fieldConfig url.Values, methodName, op string)
 				return gosrc.Println("%s = len(%s.Values()) + 1", symbols.valueCount, symbols.blueprint)
 			}, symbols.blueprint, symbols.blueprint)
 
-			switch record.dialect() {
-			case "postgres":
-				gosrc.Println("%s := fmt.Sprintf(\"$%%d\", %s)", symbols.targetValue, symbols.valueCount)
-				break
-			default:
-				gosrc.Println("%s := \"?\"", symbols.targetValue)
+			// If our operation requires a value, we to create a variable in the source that will represent the string
+			// holder during the sql statement execution. For postgres this value is placement-aware, e.g: $1.
+			if !valueless {
+				switch record.dialect() {
+				case "postgres":
+					gosrc.Println("%s := fmt.Sprintf(\"$%%d\", %s)", symbols.targetValue, symbols.valueCount)
+					break
+				default:
+					gosrc.Println("%s := \"?\"", symbols.targetValue)
+				}
 			}
 
 			command := fmt.Sprintf("UPDATE %s SET %s = %%s", record.table(), column)
 
+			// If we have an operation, use it here instead.
 			if op != "" {
 				command = fmt.Sprintf("UPDATE %s SET %s = %s", record.table(), column, op)
 			}
 
 			// Start the update template string with the basic SQL-dialect `UPDATE <table> SET <column> = ?` syntax.
 			template := fmt.Sprintf("fmt.Sprintf(\"%s\", %s)", command, symbols.targetValue)
+
+			// If no value was required in the operation string we can simplify the sql.
+			if valueless {
+				template = fmt.Sprintf("\"%s\"", command)
+			}
 
 			gosrc.Println("%s := bytes.NewBufferString(%s)", symbols.queryString, template)
 
@@ -114,7 +136,7 @@ func updater(record marlowRecord, fieldConfig url.Values, methodName, op string)
 
 			// The postgres dialect uses numbered placeholder values. If the record is using anything other than that, the
 			// placeholder for the target value should appear first in the set of values sent to Exec.
-			if record.dialect() != "postgres" {
+			if record.dialect() != "postgres" && !valueless {
 				gosrc.Println("%s = append(%s, %s)", symbols.valueSlice, symbols.valueSlice, symbols.valueParam)
 			}
 
@@ -128,7 +150,7 @@ func updater(record marlowRecord, fieldConfig url.Values, methodName, op string)
 			}, symbols.blueprint)
 
 			// If we're postgres, add our value to the very end of our value slice.
-			if record.dialect() == "postgres" {
+			if record.dialect() == "postgres" && !valueless {
 				gosrc.Println("%s = append(%s, %s)", symbols.valueSlice, symbols.valueSlice, symbols.valueParam)
 			}
 

@@ -36,6 +36,18 @@ func newDeleteableGenerator(record marlowRecord) io.Reader {
 		{Type: fmt.Sprintf("*%s", record.blueprint()), Symbol: symbols.blueprint},
 	}
 
+	if target := record.config.Get(constants.RecordSoftDeleteConfigOption); target != "" {
+		field, ok := record.fields[target]
+
+		if !ok || field.Get("type") != "time.Time" {
+			pw.CloseWithError(fmt.Errorf("specified soft delete field %s but unable to find source field", target))
+			return pr
+		}
+
+		pw.Close()
+		return updater(record, field, methodName, "NOW()")
+	}
+
 	returns := []string{
 		"int64",
 		"error",
