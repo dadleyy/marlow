@@ -1,4 +1,5 @@
 GO=go
+GO_GET=$(GO) get
 
 COMPILE=$(GO) build
 LDFLAGS="-s -w"
@@ -75,19 +76,21 @@ test: $(GO_SRC) $(VENDOR_DIR) $(INTERCHANGE_OBJ) lint
 	$(GOVER) $(LIB_DIR) $(COVERAGE_REPORT)
 
 $(VENDOR_DIR):
-	$(GO) get -v -u github.com/modocache/gover
-	$(GO) get -v -u github.com/client9/misspell/cmd/misspell
-	$(GO) get -v -u github.com/fzipp/gocyclo
-	$(GO) get -v -u github.com/Masterminds/glide
-	$(GO) get -v -u github.com/golang/lint/golint
+	$(GO_GET) -v -u github.com/modocache/gover
+	$(GO_GET) -v -u github.com/client9/misspell/cmd/misspell
+	$(GO_GET) -v -u github.com/fzipp/gocyclo
+	$(GO_GET) -v -u github.com/Masterminds/glide
+	$(GO_GET) -v -u github.com/golang/lint/golint
 	$(GLIDE) install
 
 example: $(LIBRARY_EXAMPLE_EXE)
 
 $(LIBRARY_EXAMPLE_EXE): $(LIBRARY_EXAMPLE_SRC) $(LIBRARY_EXAMPLE_MAIN) $(EXE)
-	$(GO) get -v github.com/lib/pq
-	$(GO) get -v github.com/mattn/go-sqlite3
-	$(GO) install -v -x github.com/mattn/go-sqlite3
+	$(GO_GET) -v github.com/lib/pq
+	$(GO_GET) -v github.com/mattn/go-sqlite3
+	$(GO_GET) -v github.com/go-sql-driver/mysql
+	$(GO) install github.com/go-sql-driver/mysql
+	$(GO) install github.com/mattn/go-sqlite3
 	$(GO) get -u github.com/jteeuwen/go-bindata/...
 	$(EXE) -input=$(LIBRARY_EXAMPLE_MODEL_DIR)
 	$(BINDATA) -o $(LIBRARY_DATA_DIR)/schema.go -pkg data -prefix $(LIBRARY_EXAMPLE_DIR) $(LIBRARY_DATA_DIR)/*.sql

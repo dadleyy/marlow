@@ -13,5 +13,5 @@ const (
 
 var (
 	// NumericCustomTypes are the types that are numeric in nature but not part og go/types basic types.
-	NumericCustomTypes = []string{"time.Time", "pq.NullTime"}
+	NumericCustomTypes = []string{"time.Time", "pq.NullTime", "mysql.NullTime"}
 )

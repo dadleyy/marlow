@@ -80,7 +80,7 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 			placeholders := make([]string, 0, len(record.fields))
 			index := 1
 
-			// Skip fields that have the `autoIncrement` directive.
+			// Skip fields that have the `autoIncrement` directive or those that are being managed by the library.
 			fields := record.fieldList(func(config url.Values) bool {
 				deletion := record.deletionField()
 

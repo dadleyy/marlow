@@ -103,6 +103,32 @@ func Test_MultiAuto(t *testing.T) {
 				g.Assert(e).Equal(nil)
 			})
 
+			g.It("did not insert a value for the deletedAt column", func() {
+				m, e := store.SelectMultiAutoDeletedAts(&blueprint)
+				g.Assert(e).Equal(nil)
+				g.Assert(m[0].Valid).Equal(false)
+			})
+
+			g.It("returns the set of records not deleted by default", func() {
+				c, e := store.CountMultiAutos(&blueprint)
+				g.Assert(e).Equal(nil)
+				g.Assert(c).Equal(1)
+
+				_, e = store.DeleteMultiAutos(&blueprint)
+				g.Assert(e).Equal(nil)
+
+				c, e = store.CountMultiAutos(&blueprint)
+				g.Assert(e).Equal(nil)
+				g.Assert(c).Equal(0)
+
+				c, e = store.CountMultiAutos(&MultiAutoBlueprint{
+					ID:       blueprint.ID,
+					Unscoped: true,
+				})
+				g.Assert(e).Equal(nil)
+				g.Assert(c).Equal(1)
+			})
+
 			g.It("allows the user to search by deleted_at timestamps (range)", func() {
 				start := pq.NullTime{}
 				end := pq.NullTime{}

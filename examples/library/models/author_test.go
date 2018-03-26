@@ -1,12 +1,12 @@
 package models
 
 import "os"
-import "io"
 import "fmt"
 import "time"
 import "bytes"
 import "strings"
 import "testing"
+import "github.com/go-sql-driver/mysql"
 import _ "github.com/mattn/go-sqlite3"
 import "database/sql"
 import "github.com/franela/goblin"
@@ -40,7 +40,7 @@ func Test_Author(t *testing.T) {
 	g := goblin.Goblin(t)
 	var db *sql.DB
 	var store AuthorStore
-	var queryLog io.Writer
+	var queryLog *bytes.Buffer
 
 	dbFile := "author-testing.db"
 	generatedAuthorCount := 150
@@ -457,6 +457,72 @@ func Test_Author(t *testing.T) {
 				g.Assert(authors[0].AuthorFlags).Equal(uint8(5))
 			})
 
+		})
+
+		g.Describe("*time.Time field interactions", func() {
+			var blueprint AuthorBlueprint
+			g.BeforeEach(func() {
+				birthday := time.Date(1968, 7, 7, 0, 0, 0, 0, time.Local)
+				id, e := store.CreateAuthors(Author{
+					Name:     "Douglass Fredrick Appleton",
+					Birthday: birthday,
+				})
+				g.Assert(e).Equal(nil)
+				blueprint = AuthorBlueprint{ID: []int{int(id)}}
+			})
+
+			g.AfterEach(func() {
+				_, e := store.DeleteAuthors(&blueprint)
+				g.Assert(e).Equal(nil)
+			})
+
+			g.It("allows the search based on a range", func() {
+				death := mysql.NullTime{}
+				now := time.Now()
+				death.Scan(now.Add(time.Second * 40))
+
+				_, e := store.UpdateAuthorDeceased(death, &blueprint)
+				g.Assert(e).Equal(nil)
+
+				start := mysql.NullTime{}
+				start.Scan(time.Date(1900, 1, 1, 0, 0, 0, 0, time.Local))
+				end := mysql.NullTime{}
+				end.Scan(death.Time.Add(time.Minute * 50))
+				c, e := store.CountAuthors(&AuthorBlueprint{
+					DeceasedRange: []mysql.NullTime{start, end},
+				})
+				g.Assert(e).Equal(nil)
+				g.Assert(c).Equal(1)
+			})
+
+			g.It("allows the update of mysql.NullTime dates", func() {
+				death := mysql.NullTime{}
+				now := time.Now()
+				death.Scan(now.Add(time.Second * 40))
+
+				_, e := store.UpdateAuthorDeceased(death, &blueprint)
+				g.Assert(e).Equal(nil)
+
+				r, e := store.SelectAuthorDeceaseds(&blueprint)
+				g.Assert(e).Equal(nil)
+				g.Assert(len(r)).Equal(1)
+				g.Assert(r[0].Valid).Equal(true)
+
+				_, e = store.UpdateAuthorDeceased(mysql.NullTime{}, &blueprint)
+				g.Assert(e).Equal(nil)
+
+				r, e = store.SelectAuthorDeceaseds(&blueprint)
+				g.Assert(e).Equal(nil)
+				g.Assert(len(r)).Equal(1)
+				g.Assert(r[0].Valid).Equal(false)
+			})
+
+			g.It("allows the selection of mysql.NullTime dates", func() {
+				dates, e := store.SelectAuthorDeceaseds(&blueprint)
+				g.Assert(e).Equal(nil)
+				g.Assert(len(dates)).Equal(1)
+				g.Assert(dates[0].Valid).Equal(false)
+			})
 		})
 
 		g.Describe("time.Time field interactions", func() {

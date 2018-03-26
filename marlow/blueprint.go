@@ -9,9 +9,7 @@ import "go/types"
 import "github.com/dadleyy/marlow/marlow/writing"
 import "github.com/dadleyy/marlow/marlow/constants"
 
-func writeBlueprint(destination io.Writer, record marlowRecord) error {
-	out := writing.NewGoWriter(destination)
-
+func writeBlueprintStruct(out writing.GoWriter, record marlowRecord) error {
 	e := out.WithStruct(record.blueprint(), func(url.Values) error {
 		for name, config := range record.fields {
 			fieldType := config.Get("type")
@@ -39,6 +37,10 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 			out.Println("%s []%s", name, fieldType)
 		}
 
+		if deletion := record.deletionField(); deletion != nil {
+			out.Println("Unscoped bool")
+		}
+
 		out.Println("Inclusive bool")
 		out.Println("Limit int")
 		out.Println("Offset int")
@@ -48,7 +50,13 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 		return nil
 	})
 
-	if e != nil {
+	return e
+}
+
+func writeBlueprint(destination io.Writer, record marlowRecord) error {
+	out := writing.NewGoWriter(destination)
+
+	if e := writeBlueprintStruct(out, record); e != nil {
 		return e
 	}
 
@@ -98,7 +106,7 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 	// With all of our fields having generated non-exported clause generation methods on our struct, we can create the
 	// final 'String' method which iterates over all of these, calling them and adding the non-empty string clauses to
 	// a list, which eventually is returned as a joined string.
-	e = out.WithMethod("String", record.blueprint(), nil, []string{"string"}, func(scope url.Values) error {
+	e := out.WithMethod("String", record.blueprint(), nil, []string{"string"}, func(scope url.Values) error {
 		out.Println("%s := make([]string, 0, %d)", symbols.clauseSlice, len(clauseMethods))
 		out.Println("%s := 1", symbols.valueCount)
 
@@ -122,11 +130,18 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 
 		query := fmt.Sprintf("\"WHERE \" + strings.Join(%s, %s)", symbols.clauseSlice, symbols.clauseMap)
 
-		if deletion := record.deletionField(); deletion != nil {
-			selector := fmt.Sprintf("%s.%s", record.table(), deletion.Get(constants.ColumnConfigOption))
-			query += fmt.Sprintf("+ \" AND %s IS NULL\"", selector)
+		deletion := record.deletionField()
+		if deletion == nil {
+			return out.Returns(query)
 		}
 
+		selector := fmt.Sprintf("%s.%s", record.table(), deletion.Get(constants.ColumnConfigOption))
+
+		out.WithIf("%s != nil && %s.Unscoped == true", func(url.Values) error {
+			return out.Returns(query)
+		}, scope.Get("receiver"), scope.Get("receiver"))
+
+		query += fmt.Sprintf("+ \" AND %s IS NULL\"", selector)
 		return out.Returns(query)
 	})
 

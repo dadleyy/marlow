@@ -6,7 +6,8 @@ create table authors (
   university_id INTEGER,
   rating REAL NOT NULL DEFAULT '100.00',
   flags INTEGER NOT NULL DEFAULT 0,
-  birthday Date NOT NULL
+  birthday DATE NOT NULL,
+  deceased DATE
 );
 
 drop table if exists books;

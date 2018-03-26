@@ -3,6 +3,7 @@ package models
 import "fmt"
 import "time"
 import "database/sql"
+import "github.com/go-sql-driver/mysql"
 
 //go:generate marlowc -input author.go
 
@@ -18,13 +19,14 @@ const (
 
 // Author represents an author of a book.
 type Author struct {
-	table        bool          `marlow:"tableName=authors"`
-	ID           int           `marlow:"column=system_id&autoIncrement=true"`
-	Name         string        `marlow:"column=name"`
-	UniversityID sql.NullInt64 `marlow:"column=university_id"`
-	ReaderRating float64       `marlow:"column=rating"`
-	AuthorFlags  uint8         `marlow:"column=flags&bitmask"`
-	Birthday     time.Time     `marlow:"column=birthday"`
+	table        bool           `marlow:"tableName=authors"`
+	ID           int            `marlow:"column=system_id&autoIncrement=true"`
+	Name         string         `marlow:"column=name"`
+	UniversityID sql.NullInt64  `marlow:"column=university_id"`
+	ReaderRating float64        `marlow:"column=rating"`
+	AuthorFlags  uint8          `marlow:"column=flags&bitmask"`
+	Birthday     time.Time      `marlow:"column=birthday"`
+	Deceased     mysql.NullTime `marlow:"column=deceased"`
 }
 
 func (a *Author) String() string {
