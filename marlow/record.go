@@ -36,6 +36,16 @@ func (r *marlowRecord) fieldList(filter func(url.Values) bool) fieldList {
 	return list
 }
 
+func (r *marlowRecord) deletionField() url.Values {
+	target := r.config.Get(constants.RecordSoftDeleteConfigOption)
+
+	if target == "" {
+		return nil
+	}
+
+	return r.fields[target]
+}
+
 func (r *marlowRecord) registerStoreMethod(method writing.FuncDecl) {
 	r.storeChannel <- method
 }

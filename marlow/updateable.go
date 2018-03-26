@@ -2,7 +2,6 @@ package marlow
 
 import "io"
 import "fmt"
-import "strings"
 import "net/url"
 import "go/types"
 import "github.com/dadleyy/marlow/marlow/writing"
@@ -23,9 +22,21 @@ type updaterSymbols struct {
 	targetValue     string
 }
 
-func updater(record marlowRecord, fieldConfig url.Values, methodName, op string) io.Reader {
+type updateOperation struct {
+	name      string
+	operation string
+	valueless bool
+}
+
+func updater(record marlowRecord, fieldConfig url.Values, op *updateOperation) io.Reader {
 	pr, pw := io.Pipe()
 	column := fieldConfig.Get(constants.ColumnConfigOption)
+
+	if op == nil {
+		prefix := record.config.Get(constants.UpdateFieldMethodPrefixConfigOption)
+		method := fmt.Sprintf("%s%s%s", prefix, record.name(), fieldConfig.Get("FieldName"))
+		op = &updateOperation{name: method, operation: "", valueless: false}
+	}
 
 	symbols := updaterSymbols{
 		valueParam:      "_updates",
@@ -53,13 +64,10 @@ func updater(record marlowRecord, fieldConfig url.Values, methodName, op string)
 
 	// Check to see if we have an operation, and if the operation requires a value (hacky). If no value is required then
 	// we no longer need the first user-provided argument to the deletion method.
-	valueless := false
-	if op != "" && strings.Contains(op, "%s") != true {
+	if op.valueless {
 		params = []writing.FuncParam{
 			{Type: fmt.Sprintf("*%s", record.config.Get(constants.BlueprintNameConfigOption)), Symbol: symbols.blueprint},
 		}
-
-		valueless = true
 	}
 
 	returns := []string{
@@ -71,7 +79,7 @@ func updater(record marlowRecord, fieldConfig url.Values, methodName, op string)
 		gosrc := writing.NewGoWriter(pw)
 		gosrc.Comment("[marlow] updater method for %s", column)
 
-		e := gosrc.WithMethod(methodName, record.store(), params, returns, func(scope url.Values) error {
+		e := gosrc.WithMethod(op.name, record.store(), params, returns, func(scope url.Values) error {
 			logwriter := logWriter{output: gosrc, receiver: scope.Get("receiver")}
 
 			// Prepare a value count to keep track of the amount of dynamic components will be sent into the query.
@@ -84,7 +92,7 @@ func updater(record marlowRecord, fieldConfig url.Values, methodName, op string)
 
 			// If our operation requires a value, we to create a variable in the source that will represent the string
 			// holder during the sql statement execution. For postgres this value is placement-aware, e.g: $1.
-			if !valueless {
+			if !op.valueless {
 				switch record.dialect() {
 				case "postgres":
 					gosrc.Println("%s := fmt.Sprintf(\"$%%d\", %s)", symbols.targetValue, symbols.valueCount)
@@ -97,15 +105,15 @@ func updater(record marlowRecord, fieldConfig url.Values, methodName, op string)
 			command := fmt.Sprintf("UPDATE %s SET %s = %%s", record.table(), column)
 
 			// If we have an operation, use it here instead.
-			if op != "" {
-				command = fmt.Sprintf("UPDATE %s SET %s = %s", record.table(), column, op)
+			if op.operation != "" {
+				command = fmt.Sprintf("UPDATE %s SET %s = %s", record.table(), column, op.operation)
 			}
 
 			// Start the update template string with the basic SQL-dialect `UPDATE <table> SET <column> = ?` syntax.
 			template := fmt.Sprintf("fmt.Sprintf(\"%s\", %s)", command, symbols.targetValue)
 
 			// If no value was required in the operation string we can simplify the sql.
-			if valueless {
+			if op.valueless {
 				template = fmt.Sprintf("\"%s\"", command)
 			}
 
@@ -136,7 +144,7 @@ func updater(record marlowRecord, fieldConfig url.Values, methodName, op string)
 
 			// The postgres dialect uses numbered placeholder values. If the record is using anything other than that, the
 			// placeholder for the target value should appear first in the set of values sent to Exec.
-			if record.dialect() != "postgres" && !valueless {
+			if record.dialect() != "postgres" && !op.valueless {
 				gosrc.Println("%s = append(%s, %s)", symbols.valueSlice, symbols.valueSlice, symbols.valueParam)
 			}
 
@@ -150,7 +158,7 @@ func updater(record marlowRecord, fieldConfig url.Values, methodName, op string)
 			}, symbols.blueprint)
 
 			// If we're postgres, add our value to the very end of our value slice.
-			if record.dialect() == "postgres" && !valueless {
+			if record.dialect() == "postgres" && !op.valueless {
 				gosrc.Println("%s = append(%s, %s)", symbols.valueSlice, symbols.valueSlice, symbols.valueParam)
 			}
 
@@ -183,7 +191,7 @@ func updater(record marlowRecord, fieldConfig url.Values, methodName, op string)
 
 		record.registerImports("fmt", "bytes")
 		record.registerStoreMethod(writing.FuncDecl{
-			Name:    methodName,
+			Name:    op.name,
 			Params:  params,
 			Returns: returns,
 		})
@@ -196,12 +204,10 @@ func updater(record marlowRecord, fieldConfig url.Values, methodName, op string)
 // newUpdateableGenerator is responsible for generating updating store methods.
 func newUpdateableGenerator(record marlowRecord) io.Reader {
 	readers := make([]io.Reader, 0, len(record.fields))
-	prefix := record.config.Get(constants.UpdateFieldMethodPrefixConfigOption)
 
 	for name, config := range record.fields {
 		column := config.Get(constants.ColumnConfigOption)
-		method := fmt.Sprintf("%s%s%s", prefix, record.name(), name)
-		up := updater(record, config, method, "")
+		up := updater(record, config, nil)
 		fieldType := getTypeInfo(config.Get("type"))
 
 		if _, bit := config[constants.ColumnBitmaskOption]; bit {
@@ -215,8 +221,15 @@ func newUpdateableGenerator(record marlowRecord) io.Reader {
 			}
 
 			bitwise := []io.Reader{
-				updater(record, config, fmt.Sprintf("Add%s%s", record.name(), name), fmt.Sprintf("%s | %%s", column)),
-				updater(record, config, fmt.Sprintf("Drop%s%s", record.name(), name), fmt.Sprintf("%s & ~%%s", column)),
+				updater(record, config, &updateOperation{
+					name:      fmt.Sprintf("Add%s%s", record.name(), name),
+					operation: fmt.Sprintf("%s | %%s", column),
+				}),
+
+				updater(record, config, &updateOperation{
+					name:      fmt.Sprintf("Drop%s%s", record.name(), name),
+					operation: fmt.Sprintf("%s & ~%%s", column),
+				}),
 			}
 
 			readers = append(readers, bitwise...)

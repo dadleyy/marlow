@@ -354,7 +354,7 @@ func selector(record marlowRecord, fieldName string, fieldConfig url.Values) io.
 	columnName := fieldConfig.Get(constants.ColumnConfigOption)
 
 	returnItemType := fieldConfig.Get("type")
-	returnArrayType := fmt.Sprintf("[]%s", returnItemType)
+	returnArrayType := fmt.Sprintf("[]%v", returnItemType)
 
 	returns := []string{
 		returnArrayType,

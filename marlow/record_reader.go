@@ -56,8 +56,14 @@ func parseFieldType(config *url.Values, f *ast.Field) error {
 		return fmt.Errorf("slice types not supported by marlow, field: %s", name)
 	}
 
+	expr := f.Type
+
+	if ptr, ok := f.Type.(*ast.StarExpr); ok {
+		expr = ptr.X
+	}
+
 	// Check to see if this field is a complex type - one that refers to an exported type from another package.
-	selector, ok := f.Type.(*ast.SelectorExpr)
+	selector, ok := expr.(*ast.SelectorExpr)
 
 	// If the field is a complex type, make an note of the import that it is referring to - this will be mapped to the
 	// original import path from the source package by our import processor.
@@ -87,6 +93,9 @@ func parseField(f *ast.Field) (string, url.Values, bool) {
 	}
 
 	name := f.Names[0].String()
+
+	config.Set("FieldName", name)
+
 	return name, config, true
 }
 

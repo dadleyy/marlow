@@ -2,8 +2,10 @@ package models
 
 import "os"
 import "fmt"
+import "time"
 import "testing"
-import _ "github.com/lib/pq"
+import "bytes"
+import "github.com/lib/pq"
 import "database/sql"
 import "github.com/franela/goblin"
 import "github.com/dadleyy/marlow/examples/library/data"
@@ -13,6 +15,7 @@ func Test_MultiAuto(t *testing.T) {
 
 	var db *sql.DB
 	var store MultiAutoStore
+	var output *bytes.Buffer
 
 	g.Describe("Model with multiple auto increment columns", func() {
 		g.Before(func() {
@@ -33,11 +36,12 @@ func Test_MultiAuto(t *testing.T) {
 		})
 
 		g.BeforeEach(func() {
+			output = new(bytes.Buffer)
 			schema, e := data.Asset("data/postgres.sql")
 			g.Assert(e).Equal(nil)
 			_, e = db.Exec(string(schema))
 			g.Assert(e).Equal(nil)
-			store = NewMultiAutoStore(db, nil)
+			store = NewMultiAutoStore(db, output)
 		})
 
 		g.It("allows the consumer to create multiple records, respecting prepared index params", func() {
@@ -78,6 +82,92 @@ func Test_MultiAuto(t *testing.T) {
 			g.Assert(e).Equal(nil)
 			_, e = store.DeleteMultiAutos(&MultiAutoBlueprint{ID: []uint{uint(id)}})
 			g.Assert(e).Equal(nil)
+		})
+
+		g.Describe("timestamp operations", func() {
+			var blueprint MultiAutoBlueprint
+			var created time.Time
+
+			g.BeforeEach(func() {
+				created = time.Now()
+				id, e := store.CreateMultiAutos(MultiAuto{
+					Name:      "to-update-timestamps",
+					CreatedAt: created,
+				})
+				g.Assert(e).Equal(nil)
+				blueprint = MultiAutoBlueprint{ID: []uint{uint(id)}}
+			})
+
+			g.AfterEach(func() {
+				_, e := store.DeleteMultiAutos(&blueprint)
+				g.Assert(e).Equal(nil)
+			})
+
+			g.It("allows the user to search by deleted_at timestamps (range)", func() {
+				start := pq.NullTime{}
+				end := pq.NullTime{}
+				start.Scan(created)
+				end.Scan(created.Add(time.Since(created)))
+				count, e := store.SelectMultiAutoDeletedAts(&MultiAutoBlueprint{DeletedAtRange: []pq.NullTime{start, end}})
+				g.Assert(e).Equal(nil)
+				g.Assert(len(count)).Equal(0)
+			})
+
+			g.It("allows the user to search by deleted_at timestamps (exact)", func() {
+				exact := pq.NullTime{}
+				exact.Scan(created)
+				count, e := store.SelectMultiAutoDeletedAts(&MultiAutoBlueprint{DeletedAt: []pq.NullTime{exact}})
+				g.Assert(e).Equal(nil)
+				g.Assert(len(count)).Equal(0)
+			})
+
+			g.It("allows the user to search by created_at timestamps (range)", func() {
+				start := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+				end := time.Now().Add(time.Since(start))
+				count, e := store.SelectMultiAutoDeletedAts(&MultiAutoBlueprint{
+					CreatedAtRange: []time.Time{start, end},
+				})
+				g.Assert(e).Equal(nil)
+				g.Assert(len(count)).Equal(1)
+			})
+
+			g.It("allows the user to search by created_at timestamps (exact)", func() {
+				count, e := store.SelectMultiAutoDeletedAts(&MultiAutoBlueprint{CreatedAt: []time.Time{created}})
+				g.Assert(e).Equal(nil)
+				g.Assert(len(count)).Equal(1)
+			})
+
+			g.It("allows the user to search by created_at timestamps", func() {
+				start := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+				end := time.Now().Add(time.Since(start))
+				count, e := store.SelectMultiAutoDeletedAts(&MultiAutoBlueprint{
+					CreatedAtRange: []time.Time{start, end},
+				})
+				g.Assert(e).Equal(nil)
+				g.Assert(len(count)).Equal(1)
+			})
+
+			g.It("allows the user to select destroyed_at timestamps", func() {
+				_, e := store.SelectMultiAutoDeletedAts(&blueprint)
+				g.Assert(e).Equal(nil)
+			})
+
+			g.It("allows the user to select created_at timestamps", func() {
+				_, e := store.SelectMultiAutoCreatedAts(&blueprint)
+				g.Assert(e).Equal(nil)
+			})
+
+			g.It("is allowed to update the created_at timestamp", func() {
+				_, e := store.UpdateMultiAutoCreatedAt(time.Now(), &blueprint)
+				g.Assert(e).Equal(nil)
+			})
+
+			g.It("is allowed to update the created_at timestamp", func() {
+				now := pq.NullTime{}
+				now.Scan(time.Now())
+				_, e := store.UpdateMultiAutoDeletedAt(now, &blueprint)
+				g.Assert(e).Equal(nil)
+			})
 		})
 
 		g.Describe("selections", func() {

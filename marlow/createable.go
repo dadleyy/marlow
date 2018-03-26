@@ -82,6 +82,12 @@ func newCreateableGenerator(record marlowRecord) io.Reader {
 
 			// Skip fields that have the `autoIncrement` directive.
 			fields := record.fieldList(func(config url.Values) bool {
+				deletion := record.deletionField()
+
+				if deletion != nil && deletion.Get("FieldName") == config.Get("FieldName") {
+					return false
+				}
+
 				return config.Get(constants.ColumnAutoIncrementFlag) == ""
 			})
 

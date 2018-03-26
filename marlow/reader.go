@@ -120,7 +120,7 @@ func Compile(destination io.Writer, reader io.Reader) error {
 
 	// If an error was thrown at this point, its typically a prolem with the marlow generator itself.
 	if e != nil {
-		return fmt.Errorf("%s (error %v)", constants.InvalidGeneratedCodeError, e)
+		return fmt.Errorf("%s (error %v) source:\n%s", constants.InvalidGeneratedCodeError, e, buffered)
 	}
 
 	_, e = io.Copy(destination, bytes.NewBuffer(formatted))

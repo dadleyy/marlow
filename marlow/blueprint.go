@@ -120,7 +120,14 @@ func writeBlueprint(destination io.Writer, record marlowRecord) error {
 			return out.Println("%s = \" OR \"", symbols.clauseMap)
 		}, scope.Get("receiver"))
 
-		return out.Returns(fmt.Sprintf("\"WHERE \" + strings.Join(%s, %s)", symbols.clauseSlice, symbols.clauseMap))
+		query := fmt.Sprintf("\"WHERE \" + strings.Join(%s, %s)", symbols.clauseSlice, symbols.clauseMap)
+
+		if deletion := record.deletionField(); deletion != nil {
+			selector := fmt.Sprintf("%s.%s", record.table(), deletion.Get(constants.ColumnConfigOption))
+			query += fmt.Sprintf("+ \" AND %s IS NULL\"", selector)
+		}
+
+		return out.Returns(query)
 	})
 
 	if e != nil {
