@@ -1,21 +1,28 @@
-hash: f01968c098f896b4e9b97fa4b38e8ee3e13ad8c8aa1daab736d872f22463a571
-updated: 2018-02-25T11:55:29.759498125-05:00
+hash: 87dde26b983ed5655c1758c11a23bf90293367fd1609ebe52f7f52f2aef62bd1
+updated: 2018-06-26T09:55:56.053333896-04:00
 imports:
 - name: github.com/dustin/go-humanize
   version: bb3d318650d48840a39aa21a027c6630e198e626
 - name: github.com/franela/goblin
-  version: 74c9fe110d4bfd04c222a089a309e0a97e258534
+  version: cd5d08fb4ede9eaac1812fdb513552e7404eae2e
 - name: github.com/gedex/inflector
   version: 046f2c31204676e3623730ee70fd0964e05822e7
+- name: github.com/lib/pq
+  version: b609790bd85edf8e9ab7e0f8912750a786177bcf
+  subpackages:
+  - oid
 - name: github.com/mattn/go-isatty
   version: 56b76bdf51f7708750eac80fa38b952bb9f32639
 - name: github.com/mattn/go-sqlite3
   version: ca5e3819723d8eeaf170ad510e7da1d6d2e94a08
 - name: github.com/vbauerster/mpb
-  version: dac08dfacedfef1da943f0491a430e4a8edf5bb0
+  version: 3674fd1f0789dbb003aa91a7b06138df0ef83c0f
   subpackages:
   - cwriter
   - decor
+  - internal
+- name: github.com/VividCortex/ewma
+  version: 43880d236f695d39c62cf7aa4ebd4508c258e6c0
 - name: golang.org/x/net
   version: 8e573f4005aa312856df2ea97c32b9beac70dd89
   subpackages:
@@ -24,8 +31,4 @@ imports:
   version: 62bee037599929a6e9146f29d10dd5208c43507d
   subpackages:
   - unix
-testImports:
-- name: github.com/lib/pq
-  version: b609790bd85edf8e9ab7e0f8912750a786177bcf
-  subpackages:
-  - oid
+testImports: []

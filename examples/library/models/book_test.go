@@ -260,7 +260,7 @@ func Test_Book(t *testing.T) {
 				ID: []int{1},
 			})
 			g.Assert(e).Equal(nil)
-			g.Assert(results).Equal(1)
+			g.Assert(results).Equal(int64(1))
 		})
 
 		g.It("allows the consumer to update the author id", func() {
@@ -268,7 +268,7 @@ func Test_Book(t *testing.T) {
 				ID: []int{1},
 			})
 			g.Assert(e).Equal(nil)
-			g.Assert(results).Equal(1)
+			g.Assert(results).Equal(int64(1))
 		})
 
 		g.It("allows the consumer to update the book year published", func() {
@@ -276,7 +276,7 @@ func Test_Book(t *testing.T) {
 				ID: []int{10},
 			})
 			g.Assert(e).Equal(nil)
-			g.Assert(results).Equal(1)
+			g.Assert(results).Equal(int64(1))
 		})
 
 		g.It("allows the consumer to update the book series id (valid: false)", func() {
@@ -286,7 +286,7 @@ func Test_Book(t *testing.T) {
 				ID: []int{10},
 			})
 			g.Assert(e).Equal(nil)
-			g.Assert(results).Equal(1)
+			g.Assert(results).Equal(int64(1))
 		})
 
 		g.It("allows the consumer to update the book series id (non-nil)", func() {
@@ -297,7 +297,7 @@ func Test_Book(t *testing.T) {
 				ID: []int{10},
 			})
 			g.Assert(e).Equal(nil)
-			g.Assert(results).Equal(1)
+			g.Assert(results).Equal(int64(1))
 		})
 
 		g.It("allows the consumer to update the book series id (nil)", func() {
@@ -305,7 +305,7 @@ func Test_Book(t *testing.T) {
 				ID: []int{10},
 			})
 			g.Assert(e).Equal(nil)
-			g.Assert(results).Equal(1)
+			g.Assert(results).Equal(int64(1))
 		})
 
 		g.It("allows the consumer to update the book id", func() {
@@ -313,7 +313,7 @@ func Test_Book(t *testing.T) {
 				ID: []int{10},
 			})
 			g.Assert(e).Equal(nil)
-			g.Assert(results).Equal(1)
+			g.Assert(results).Equal(int64(1))
 		})
 
 		g.It("allows the consumer to select explicit year published", func() {
@@ -330,25 +330,25 @@ func Test_Book(t *testing.T) {
 			g.It("returns an error and a negative number with an empty blueprint", func() {
 				c, e := store.DeleteBooks(&BookBlueprint{})
 				g.Assert(e == nil).Equal(false)
-				g.Assert(c).Equal(-1)
+				g.Assert(c).Equal(int64(-1))
 			})
 
 			g.It("returns an error and a negative number without a blueprint", func() {
 				c, e := store.DeleteBooks(nil)
 				g.Assert(e == nil).Equal(false)
-				g.Assert(c).Equal(-1)
+				g.Assert(c).Equal(int64(-1))
 			})
 
 			g.It("successfully returns 0 if no books were found to delete", func() {
 				deleted, e := store.DeleteBooks(&BookBlueprint{ID: []int{-1000}})
 				g.Assert(e).Equal(nil)
-				g.Assert(deleted).Equal(0)
+				g.Assert(deleted).Equal(int64(0))
 			})
 
 			g.It("successfully deletes the records found by the blueprint", func() {
 				deleted, e := store.DeleteBooks(&BookBlueprint{ID: []int{13}})
 				g.Assert(e).Equal(nil)
-				g.Assert(deleted).Equal(1)
+				g.Assert(deleted).Equal(int64(1))
 				found, e := store.CountBooks(&BookBlueprint{ID: []int{13}})
 				g.Assert(e).Equal(nil)
 				g.Assert(found).Equal(0)
@@ -359,7 +359,7 @@ func Test_Book(t *testing.T) {
 			g.It("returns immediately with 0 if no authors", func() {
 				s, e := store.CreateBooks()
 				g.Assert(e).Equal(nil)
-				g.Assert(s).Equal(0)
+				g.Assert(s).Equal(int64(0))
 			})
 
 			g.It("returns the number of authors created", func() {
