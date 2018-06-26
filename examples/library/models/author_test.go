@@ -227,7 +227,7 @@ func Test_Author(t *testing.T) {
 
 			g.Assert(authors[0].Name).Equal("learned author")
 			g.Assert(authors[0].UniversityID.Valid).Equal(true)
-			g.Assert(authors[0].UniversityID.Int64).Equal(10)
+			g.Assert(authors[0].UniversityID.Int64).Equal(int64(10))
 
 			g.Assert(authors[1].Name).Equal("other author")
 			g.Assert(authors[1].UniversityID.Valid).Equal(false)
@@ -264,7 +264,7 @@ func Test_Author(t *testing.T) {
 			})
 			g.Assert(e).Equal(nil)
 			g.Assert(len(results)).Equal(1)
-			g.Assert(results[0].Int64).Equal(10)
+			g.Assert(results[0].Int64).Equal(int64(10))
 			store.DeleteAuthors(&AuthorBlueprint{
 				NameLike: []string{"%limited%"},
 			})
@@ -286,7 +286,7 @@ func Test_Author(t *testing.T) {
 			g.Assert(e).Equal(nil)
 			g.Assert(len(results)).Equal(1)
 			g.Assert(results[0].Valid).Equal(true)
-			g.Assert(results[0].Int64).Equal(10)
+			g.Assert(results[0].Int64).Equal(int64(10))
 		})
 
 		g.It("allows consumers to select individual author names with limit", func() {
@@ -347,19 +347,19 @@ func Test_Author(t *testing.T) {
 		g.It("allows the consumer to update the author id", func() {
 			c, e := store.UpdateAuthorID(1991, &AuthorBlueprint{ID: []int{8}})
 			g.Assert(e).Equal(nil)
-			g.Assert(c).Equal(1)
+			g.Assert(c).Equal(int64(1))
 		})
 
 		g.It("allows the consumer to update the author university id using nil", func() {
 			c, e := store.UpdateAuthorUniversityID(nil, &AuthorBlueprint{ID: []int{1}})
 			g.Assert(e).Equal(nil)
-			g.Assert(c).Equal(1)
+			g.Assert(c).Equal(int64(1))
 		})
 
 		g.It("allows the consumer to update the author university id using valid: false", func() {
 			c, e := store.UpdateAuthorUniversityID(&sql.NullInt64{Valid: false}, &AuthorBlueprint{ID: []int{2}})
 			g.Assert(e).Equal(nil)
-			g.Assert(c).Equal(1)
+			g.Assert(c).Equal(int64(1))
 		})
 
 		g.It("allows the consumer to update the author university id using valid: true", func() {
@@ -369,7 +369,7 @@ func Test_Author(t *testing.T) {
 			}, &AuthorBlueprint{ID: []int{2}})
 
 			g.Assert(e).Equal(nil)
-			g.Assert(c).Equal(1)
+			g.Assert(c).Equal(int64(1))
 		})
 
 		g.It("allows the consumer to update the author name", func() {
@@ -379,7 +379,7 @@ func Test_Author(t *testing.T) {
 
 			updatedCount, e := store.UpdateAuthorName("danny", &AuthorBlueprint{ID: []int{1}})
 			g.Assert(e).Equal(nil)
-			g.Assert(updatedCount).Equal(1)
+			g.Assert(updatedCount).Equal(int64(1))
 
 			a, e := store.FindAuthors(&AuthorBlueprint{ID: []int{1}})
 			g.Assert(e).Equal(nil)
@@ -398,7 +398,7 @@ func Test_Author(t *testing.T) {
 			g.It("returns immediately with 0 if no authors", func() {
 				s, e := store.CreateAuthors()
 				g.Assert(e).Equal(nil)
-				g.Assert(s).Equal(0)
+				g.Assert(s).Equal(int64(0))
 			})
 
 			g.It("returns the id of the latest author created", func() {
@@ -600,19 +600,19 @@ func Test_Author(t *testing.T) {
 			g.It("returns an error and a negative number with an empty blueprint", func() {
 				c, e := store.DeleteAuthors(&AuthorBlueprint{})
 				g.Assert(e == nil).Equal(false)
-				g.Assert(c).Equal(-1)
+				g.Assert(c).Equal(int64(-1))
 			})
 
 			g.It("returns an error and a negative number without a blueprint", func() {
 				c, e := store.DeleteAuthors(nil)
 				g.Assert(e == nil).Equal(false)
-				g.Assert(c).Equal(-1)
+				g.Assert(c).Equal(int64(-1))
 			})
 
 			g.It("successfully deletes the records found by the blueprint", func() {
 				deleted, e := store.DeleteAuthors(&AuthorBlueprint{ID: []int{13}})
 				g.Assert(e).Equal(nil)
-				g.Assert(deleted).Equal(1)
+				g.Assert(deleted).Equal(int64(1))
 				found, e := store.CountAuthors(&AuthorBlueprint{ID: []int{13}})
 				g.Assert(e).Equal(nil)
 				g.Assert(found).Equal(0)

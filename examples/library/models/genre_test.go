@@ -141,7 +141,7 @@ func Test_Genre(t *testing.T) {
 					g.Assert(e).Equal(nil)
 					g.Assert(len(parents)).Equal(1)
 					g.Assert(parents[0].Valid).Equal(true)
-					g.Assert(parents[0].Int64).Equal(10)
+					g.Assert(parents[0].Int64).Equal(int64(10))
 				})
 
 				g.It("allows counting w/ empty NullInt64 blueprint (NOT NULL)", func() {
@@ -241,7 +241,7 @@ func Test_Genre(t *testing.T) {
 					g.Assert(e).Equal(nil)
 					g.Assert(len(ids)).Equal(1)
 					g.Assert(ids[0].Valid).Equal(true)
-					g.Assert(ids[0].Int64).Equal(100)
+					g.Assert(ids[0].Int64).Equal(int64(100))
 
 					p.Scan(nil)
 					_, e = store.UpdateGenreParentID(&p, bp)

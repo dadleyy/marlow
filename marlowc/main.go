@@ -4,14 +4,15 @@ import "os"
 import "io"
 import "fmt"
 import "flag"
-import "time"
 import "path"
+import "sync"
 import "bytes"
 import "strings"
 import "go/build"
+
 import "github.com/vbauerster/mpb"
 import "github.com/dustin/go-humanize"
-import "github.com/vbauerster/mpb/decor"
+
 import "github.com/dadleyy/marlow/marlow"
 import "github.com/dadleyy/marlow/marlow/constants"
 
@@ -44,7 +45,9 @@ func main() {
 		progressOut = os.Stdout
 	}
 
-	total, name, done := len(sourceFiles), fmt.Sprintf("compiling files"), make(chan struct{})
+	fmt.Fprintf(progressOut, "starting progress")
+
+	total := len(sourceFiles)
 
 	// If no files were found, exit.
 	if total == 0 {
@@ -53,19 +56,10 @@ func main() {
 
 	// Create the progress bar.
 	progress := mpb.New(
-		mpb.Output(progressOut),
-		mpb.WithWidth(100),
-		mpb.WithRefreshRate(time.Millisecond),
-		mpb.WithShutdownNotifier(done),
+		mpb.WithOutput(progressOut),
+		mpb.WithWaitGroup(&sync.WaitGroup{}),
 	)
-
-	bar := progress.AddBar(int64(total),
-		mpb.PrependDecorators(
-			decor.StaticName(name, len(name), 0),
-			decor.ETA(4, decor.DSyncSpace),
-		),
-		mpb.AppendDecorators(decor.Percentage(5, 0)),
-	)
+	bar := progress.AddBar(int64(total))
 
 	// Keep a list of files that have been created to print out at the end.
 	results := make(map[string]int64)
@@ -73,6 +67,7 @@ func main() {
 	for _, name := range sourceFiles {
 		// Skip files that have already bee compiled.
 		if strings.HasSuffix(path.Base(name), options.ext) {
+			bar.IncrBy(1)
 			continue
 		}
 
@@ -99,8 +94,11 @@ func main() {
 		// If no data was copied we had an no-op gen source, remove the file and continue.
 		if size == 0 {
 			os.Remove(options.generatedName(name))
+			bar.IncrBy(1)
 			continue
 		}
+
+		fmt.Fprintf(os.Stdout, "completed compilation of %s\n", name)
 
 		results[options.generatedName(name)] = size
 
@@ -108,12 +106,10 @@ func main() {
 		writer.Close()
 
 		// Let our progress bar know we're done.
-		bar.Incr(1)
+		bar.IncrBy(1)
 	}
 
-	bar.Complete()
-	progress.Stop()
-	<-done
+	progress.Wait()
 
 	// If no files were the target of compilation, or the silent flag was used, do nothing.
 	if len(results) == 0 || options.silent == true {
