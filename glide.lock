@@ -1,5 +1,5 @@
 hash: 87dde26b983ed5655c1758c11a23bf90293367fd1609ebe52f7f52f2aef62bd1
-updated: 2018-06-26T09:55:56.053333896-04:00
+updated: 2018-09-28T10:20:32.486947-04:00
 imports:
 - name: github.com/dustin/go-humanize
   version: bb3d318650d48840a39aa21a027c6630e198e626
@@ -16,13 +16,17 @@ imports:
 - name: github.com/mattn/go-sqlite3
   version: ca5e3819723d8eeaf170ad510e7da1d6d2e94a08
 - name: github.com/vbauerster/mpb
-  version: 3674fd1f0789dbb003aa91a7b06138df0ef83c0f
+  version: b89b6c9ce4c35decc74d18628a5def8299d6c41f
   subpackages:
   - cwriter
   - decor
   - internal
 - name: github.com/VividCortex/ewma
   version: 43880d236f695d39c62cf7aa4ebd4508c258e6c0
+- name: golang.org/x/crypto
+  version: c367d6eeb7c6158125f2f47e049f7eb7e251c09a
+  subpackages:
+  - ssh/terminal
 - name: golang.org/x/net
   version: 8e573f4005aa312856df2ea97c32b9beac70dd89
   subpackages:
