@@ -79,7 +79,7 @@ $(VENDOR_DIR):
 	$(GO) get -v -u github.com/client9/misspell/cmd/misspell
 	$(GO) get -v -u github.com/fzipp/gocyclo
 	$(GO) get -v -u github.com/Masterminds/glide
-	$(GO) get -v -u github.com/golang/lint/golint
+	$(GO) get -v -u golang.org/x/lint/golint
 	$(GLIDE) install
 
 example: $(LIBRARY_EXAMPLE_EXE)
