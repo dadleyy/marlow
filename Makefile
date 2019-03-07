@@ -65,7 +65,7 @@ lint: $(GO_SRC)
 	$(LINT) $(LINT_FLAGS) $(LIB_DIR)/...
 	$(LINT) $(LINT_FLAGS) $(MAIN)
 
-test: $(GO_SRC) $(VENDOR_DIR) $(INTERCHANGE_OBJ) lint
+test: $(GO_SRC) $(VENDOR_DIR) lint
 	$(VET) $(VET_FLAGS) $(SRC_DIR)
 	$(VET) $(VET_FLAGS) $(LIB_DIR)
 	$(VET) $(VET_FLAGS) $(MAIN)
@@ -79,7 +79,7 @@ $(VENDOR_DIR):
 	$(GO) get -v -u github.com/client9/misspell/cmd/misspell
 	$(GO) get -v -u github.com/fzipp/gocyclo
 	$(GO) get -v -u github.com/Masterminds/glide
-	$(GO) get -v -u github.com/golang/lint/golint
+	$(GO) get -v -u golang.org/x/lint/golint
 	$(GLIDE) install
 
 example: $(LIBRARY_EXAMPLE_EXE)
