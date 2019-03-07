@@ -65,7 +65,7 @@ lint: $(GO_SRC)
 	$(LINT) $(LINT_FLAGS) $(LIB_DIR)/...
 	$(LINT) $(LINT_FLAGS) $(MAIN)
 
-test: $(GO_SRC) $(VENDOR_DIR) $(INTERCHANGE_OBJ) lint
+test: $(GO_SRC) $(VENDOR_DIR) lint
 	$(VET) $(VET_FLAGS) $(SRC_DIR)
 	$(VET) $(VET_FLAGS) $(LIB_DIR)
 	$(VET) $(VET_FLAGS) $(MAIN)
