@@ -4,7 +4,6 @@ COMPILE=$(GO) build
 LDFLAGS="-s -w"
 BUILD_FLAGS=-x -v -ldflags $(LDFLAGS)
 
-GLIDE=glide
 VENDOR_DIR=vendor
 
 LINT=golint
@@ -78,9 +77,8 @@ $(VENDOR_DIR):
 	$(GO) get -v -u github.com/modocache/gover
 	$(GO) get -v -u github.com/client9/misspell/cmd/misspell
 	$(GO) get -v -u github.com/fzipp/gocyclo
-	$(GO) get -v -u github.com/Masterminds/glide
 	$(GO) get -v -u golang.org/x/lint/golint
-	$(GLIDE) install
+	$(GO) mod vendor
 
 example: $(LIBRARY_EXAMPLE_EXE)
 
@@ -88,7 +86,7 @@ $(LIBRARY_EXAMPLE_EXE): $(LIBRARY_EXAMPLE_SRC) $(LIBRARY_EXAMPLE_MAIN) $(EXE)
 	$(GO) get -v github.com/lib/pq
 	$(GO) get -v github.com/mattn/go-sqlite3
 	$(GO) install -v -x github.com/mattn/go-sqlite3
-	$(GO) get -u github.com/jteeuwen/go-bindata/...
+	$(GO) get -u github.com/jteeuwen/go-bindata
 	$(EXE) -input=$(LIBRARY_EXAMPLE_MODEL_DIR)
 	$(BINDATA) -o $(LIBRARY_DATA_DIR)/schema.go -pkg data -prefix $(LIBRARY_EXAMPLE_DIR) $(LIBRARY_DATA_DIR)/*.sql
 	$(COMPILE) $(BUILD_FLAGS) -o $(LIBRARY_EXAMPLE_EXE) $(LIBRARY_EXAMPLE_MAIN)

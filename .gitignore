@@ -15,6 +15,7 @@
 .keys
 node_modules
 bin
+/vendor
 vendor/*/
 dump.rdb
 coverage.txt
