@@ -7,6 +7,7 @@ require (
 	github.com/franela/goblin v0.0.0-20180407132755-cd5d08fb4ede
 	github.com/fzipp/gocyclo v0.0.0-20150627053110-6acd4345c835 // indirect
 	github.com/gedex/inflector v0.0.0-20161103042756-046f2c312046
+	github.com/go-bindata/go-bindata v3.1.2+incompatible // indirect
 	github.com/jteeuwen/go-bindata v3.0.7+incompatible // indirect
 	github.com/lib/pq v1.2.0
 	github.com/mattn/go-isatty v0.0.0-20151211000621-56b76bdf51f7 // indirect

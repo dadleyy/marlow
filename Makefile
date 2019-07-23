@@ -86,7 +86,7 @@ $(LIBRARY_EXAMPLE_EXE): $(LIBRARY_EXAMPLE_SRC) $(LIBRARY_EXAMPLE_MAIN) $(EXE)
 	$(GO) get -v github.com/lib/pq
 	$(GO) get -v github.com/mattn/go-sqlite3
 	$(GO) install -v -x github.com/mattn/go-sqlite3
-	$(GO) get -u github.com/jteeuwen/go-bindata/go-bindata
+	$(GO) get -u github.com/go-bindata/go-bindata/go-bindata
 	$(EXE) -input=$(LIBRARY_EXAMPLE_MODEL_DIR)
 	$(BINDATA) -o $(LIBRARY_DATA_DIR)/schema.go -pkg data -prefix $(LIBRARY_EXAMPLE_DIR) $(LIBRARY_DATA_DIR)/*.sql
 	$(COMPILE) $(BUILD_FLAGS) -o $(LIBRARY_EXAMPLE_EXE) $(LIBRARY_EXAMPLE_MAIN)
