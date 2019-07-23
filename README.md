@@ -11,12 +11,7 @@ for interacting with a project's data persistence layer while maintaining strong
 
 [![travis.img]][travis.url] 
 [![codecov.img]][codecov.url]
-[![report.img]][report.url]
 [![godoc.img]][godoc.url]
-[![tag.img]][tag.url]
-[![commits.img]][commits.url]
-[![awesome.img]][awesome.url]
-[![generated-coverage.img]][generated-coverage.url]
 
 ---- 
 
@@ -193,23 +188,14 @@ generated coverage badge provided by [gendry]
 [postgres]: https://www.postgresql.org
 [codecov.img]: https://img.shields.io/codecov/c/github/dadleyy/marlow.svg?style=flat-square
 [codecov.url]: https://codecov.io/gh/dadleyy/marlow
-[tag.img]: https://img.shields.io/github/tag/dadleyy/marlow.svg?style=flat-square
-[tag.url]: https://github.com/dadleyy/marlow/releases
 [struct field tags]: https://golang.org/ref/spec#Tag
 [golang]: https://golang.org
-[report.img]: https://goreportcard.com/badge/github.com/dadleyy/marlow?style=flat-square
-[report.url]: https://goreportcard.com/report/github.com/dadleyy/marlow
 [travis.img]: https://img.shields.io/travis/dadleyy/marlow/master.svg?style=flat-square
 [travis.url]: https://travis-ci.org/dadleyy/marlow
 [godoc.img]: http://img.shields.io/badge/godoc-reference-5272B4.svg?style=flat-square
 [godoc.url]: https://godoc.org/github.com/dadleyy/marlow/marlow
 [field tags]: https://golang.org/pkg/reflect/#StructTag
 [logo.img]: https://s3.amazonaws.com/coverage.marlow.sizethree.cc/media/marlow.svg
-[commits.img]: https://img.shields.io/github/commits-since/dadleyy/marlow/latest.svg?style=flat-square
-[commits.url]: https://github.com/dadleyy/marlow
-[awesome.img]: https://img.shields.io/badge/%F0%9F%95%B6-awesome--go-443f5e.svg?colorA=c3a1bb&style=flat-square
-[awesome.url]: https://awesome-go.com/#orm
-[generated-coverage.img]: http://gendry.sizethree.cc/coverage/dadleyy/marlow.svg
 [generated-coverage.url]: http://coverage.marlow.sizethree.cc.s3.amazonaws.com/latest/library.coverage.html
 [gendry]: https://bitbucket.org/dadleyy/gendry
 [`github.com/lib/pq`]: https://github.com/lib/pq
