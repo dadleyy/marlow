@@ -12,7 +12,7 @@ type Book struct {
 	table         string        `marlow:"defaultLimit=10"`
 	ID            int           `marlow:"column=system_id&autoIncrement=true"`
 	Title         string        `marlow:"column=title"`
-	AuthorID      int           `marlow:"column=author&references=Author"`
+	AuthorID      int           `marlow:"column=author"`
 	SeriesID      sql.NullInt64 `marlow:"column=series"`
 	YearPublished int           `marlow:"column=year_published" json:"year_published"`
 }
