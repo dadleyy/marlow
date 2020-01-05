@@ -48,7 +48,7 @@ as the executable target for golang's [`go generate`] command using `//go:genera
 ```go
 package models
 
-//go:generate marlow -input=book.go
+//go:generate marlowc -input=book.go
 
 type Book struct {
   ID       string `marlow="column=id"`
